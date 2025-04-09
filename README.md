@@ -1,4 +1,7 @@
-# GraphQL Server
+# Jito Bell
+
+## Overview
+
+- Track live Solana transactions
 
 ## Resources
-1. [Juniper](https://github.com/graphql-rust/juniper)
