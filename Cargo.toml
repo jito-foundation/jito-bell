@@ -1,8 +1,20 @@
 [package]
-name = "graphql-server"
+name = "jito-bell"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.62"
+chrono = "0.4.26"
+clap = { version = "4.3.0", features = ["derive", "env"] }
+env_logger = "0.11.3"
+futures = "0.3.24"
+log = "0.4.17"
+maplit = "1.0.2"
+solana-sdk = "~2.2.1"
+tokio = { version = "1.21.2", features = ["full"] }
+tonic = "0.12.1"
+yellowstone-grpc-client = "6.0.0"
+yellowstone-grpc-proto = { version = "6.0.0", default-features = false }
