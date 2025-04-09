@@ -8,12 +8,11 @@ use clap::{Parser, ValueEnum};
 use futures::{sink::SinkExt, stream::StreamExt};
 use log::{error, info};
 use maplit::hashmap;
-use solana_sdk::signature::Signature;
 use tonic::transport::channel::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::prelude::{
     subscribe_update::UpdateOneof, CommitmentLevel, SubscribeRequest,
-    SubscribeRequestFilterBlocksMeta, SubscribeRequestFilterTransactions,
+    SubscribeRequestFilterTransactions,
 };
 
 #[derive(Debug, Clone, Parser)]
@@ -95,18 +94,18 @@ async fn main() -> anyhow::Result<()> {
         .send(SubscribeRequest {
             slots: HashMap::new(),
             accounts: HashMap::new(),
-            transactions: HashMap::new(),
-            transactions_status: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
+            transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
                 vote: args.vote,
                 failed: args.failed,
-                signature: args.signature,
+                signature: args.signature.clone(),
                 account_include: args.account_include,
                 account_exclude: args.account_exclude,
                 account_required: args.account_required,
             } },
+            transactions_status: HashMap::new(),
             entry: HashMap::new(),
             blocks: HashMap::new(),
-            blocks_meta: hashmap! { "".to_owned() => SubscribeRequestFilterBlocksMeta {} },
+            blocks_meta: HashMap::new(),
             commitment: Some(commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
@@ -119,38 +118,58 @@ async fn main() -> anyhow::Result<()> {
         match message {
             Ok(msg) => {
                 match msg.update_oneof {
-                    Some(UpdateOneof::TransactionStatus(tx)) => {
-                        let entry = messages.entry(tx.slot).or_default();
-                        let sig = Signature::try_from(tx.signature.as_slice())
-                            .expect("valid signature from transaction")
-                            .to_string();
-                        if let Some(timestamp) = entry.0 {
-                            info!("received txn {} at {}", sig, timestamp);
-                        } else {
-                            entry.1.push(sig);
-                        }
-                    }
-                    Some(UpdateOneof::BlockMeta(block)) => {
-                        let entry = messages.entry(block.slot).or_default();
-                        entry.0 = block.block_time.map(|obj| {
-                            DateTime::from_timestamp(obj.timestamp, 0)
-                                .expect("invalid or out-of-range datetime")
-                        });
-                        if let Some(timestamp) = entry.0 {
-                            for sig in &entry.1 {
-                                info!("received txn {} at {}", sig, timestamp);
-                            }
-                        }
+                    Some(UpdateOneof::Transaction(transaction)) => {
+                        let entry = messages.entry(transaction.slot).or_default();
 
-                        // remove outdated
-                        while let Some(slot) = messages.keys().next().cloned() {
-                            if slot < block.slot - 20 {
-                                messages.remove(&slot);
-                            } else {
-                                break;
+                        if let Some(tx) = transaction.transaction {
+                            if let Some(tx) = tx.transaction {
+                                if let Some(msg) = tx.message {
+                                    info!("Instructions: {:?}", msg.instructions);
+                                }
                             }
                         }
+                        // let sig = Signature::try_from(tx.signature.as_slice())
+                        //     .expect("valid signature from transaction")
+                        //     .to_string();
+                        // if let Some(timestamp) = entry.0 {
+                        //     info!("received txn {} at {}", sig, timestamp);
+                        // } else {
+                        //     entry.1.push(sig);
+                        // }
                     }
+                    // Some(UpdateOneof::TransactionStatus(tx)) => {
+                    //     let entry = messages.entry(tx.slot).or_default();
+                    //     tx.
+                    //     let sig = Signature::try_from(tx.signature.as_slice())
+                    //         .expect("valid signature from transaction")
+                    //         .to_string();
+                    //     if let Some(timestamp) = entry.0 {
+                    //         info!("received txn {} at {}", sig, timestamp);
+                    //     } else {
+                    //         entry.1.push(sig);
+                    //     }
+                    // }
+                    // Some(UpdateOneof::BlockMeta(block)) => {
+                    //     let entry = messages.entry(block.slot).or_default();
+                    //     entry.0 = block.block_time.map(|obj| {
+                    //         DateTime::from_timestamp(obj.timestamp, 0)
+                    //             .expect("invalid or out-of-range datetime")
+                    //     });
+                    //     if let Some(timestamp) = entry.0 {
+                    //         for sig in &entry.1 {
+                    //             info!("received txn {} at {}", sig, timestamp);
+                    //         }
+                    //     }
+
+                    //     // remove outdated
+                    //     while let Some(slot) = messages.keys().next().cloned() {
+                    //         if slot < block.slot - 20 {
+                    //             messages.remove(&slot);
+                    //         } else {
+                    //             break;
+                    //         }
+                    //     }
+                    // }
                     _ => {}
                 }
             }
