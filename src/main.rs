@@ -6,6 +6,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use clap::{Parser, ValueEnum};
 use futures::{sink::SinkExt, stream::StreamExt};
+use jito_bell::parser::JitoTransactionParser;
 use log::{error, info};
 use maplit::hashmap;
 use tonic::transport::channel::ClientTlsConfig;
@@ -119,15 +120,11 @@ async fn main() -> anyhow::Result<()> {
             Ok(msg) => {
                 match msg.update_oneof {
                     Some(UpdateOneof::Transaction(transaction)) => {
-                        let entry = messages.entry(transaction.slot).or_default();
+                        let parser = JitoTransactionParser::new(transaction);
 
-                        if let Some(tx) = transaction.transaction {
-                            if let Some(tx) = tx.transaction {
-                                if let Some(msg) = tx.message {
-                                    info!("Instructions: {:?}", msg.instructions);
-                                }
-                            }
-                        }
+                        info!("Transaction Signature: {:?}", parser.transaction_signature);
+                        info!("Instruction: {:?}", parser.instructions);
+
                         // let sig = Signature::try_from(tx.signature.as_slice())
                         //     .expect("valid signature from transaction")
                         //     .to_string();
