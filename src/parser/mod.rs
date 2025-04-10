@@ -18,7 +18,7 @@ pub struct JitoTransactionParser {
     /// Transaction Hash
     pub transaction_hash: String,
     // Instructions
-    // pub instructions: HashMap<Pubkey, Vec<CompiledInstruction>>,
+    // pub instructions: Vec<JitoInstruction>,
 }
 
 impl JitoTransactionParser {
