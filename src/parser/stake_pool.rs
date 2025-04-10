@@ -38,7 +38,10 @@ impl JitoStakePool {
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
     ) -> Option<JitoStakePool> {
-        let stake_pool_ix = StakePoolInstruction::try_from_slice(&instruction.data).unwrap();
+        let stake_pool_ix = match StakePoolInstruction::try_from_slice(&instruction.data) {
+            Ok(ix) => ix,
+            Err(_) => return None,
+        };
 
         match stake_pool_ix {
             StakePoolInstruction::DepositStakeWithSlippage {
@@ -119,7 +122,7 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: Pubkey::new_unique(),
+            program_id: JitoStakePool::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
@@ -172,7 +175,7 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: Pubkey::new_unique(),
+            program_id: JitoStakePool::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
@@ -221,7 +224,7 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: Pubkey::new_unique(),
+            program_id: JitoStakePool::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
@@ -272,7 +275,7 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: Pubkey::new_unique(),
+            program_id: JitoStakePool::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
