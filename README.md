@@ -1,5 +1,7 @@
 # Jito Bell
 
+![Jito Bell](./docs/assets/images/jito-bell-logo-full.png)
+
 ## Overview
 
 - Track live Solana transactions
