@@ -117,22 +117,20 @@ async fn main() -> anyhow::Result<()> {
     while let Some(message) = stream.next().await {
         match message {
             Ok(msg) => {
-                match msg.update_oneof {
-                    Some(UpdateOneof::Transaction(transaction)) => {
-                        let parser = JitoTransactionParser::new(transaction);
+                if let Some(UpdateOneof::Transaction(transaction)) = msg.update_oneof {
+                    let parser = JitoTransactionParser::new(transaction);
 
-                        info!("Instruction: {:?}", parser.programs);
+                    info!("Instruction: {:?}", parser.programs);
 
-                        handler.send_notification(&parser).await;
-                        // let sig = Signature::try_from(tx.signature.as_slice())
-                        //     .expect("valid signature from transaction")
-                        //     .to_string();
-                        // if let Some(timestamp) = entry.0 {
-                        //     info!("received txn {} at {}", sig, timestamp);
-                        // } else {
-                        //     entry.1.push(sig);
-                        // }
-                    }
+                    handler.send_notification(&parser).await;
+                    // let sig = Signature::try_from(tx.signature.as_slice())
+                    //     .expect("valid signature from transaction")
+                    //     .to_string();
+                    // if let Some(timestamp) = entry.0 {
+                    //     info!("received txn {} at {}", sig, timestamp);
+                    // } else {
+                    //     entry.1.push(sig);
+                    // }
                     // Some(UpdateOneof::TransactionStatus(tx)) => {
                     //     let entry = messages.entry(tx.slot).or_default();
                     //     tx.
@@ -166,7 +164,6 @@ async fn main() -> anyhow::Result<()> {
                     //         }
                     //     }
                     // }
-                    _ => {}
                 }
             }
             Err(error) => {
