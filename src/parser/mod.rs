@@ -9,10 +9,10 @@ pub enum JitoBellProgram {
     SplStakePool(SplStakePoolProgram),
 }
 
-impl ToString for JitoBellProgram {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for JitoBellProgram {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            JitoBellProgram::SplStakePool(_) => "spl_stake_pool".to_string(),
+            JitoBellProgram::SplStakePool(_) => write!(f, "spl_stake_pool"),
         }
     }
 }

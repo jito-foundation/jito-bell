@@ -59,6 +59,12 @@ impl JitoBellHandler {
                                                     )
                                                     .await
                                                 }
+                                                "slack" => {
+                                                    unimplemented!()
+                                                }
+                                                "discord" => {
+                                                    unimplemented!()
+                                                }
                                                 _ => {}
                                             }
                                         }
@@ -75,6 +81,12 @@ impl JitoBellHandler {
                                                         &parser.transaction_signature,
                                                     )
                                                     .await
+                                                }
+                                                "slack" => {
+                                                    unimplemented!()
+                                                }
+                                                "discord" => {
+                                                    unimplemented!()
                                                 }
                                                 _ => {}
                                             }

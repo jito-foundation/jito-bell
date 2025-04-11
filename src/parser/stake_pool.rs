@@ -29,19 +29,19 @@ pub enum SplStakePoolProgram {
     },
 }
 
-impl ToString for SplStakePoolProgram {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for SplStakePoolProgram {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SplStakePoolProgram::DepositStakeWithSlippage {
                 ix: _,
                 minimum_pool_tokens_out: _,
-            } => String::from("deposit_stake_with_slippage"),
+            } => write!(f, "deposit_stake_with_slippage"),
             SplStakePoolProgram::WithdrawStakeWithSlippage {
                 ix: _,
                 minimum_lamports_out: _,
-            } => String::from("withdraw_stake_with_slippage"),
-            SplStakePoolProgram::DepositSol { ix: _, amount: _ } => String::from("deposit_sol"),
-            SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => String::from("withdraw_sol"),
+            } => write!(f, "withdraw_stake_with_slippage"),
+            SplStakePoolProgram::DepositSol { ix: _, amount: _ } => write!(f, "deposit_sol"),
+            SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => write!(f, "withdraw_sol"),
         }
     }
 }
