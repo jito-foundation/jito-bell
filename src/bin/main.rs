@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
+use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use futures::{sink::SinkExt, stream::StreamExt};
 use jito_bell::{parser::JitoTransactionParser, JitoBellHandler};
@@ -122,7 +123,10 @@ async fn main() -> anyhow::Result<()> {
 
                     info!("Instruction: {:?}", parser.programs);
 
-                    handler.send_notification(&parser).await;
+                    handler
+                        .send_notification(&parser)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e))?;
                     // let sig = Signature::try_from(tx.signature.as_slice())
                     //     .expect("valid signature from transaction")
                     //     .to_string();

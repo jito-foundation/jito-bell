@@ -1757,6 +1757,7 @@ dependencies = [
  "serde_yaml",
  "solana-sdk",
  "spl-stake-pool",
+ "thiserror 2.0.12",
  "tokio",
  "tonic",
  "yellowstone-grpc-client",

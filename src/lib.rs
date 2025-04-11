@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
+use error::JitoBellError;
 use log::info;
 use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
 
 use crate::config::JitoBellConfig;
 
 pub mod config;
+mod error;
 pub mod instruction;
 pub mod notification_config;
 pub mod notification_info;
@@ -27,7 +29,10 @@ impl JitoBellHandler {
         Self { config }
     }
 
-    pub async fn send_notification(&self, parser: &JitoTransactionParser) {
+    pub async fn send_notification(
+        &self,
+        parser: &JitoTransactionParser,
+    ) -> Result<(), JitoBellError> {
         info!("Before Send notification");
         for program in &parser.programs {
             match program {
@@ -69,7 +74,7 @@ impl JitoBellHandler {
                                                         *minimum_pool_tokens_out,
                                                         &parser.transaction_signature,
                                                     )
-                                                    .await
+                                                    .await?
                                                 }
                                                 _ => {}
                                             }
@@ -98,7 +103,7 @@ impl JitoBellHandler {
                                                         *amount,
                                                         &parser.transaction_signature,
                                                     )
-                                                    .await
+                                                    .await?
                                                 }
                                                 _ => {}
                                             }
@@ -112,6 +117,8 @@ impl JitoBellHandler {
                 }
             }
         }
+
+        Ok(())
     }
 
     /// Send message to Telegram
@@ -147,7 +154,12 @@ impl JitoBellHandler {
     }
 
     /// Send message to Discord
-    async fn send_discord_message(&self, description: &str, amount: f64, sig: &str) {
+    async fn send_discord_message(
+        &self,
+        description: &str,
+        amount: f64,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
         if let Some(discord_config) = &self.config.notifications.discord {
             let webhook_url = &discord_config.webhook_url;
 
@@ -182,12 +194,24 @@ impl JitoBellHandler {
 
             match response {
                 Ok(res) => {
-                    if !res.status().is_success() {
-                        println!("Failed to send Discord message: {:?}", res.status());
+                    if res.status().is_success() {
+                        return Ok(());
+                    } else {
+                        return Err(JitoBellError::NotificationError(format!(
+                            "Failed to send Discord message: {:?}",
+                            res.status(),
+                        )));
                     }
                 }
-                Err(e) => println!("Error sending Discord message: {:?}", e),
+                Err(e) => {
+                    return Err(JitoBellError::NotificationError(format!(
+                        "Error sending Discord message: {:?}",
+                        e
+                    )));
+                }
             }
         }
+
+        Ok(())
     }
 }
