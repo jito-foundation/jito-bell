@@ -1,8 +1,16 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use error::JitoBellError;
-use log::info;
+use futures::{sink::SinkExt, stream::StreamExt};
+use log::{error, info};
+use maplit::hashmap;
 use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
+use tonic::transport::channel::ClientTlsConfig;
+use yellowstone_grpc_client::GeyserGrpcClient;
+use yellowstone_grpc_proto::prelude::{
+    subscribe_update::UpdateOneof, CommitmentLevel, SubscribeRequest,
+    SubscribeRequestFilterTransactions,
+};
 
 use crate::config::JitoBellConfig;
 
@@ -13,6 +21,7 @@ pub mod notification_config;
 pub mod notification_info;
 pub mod parser;
 pub mod program;
+pub mod subscribe_option;
 
 pub struct JitoBellHandler {
     /// Configuration for Notification
@@ -27,6 +36,62 @@ impl JitoBellHandler {
             serde_yaml::from_str(&config_str).expect("Failed to parse config");
 
         Self { config }
+    }
+
+    pub fn heart_beat(&self, endpoint: &str, x_token: &str) -> Result<(), JitoBellError> {
+        let mut client = GeyserGrpcClient::build_from_shared(endpoint)?
+            .x_token(x_token)?
+            .tls_config(ClientTlsConfig::new().with_native_roots())?
+            .connect()
+            .await?;
+        let (mut subscribe_tx, mut stream) = client.subscribe().await?;
+
+        let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
+        subscribe_tx
+            .send(SubscribeRequest {
+                slots: HashMap::new(),
+                accounts: HashMap::new(),
+                transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
+                    vote: args.vote,
+                    failed: args.failed,
+                    signature: args.signature.clone(),
+                    account_include: args.account_include,
+                    account_exclude: args.account_exclude,
+                    account_required: args.account_required,
+                } },
+                transactions_status: HashMap::new(),
+                entry: HashMap::new(),
+                blocks: HashMap::new(),
+                blocks_meta: HashMap::new(),
+                commitment: Some(commitment as i32),
+                accounts_data_slice: vec![],
+                ping: None,
+                from_slot: None,
+            })
+            .await?;
+
+        while let Some(message) = stream.next().await {
+            match message {
+                Ok(msg) => {
+                    if let Some(UpdateOneof::Transaction(transaction)) = msg.update_oneof {
+                        let parser = JitoTransactionParser::new(transaction);
+
+                        info!("Instruction: {:?}", parser.programs);
+
+                        handler
+                            .send_notification(&parser)
+                            .await
+                            .map_err(|e| anyhow::anyhow!(e))?;
+                    }
+                }
+                Err(error) => {
+                    error!("stream error: {error:?}");
+                    break;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn send_notification(
