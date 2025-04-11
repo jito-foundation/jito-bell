@@ -65,7 +65,13 @@ impl JitoBellHandler {
                                                     .await
                                                 }
                                                 "slack" => {
-                                                    unimplemented!()
+                                                    info!("Will Send Slack Notification");
+                                                    self.send_slack_message(
+                                                        &instruction.notification.description,
+                                                        *minimum_pool_tokens_out,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await?
                                                 }
                                                 "discord" => {
                                                     info!("Will Send Discord Notification");
@@ -94,7 +100,12 @@ impl JitoBellHandler {
                                                     .await
                                                 }
                                                 "slack" => {
-                                                    unimplemented!()
+                                                    self.send_slack_message(
+                                                        &instruction.notification.description,
+                                                        *amount,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await?
                                                 }
                                                 "discord" => {
                                                     info!("Will Send Discord Notification");
@@ -209,6 +220,69 @@ impl JitoBellHandler {
                         e
                     )));
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Send message to Slack
+    async fn send_slack_message(
+        &self,
+        description: &str,
+        amount: f64,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
+        if let Some(slack_config) = &self.config.notifications.slack {
+            let webhook_url = &slack_config.webhook_url;
+
+            // Build a Slack message with blocks for better formatting
+            let payload = serde_json::json!({
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "New Transaction Detected"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": format!("*Description:* {}", description)
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {
+                                "type": "mrkdwn",
+                                "text": format!("*Amount:* {:.2} SOL", amount)
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": format!("*Transaction:* <https://explorer.solana.com/tx/{}|View on Explorer>", sig)
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .await
+                .map_err(|e| JitoBellError::Notification(format!("Slack request error: {}", e)))?;
+
+            if !response.status().is_success() {
+                return Err(JitoBellError::Notification(format!(
+                    "Failed to send Slack message: Status {}",
+                    response.status()
+                )));
             }
         }
 

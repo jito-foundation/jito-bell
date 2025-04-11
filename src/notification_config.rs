@@ -1,11 +1,10 @@
 use serde::Deserialize;
 
-// #[derive(Deserialize, Debug)]
-// struct SlackConfig {
-//     webhook_url: String,
-//     channel: String,
-// }
-//
+#[derive(Deserialize, Debug)]
+pub struct SlackConfig {
+    pub webhook_url: String,
+    pub channel: String,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct DiscordConfig {
@@ -20,7 +19,9 @@ pub struct TelegramConfig {
 
 #[derive(Deserialize, Debug)]
 pub struct NotificationConfig {
-    // slack: Option<SlackConfig>,
+    /// Slack notification configuration
+    pub slack: Option<SlackConfig>,
+
     /// Discord notification configuration
     pub discord: Option<DiscordConfig>,
 
