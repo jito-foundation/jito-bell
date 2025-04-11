@@ -63,7 +63,13 @@ impl JitoBellHandler {
                                                     unimplemented!()
                                                 }
                                                 "discord" => {
-                                                    unimplemented!()
+                                                    info!("Will Send Discord Notification");
+                                                    self.send_discord_message(
+                                                        &instruction.notification.description,
+                                                        *minimum_pool_tokens_out,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await
                                                 }
                                                 _ => {}
                                             }
@@ -86,7 +92,13 @@ impl JitoBellHandler {
                                                     unimplemented!()
                                                 }
                                                 "discord" => {
-                                                    unimplemented!()
+                                                    info!("Will Send Discord Notification");
+                                                    self.send_discord_message(
+                                                        &instruction.notification.description,
+                                                        *amount,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await
                                                 }
                                                 _ => {}
                                             }
@@ -136,32 +148,55 @@ impl JitoBellHandler {
 
     /// Send message to Discord
     async fn send_discord_message(&self, description: &str, amount: f64, sig: &str) {
-        if let Some(telegram_config) = &self.config.notifications.telegram {
-            let template = self
-                .config
-                .message_templates
-                .get("telegram")
-                .unwrap_or(self.config.message_templates.get("default").unwrap());
-            let message = template
-                .replace("{{description}}", description)
-                .replace("{{amount}}", &format!("{:.2}", amount))
-                .replace("{{tx_hash}}", sig);
+        if let Some(discord_config) = &self.config.notifications.discord {
+            let webhook_url = &discord_config.webhook_url;
 
-            let bot_token = &telegram_config.bot_token;
-            let chat_id = &telegram_config.chat_id;
+            // let template = self
+            //     .config
+            //     .message_templates
+            //     .get("discord")
+            //     .unwrap_or(self.config.message_templates.get("default").unwrap());
+            // let message = template
+            //     .replace("{{description}}", description)
+            //     .replace("{{amount}}", &format!("{:.2}", amount))
+            //     .replace("{{tx_hash}}", sig);
 
-            let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
+            let payload = serde_json::json!({
+                "embeds": [{
+                    "title": "New Transaction Detected",
+                    "description": description,
+                    "color": 3447003, // Blue color
+                    "fields": [
+                        {
+                            "name": "Amount",
+                            "value": format!("{:.2} SOL", amount),
+                            "inline": true
+                        },
+                        {
+                            "name": "Transaction",
+                            "value": format!("[View on Explorer](https://explorer.solana.com/tx/{})", sig),
+                            "inline": true
+                        }
+                    ],
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }]
+            });
 
             let client = reqwest::Client::new();
             let response = client
-                .post(&url)
-                .form(&[("chat_id", chat_id), ("text", &message)])
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
                 .send()
-                .await
-                .unwrap();
+                .await;
 
-            if !response.status().is_success() {
-                println!("Failed to send Telegram message: {:?}", response.status());
+            match response {
+                Ok(res) => {
+                    if !res.status().is_success() {
+                        println!("Failed to send Discord message: {:?}", res.status());
+                    }
+                }
+                Err(e) => println!("Error sending Discord message: {:?}", e),
             }
         }
     }

@@ -1753,6 +1753,7 @@ dependencies = [
  "maplit",
  "reqwest",
  "serde",
+ "serde_json",
  "serde_yaml",
  "solana-sdk",
  "spl-stake-pool",
