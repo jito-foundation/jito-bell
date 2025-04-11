@@ -1,12 +1,8 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    env,
-};
+use std::{collections::HashMap, env, path::PathBuf};
 
-use chrono::{DateTime, Utc};
 use clap::{Parser, ValueEnum};
 use futures::{sink::SinkExt, stream::StreamExt};
-use jito_bell::parser::JitoTransactionParser;
+use jito_bell::{parser::JitoTransactionParser, JitoBellHandler};
 use log::{error, info};
 use maplit::hashmap;
 use tonic::transport::channel::ClientTlsConfig;
@@ -53,6 +49,9 @@ struct Args {
     /// Filter required account in transactions
     #[clap(long)]
     account_required: Vec<String>,
+
+    #[clap(long)]
+    config_file: PathBuf,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -82,6 +81,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let args = Args::parse();
+    let handler = JitoBellHandler::new(args.config_file);
 
     let mut client = GeyserGrpcClient::build_from_shared(args.endpoint)?
         .x_token(args.x_token)?
@@ -114,7 +114,6 @@ async fn main() -> anyhow::Result<()> {
         })
         .await?;
 
-    let mut messages: BTreeMap<u64, (Option<DateTime<Utc>>, Vec<String>)> = BTreeMap::new();
     while let Some(message) = stream.next().await {
         match message {
             Ok(msg) => {
@@ -122,9 +121,9 @@ async fn main() -> anyhow::Result<()> {
                     Some(UpdateOneof::Transaction(transaction)) => {
                         let parser = JitoTransactionParser::new(transaction);
 
-                        info!("Transaction Signature: {:?}", parser.transaction_signature);
-                        info!("Instruction: {:?}", parser.instructions);
+                        info!("Instruction: {:?}", parser.programs);
 
+                        handler.send_notification(&parser).await;
                         // let sig = Signature::try_from(tx.signature.as_slice())
                         //     .expect("valid signature from transaction")
                         //     .to_string();

@@ -3,6 +3,7 @@ use std::str::FromStr;
 use ::borsh::BorshDeserialize;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
+    native_token::lamports_to_sol,
     pubkey::Pubkey,
 };
 use spl_stake_pool::instruction::StakePoolInstruction;
@@ -12,19 +13,19 @@ use yellowstone_grpc_proto::prelude::CompiledInstruction;
 pub enum SplStakePoolProgram {
     DepositStakeWithSlippage {
         ix: Instruction,
-        minimum_pool_tokens_out: u64,
+        minimum_pool_tokens_out: f64,
     },
     WithdrawStakeWithSlippage {
         ix: Instruction,
-        minimum_lamports_out: u64,
+        minimum_lamports_out: f64,
     },
     DepositSol {
         ix: Instruction,
-        amount: u64,
+        amount: f64,
     },
     WithdrawSol {
         ix: Instruction,
-        amount: u64,
+        amount: f64,
     },
 }
 
@@ -146,7 +147,7 @@ impl SplStakePoolProgram {
 
         SplStakePoolProgram::DepositStakeWithSlippage {
             ix,
-            minimum_pool_tokens_out,
+            minimum_pool_tokens_out: lamports_to_sol(minimum_pool_tokens_out),
         }
     }
 
@@ -199,7 +200,7 @@ impl SplStakePoolProgram {
 
         SplStakePoolProgram::WithdrawStakeWithSlippage {
             ix,
-            minimum_lamports_out,
+            minimum_lamports_out: lamports_to_sol(minimum_lamports_out),
         }
     }
 
@@ -246,7 +247,10 @@ impl SplStakePoolProgram {
             data: instruction.data.clone(),
         };
 
-        SplStakePoolProgram::DepositSol { ix, amount }
+        SplStakePoolProgram::DepositSol {
+            ix,
+            amount: lamports_to_sol(amount),
+        }
     }
 
     /// Parse Withdraw SOL Instruction
@@ -297,6 +301,9 @@ impl SplStakePoolProgram {
             data: instruction.data.clone(),
         };
 
-        SplStakePoolProgram::WithdrawSol { ix, amount }
+        SplStakePoolProgram::WithdrawSol {
+            ix,
+            amount: lamports_to_sol(amount),
+        }
     }
 }

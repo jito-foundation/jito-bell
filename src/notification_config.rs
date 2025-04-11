@@ -12,14 +12,14 @@ use serde::Deserialize;
 // }
 
 #[derive(Deserialize, Debug)]
-struct TelegramConfig {
-    bot_token: String,
-    chat_id: String,
+pub struct TelegramConfig {
+    pub bot_token: String,
+    pub chat_id: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct NotificationConfig {
+pub struct NotificationConfig {
     // slack: Option<SlackConfig>,
     // discord: Option<DiscordConfig>,
-    telegram: Option<TelegramConfig>,
+    pub telegram: Option<TelegramConfig>,
 }

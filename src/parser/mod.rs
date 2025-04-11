@@ -9,6 +9,14 @@ pub enum JitoBellProgram {
     SplStakePool(SplStakePoolProgram),
 }
 
+impl ToString for JitoBellProgram {
+    fn to_string(&self) -> String {
+        match self {
+            JitoBellProgram::SplStakePool(_) => "spl_stake_pool".to_string(),
+        }
+    }
+}
+
 /// Parse Transaction
 #[derive(Debug)]
 pub struct JitoTransactionParser {
