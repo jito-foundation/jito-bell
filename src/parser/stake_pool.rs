@@ -3,32 +3,50 @@ use std::str::FromStr;
 use ::borsh::BorshDeserialize;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
+    native_token::lamports_to_sol,
     pubkey::Pubkey,
 };
 use spl_stake_pool::instruction::StakePoolInstruction;
 use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
 #[derive(Debug)]
-pub enum JitoStakePool {
+pub enum SplStakePoolProgram {
     DepositStakeWithSlippage {
         ix: Instruction,
-        minimum_pool_tokens_out: u64,
+        minimum_pool_tokens_out: f64,
     },
     WithdrawStakeWithSlippage {
         ix: Instruction,
-        minimum_lamports_out: u64,
+        minimum_lamports_out: f64,
     },
     DepositSol {
         ix: Instruction,
-        amount: u64,
+        amount: f64,
     },
     WithdrawSol {
         ix: Instruction,
-        amount: u64,
+        amount: f64,
     },
 }
 
-impl JitoStakePool {
+impl std::fmt::Display for SplStakePoolProgram {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SplStakePoolProgram::DepositStakeWithSlippage {
+                ix: _,
+                minimum_pool_tokens_out: _,
+            } => write!(f, "deposit_stake_with_slippage"),
+            SplStakePoolProgram::WithdrawStakeWithSlippage {
+                ix: _,
+                minimum_lamports_out: _,
+            } => write!(f, "withdraw_stake_with_slippage"),
+            SplStakePoolProgram::DepositSol { ix: _, amount: _ } => write!(f, "deposit_sol"),
+            SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => write!(f, "withdraw_sol"),
+        }
+    }
+}
+
+impl SplStakePoolProgram {
     /// Retrieve Program ID of SPL Stake Pool Program
     pub fn program_id() -> Pubkey {
         Pubkey::from_str("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy").unwrap()
@@ -37,7 +55,7 @@ impl JitoStakePool {
     pub fn parse_jito_stake_pool_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
-    ) -> Option<JitoStakePool> {
+    ) -> Option<SplStakePoolProgram> {
         let stake_pool_ix = match StakePoolInstruction::try_from_slice(&instruction.data) {
             Ok(ix) => ix,
             Err(_) => return None,
@@ -98,7 +116,7 @@ impl JitoStakePool {
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
         minimum_pool_tokens_out: u64,
-    ) -> JitoStakePool {
+    ) -> SplStakePoolProgram {
         let mut account_metas = [
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
@@ -122,14 +140,14 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: JitoStakePool::program_id(),
+            program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
 
-        JitoStakePool::DepositStakeWithSlippage {
+        SplStakePoolProgram::DepositStakeWithSlippage {
             ix,
-            minimum_pool_tokens_out,
+            minimum_pool_tokens_out: lamports_to_sol(minimum_pool_tokens_out),
         }
     }
 
@@ -153,7 +171,7 @@ impl JitoStakePool {
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
         minimum_lamports_out: u64,
-    ) -> JitoStakePool {
+    ) -> SplStakePoolProgram {
         let mut account_metas = [
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
@@ -175,14 +193,14 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: JitoStakePool::program_id(),
+            program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
 
-        JitoStakePool::WithdrawStakeWithSlippage {
+        SplStakePoolProgram::WithdrawStakeWithSlippage {
             ix,
-            minimum_lamports_out,
+            minimum_lamports_out: lamports_to_sol(minimum_lamports_out),
         }
     }
 
@@ -204,7 +222,7 @@ impl JitoStakePool {
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
         amount: u64,
-    ) -> JitoStakePool {
+    ) -> SplStakePoolProgram {
         let mut account_metas = [
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
@@ -224,12 +242,15 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: JitoStakePool::program_id(),
+            program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
 
-        JitoStakePool::DepositSol { ix, amount }
+        SplStakePoolProgram::DepositSol {
+            ix,
+            amount: lamports_to_sol(amount),
+        }
     }
 
     /// Parse Withdraw SOL Instruction
@@ -253,7 +274,7 @@ impl JitoStakePool {
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
         amount: u64,
-    ) -> JitoStakePool {
+    ) -> SplStakePoolProgram {
         let mut account_metas = [
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
@@ -275,11 +296,14 @@ impl JitoStakePool {
         }
 
         let ix = Instruction {
-            program_id: JitoStakePool::program_id(),
+            program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
             data: instruction.data.clone(),
         };
 
-        JitoStakePool::WithdrawSol { ix, amount }
+        SplStakePoolProgram::WithdrawSol {
+            ix,
+            amount: lamports_to_sol(amount),
+        }
     }
 }
