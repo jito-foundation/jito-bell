@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
+use error::JitoBellError;
 use log::info;
 use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
 
 use crate::config::JitoBellConfig;
 
 pub mod config;
+mod error;
 pub mod instruction;
 pub mod notification_config;
 pub mod notification_info;
@@ -27,7 +29,10 @@ impl JitoBellHandler {
         Self { config }
     }
 
-    pub async fn send_notification(&self, parser: &JitoTransactionParser) {
+    pub async fn send_notification(
+        &self,
+        parser: &JitoTransactionParser,
+    ) -> Result<(), JitoBellError> {
         info!("Before Send notification");
         for program in &parser.programs {
             match program {
@@ -63,7 +68,13 @@ impl JitoBellHandler {
                                                     unimplemented!()
                                                 }
                                                 "discord" => {
-                                                    unimplemented!()
+                                                    info!("Will Send Discord Notification");
+                                                    self.send_discord_message(
+                                                        &instruction.notification.description,
+                                                        *minimum_pool_tokens_out,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await?
                                                 }
                                                 _ => {}
                                             }
@@ -86,7 +97,13 @@ impl JitoBellHandler {
                                                     unimplemented!()
                                                 }
                                                 "discord" => {
-                                                    unimplemented!()
+                                                    info!("Will Send Discord Notification");
+                                                    self.send_discord_message(
+                                                        &instruction.notification.description,
+                                                        *amount,
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await?
                                                 }
                                                 _ => {}
                                             }
@@ -100,8 +117,11 @@ impl JitoBellHandler {
                 }
             }
         }
+
+        Ok(())
     }
 
+    /// Send message to Telegram
     async fn send_telegram_message(&self, description: &str, amount: f64, sig: &str) {
         if let Some(telegram_config) = &self.config.notifications.telegram {
             let template = self
@@ -131,5 +151,67 @@ impl JitoBellHandler {
                 println!("Failed to send Telegram message: {:?}", response.status());
             }
         }
+    }
+
+    /// Send message to Discord
+    async fn send_discord_message(
+        &self,
+        description: &str,
+        amount: f64,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
+        if let Some(discord_config) = &self.config.notifications.discord {
+            let webhook_url = &discord_config.webhook_url;
+
+            let payload = serde_json::json!({
+                "embeds": [{
+                    "title": "New Transaction Detected",
+                    "description": description,
+                    "color": 3447003, // Blue color
+                    "fields": [
+                        {
+                            "name": "Amount",
+                            "value": format!("{:.2} SOL", amount),
+                            "inline": true
+                        },
+                        {
+                            "name": "Transaction",
+                            "value": format!("[View on Explorer](https://explorer.solana.com/tx/{})", sig),
+                            "inline": true
+                        }
+                    ],
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }]
+            });
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .await;
+
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        return Ok(());
+                    } else {
+                        return Err(JitoBellError::Notification(format!(
+                            "Failed to send Discord message: {:?}",
+                            res.status(),
+                        )));
+                    }
+                }
+                Err(e) => {
+                    return Err(JitoBellError::Notification(format!(
+                        "Error sending Discord message: {:?}",
+                        e
+                    )));
+                }
+            }
+        }
+
+        Ok(())
     }
 }
