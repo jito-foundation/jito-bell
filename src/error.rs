@@ -3,11 +3,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum JitoBellError {
     #[error("Transaction parse error: {0}")]
-    TransactionParseError(String),
+    TransactionParse(String),
 
     #[error("Notification error: {0}")]
-    NotificationError(String),
+    Notification(String),
 
     #[error("Network error: {0}")]
-    NetworkError(#[from] reqwest::Error),
+    Network(#[from] reqwest::Error),
 }

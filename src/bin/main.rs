@@ -1,6 +1,5 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use futures::{sink::SinkExt, stream::StreamExt};
 use jito_bell::{parser::JitoTransactionParser, JitoBellHandler};

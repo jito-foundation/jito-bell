@@ -197,14 +197,14 @@ impl JitoBellHandler {
                     if res.status().is_success() {
                         return Ok(());
                     } else {
-                        return Err(JitoBellError::NotificationError(format!(
+                        return Err(JitoBellError::Notification(format!(
                             "Failed to send Discord message: {:?}",
                             res.status(),
                         )));
                     }
                 }
                 Err(e) => {
-                    return Err(JitoBellError::NotificationError(format!(
+                    return Err(JitoBellError::Notification(format!(
                         "Error sending Discord message: {:?}",
                         e
                     )));
