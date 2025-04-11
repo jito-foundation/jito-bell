@@ -151,16 +151,6 @@ impl JitoBellHandler {
         if let Some(discord_config) = &self.config.notifications.discord {
             let webhook_url = &discord_config.webhook_url;
 
-            // let template = self
-            //     .config
-            //     .message_templates
-            //     .get("discord")
-            //     .unwrap_or(self.config.message_templates.get("default").unwrap());
-            // let message = template
-            //     .replace("{{description}}", description)
-            //     .replace("{{amount}}", &format!("{:.2}", amount))
-            //     .replace("{{tx_hash}}", sig);
-
             let payload = serde_json::json!({
                 "embeds": [{
                     "title": "New Transaction Detected",
