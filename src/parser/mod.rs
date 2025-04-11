@@ -1,12 +1,12 @@
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
-use stake_pool::JitoStakePool;
+use stake_pool::SplStakePoolProgram;
 use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
-mod stake_pool;
+pub mod stake_pool;
 
 #[derive(Debug)]
-pub enum JitoInstruction {
-    JitoStakePool(JitoStakePool),
+pub enum JitoBellProgram {
+    SplStakePool(SplStakePoolProgram),
 }
 
 /// Parse Transaction
@@ -16,7 +16,7 @@ pub struct JitoTransactionParser {
     pub transaction_signature: String,
 
     /// Instructions
-    pub instructions: Vec<JitoInstruction>,
+    pub programs: Vec<JitoBellProgram>,
 }
 
 impl JitoTransactionParser {
@@ -24,7 +24,7 @@ impl JitoTransactionParser {
     ///
     pub fn new(transaction: SubscribeUpdateTransaction) -> Self {
         let mut transaction_signature = String::new();
-        let mut instructions = Vec::new();
+        let mut programs = Vec::new();
 
         if let Some(tx) = transaction.transaction {
             if let Some(tx) = tx.transaction {
@@ -47,11 +47,11 @@ impl JitoTransactionParser {
 
                     for instruction in &msg.instructions {
                         let program_id = &pubkeys[instruction.program_id_index as usize];
-                        if program_id.eq(&JitoStakePool::program_id()) {
+                        if program_id.eq(&SplStakePoolProgram::program_id()) {
                             if let Some(ix_info) =
-                                JitoStakePool::parse_jito_stake_pool_ix(instruction, &pubkeys)
+                                SplStakePoolProgram::parse_jito_stake_pool_ix(instruction, &pubkeys)
                             {
-                                instructions.push(JitoInstruction::JitoStakePool(ix_info));
+                                programs.push(JitoBellProgram::SplStakePool(ix_info));
                             }
                         }
                     }
@@ -61,7 +61,7 @@ impl JitoTransactionParser {
 
         Self {
             transaction_signature,
-            instructions,
+            programs,
         }
     }
 }

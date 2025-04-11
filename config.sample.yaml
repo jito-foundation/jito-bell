@@ -1,0 +1,41 @@
+programs:
+  spl_stake_pool:
+    program_id: "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
+    instructions:
+      deposit_stake:
+        threshold: 1000.0  # SOL
+        notification:
+          description: "Large JitoSOL stake deposit detected"
+          destinations: ["telegram"]
+      withdraw_stake:
+        threshold: 1000.0  # SOL
+        notification:
+          description: "Large JitoSOL stake withdrawal detected"
+          destinations: ["telegram"]
+      deposit_sol:
+        threshold: 1000.0  # SOL
+        notification:
+          description: "Large SOL deposit to JitoSOL detected"
+          destinations: ["telegram"]
+      withdraw_sol:
+        threshold: 1000.0  # SOL
+        notification:
+          description: "Large SOL withdrawal from JitoSOL detected"
+          destinations: ["telegram"]
+  
+notifications:
+  slack:
+    webhook_url: "https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX"
+    channel: "#jito-alerts"
+  
+  discord:
+    webhook_url: "https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  
+  telegram:
+    bot_token: "0123456789:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    chat_id: "-1001234567890"
+
+message_templates:
+  default: "{{description}} - Amount: {{amount}} SOL - Tx: https://explorer.solana.com/tx/{{tx_hash}}"
+  slack: "<!here> {{description}} - Amount: {{amount}} SOL - <https://explorer.solana.com/tx/{{tx_hash}}|View Transaction>"
+  discord: "@here {{description}} - Amount: {{amount}} SOL - [View Transaction](https://explorer.solana.com/tx/{{tx_hash}})"
