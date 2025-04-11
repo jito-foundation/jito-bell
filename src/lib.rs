@@ -102,7 +102,40 @@ impl JitoBellHandler {
         }
     }
 
+    /// Send message to Telegram
     async fn send_telegram_message(&self, description: &str, amount: f64, sig: &str) {
+        if let Some(telegram_config) = &self.config.notifications.telegram {
+            let template = self
+                .config
+                .message_templates
+                .get("telegram")
+                .unwrap_or(self.config.message_templates.get("default").unwrap());
+            let message = template
+                .replace("{{description}}", description)
+                .replace("{{amount}}", &format!("{:.2}", amount))
+                .replace("{{tx_hash}}", sig);
+
+            let bot_token = &telegram_config.bot_token;
+            let chat_id = &telegram_config.chat_id;
+
+            let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(&url)
+                .form(&[("chat_id", chat_id), ("text", &message)])
+                .send()
+                .await
+                .unwrap();
+
+            if !response.status().is_success() {
+                println!("Failed to send Telegram message: {:?}", response.status());
+            }
+        }
+    }
+
+    /// Send message to Discord
+    async fn send_discord_message(&self, description: &str, amount: f64, sig: &str) {
         if let Some(telegram_config) = &self.config.notifications.telegram {
             let template = self
                 .config
