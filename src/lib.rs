@@ -43,7 +43,7 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
             .x_token(subscribe_option.x_token.clone())?
-            .tls_config(ClientTlsConfig::new().with_native_roots())?
+            .tls_config(ClientTlsConfig::new())?
             .connect()
             .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
@@ -66,7 +66,6 @@ impl JitoBellHandler {
             commitment: Some(subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
-            from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
