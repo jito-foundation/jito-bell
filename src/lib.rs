@@ -5,11 +5,11 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use log::{error, info};
 use maplit::hashmap;
 use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
+use subscribe_option::SubscribeOption;
 use tonic::transport::channel::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::prelude::{
-    subscribe_update::UpdateOneof, CommitmentLevel, SubscribeRequest,
-    SubscribeRequestFilterTransactions,
+    subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
 };
 
 use crate::config::JitoBellConfig;
@@ -29,46 +29,57 @@ pub struct JitoBellHandler {
 }
 
 impl JitoBellHandler {
-    pub fn new(config_path: PathBuf) -> Self {
-        let config_str = std::fs::read_to_string(config_path).expect("Failed to read config file");
+    pub fn new(config_path: PathBuf) -> Result<Self, JitoBellError> {
+        let config_str = std::fs::read_to_string(&config_path).map_err(|e| JitoBellError::Io(e))?;
 
-        let config: JitoBellConfig =
-            serde_yaml::from_str(&config_str).expect("Failed to parse config");
+        let config: JitoBellConfig = serde_yaml::from_str(&config_str).map_err(|e| {
+            JitoBellError::Config(format!(
+                "Failed to parse config at {}:{}",
+                config_path.display(),
+                e
+            ))
+        })?;
 
-        Self { config }
+        Ok(Self { config })
     }
 
-    pub fn heart_beat(&self, endpoint: &str, x_token: &str) -> Result<(), JitoBellError> {
-        let mut client = GeyserGrpcClient::build_from_shared(endpoint)?
-            .x_token(x_token)?
+    pub async fn heart_beat(
+        &self,
+        subscribe_option: &SubscribeOption,
+    ) -> Result<(), JitoBellError> {
+        let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
+            .x_token(subscribe_option.x_token.clone())?
             .tls_config(ClientTlsConfig::new().with_native_roots())?
             .connect()
             .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
 
-        let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
-        subscribe_tx
-            .send(SubscribeRequest {
-                slots: HashMap::new(),
-                accounts: HashMap::new(),
-                transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
-                    vote: args.vote,
-                    failed: args.failed,
-                    signature: args.signature.clone(),
-                    account_include: args.account_include,
-                    account_exclude: args.account_exclude,
-                    account_required: args.account_required,
-                } },
-                transactions_status: HashMap::new(),
-                entry: HashMap::new(),
-                blocks: HashMap::new(),
-                blocks_meta: HashMap::new(),
-                commitment: Some(commitment as i32),
-                accounts_data_slice: vec![],
-                ping: None,
-                from_slot: None,
-            })
-            .await?;
+        let subscribe_request = SubscribeRequest {
+            slots: HashMap::new(),
+            accounts: HashMap::new(),
+            transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
+                vote: subscribe_option.vote,
+                failed: subscribe_option.failed,
+                signature: subscribe_option.signature.clone(),
+                account_include: subscribe_option.account_include.clone(),
+                account_exclude: subscribe_option.account_exclude.clone(),
+                account_required: subscribe_option.account_required.clone(),
+            } },
+            transactions_status: HashMap::new(),
+            entry: HashMap::new(),
+            blocks: HashMap::new(),
+            blocks_meta: HashMap::new(),
+            commitment: Some(subscribe_option.commitment as i32),
+            accounts_data_slice: vec![],
+            ping: None,
+            from_slot: None,
+        };
+        if let Err(e) = subscribe_tx.send(subscribe_request).await {
+            return Err(JitoBellError::Susbscription(format!(
+                "Failed to send subscription request: {}",
+                e
+            )));
+        }
 
         while let Some(message) = stream.next().await {
             match message {
@@ -78,10 +89,7 @@ impl JitoBellHandler {
 
                         info!("Instruction: {:?}", parser.programs);
 
-                        handler
-                            .send_notification(&parser)
-                            .await
-                            .map_err(|e| anyhow::anyhow!(e))?;
+                        self.send_notification(&parser).await?;
                     }
                 }
                 Err(error) => {
