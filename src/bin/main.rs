@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use clap::{Parser, ValueEnum};
 use jito_bell::{subscribe_option::SubscribeOption, JitoBellHandler};
-use log::{debug, info};
+use log::info;
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
 
 #[derive(Debug, Clone, Parser)]
@@ -76,7 +76,6 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     info!("Starting Jito Bell with endpoint: {}", args.endpoint);
-    debug!("Command line arguments: {:?}", args);
 
     let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
     let subscribe_option = SubscribeOption::new(
@@ -90,6 +89,8 @@ async fn main() -> anyhow::Result<()> {
         args.account_exclude,
         args.account_required,
     );
+
+    info!("Subscription configuration:\n{}", subscribe_option);
 
     let handler = JitoBellHandler::new(args.config_file)?;
 
