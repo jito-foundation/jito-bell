@@ -25,7 +25,7 @@ pub enum JitoBellError {
     GeyserGrpcClient(#[from] GeyserGrpcClientError),
 
     #[error("Subscription Error: {0}")]
-    Susbscription(String),
+    Subscription(String),
 }
 
 // For serde_yaml errors

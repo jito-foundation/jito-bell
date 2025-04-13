@@ -32,13 +32,7 @@ impl JitoBellHandler {
     pub fn new(config_path: PathBuf) -> Result<Self, JitoBellError> {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
-        let config: JitoBellConfig = serde_yaml::from_str(&config_str).map_err(|e| {
-            JitoBellError::Config(format!(
-                "Failed to parse config at {}:{}",
-                config_path.display(),
-                e
-            ))
-        })?;
+        let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
 
         Ok(Self { config })
     }
@@ -75,7 +69,7 @@ impl JitoBellHandler {
             from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
-            return Err(JitoBellError::Susbscription(format!(
+            return Err(JitoBellError::Subscription(format!(
                 "Failed to send subscription request: {}",
                 e
             )));

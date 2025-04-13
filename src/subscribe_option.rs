@@ -19,7 +19,7 @@ pub struct SubscribeOption {
     /// Signature
     pub signature: Option<String>,
 
-    /// Acount include
+    /// Account include
     pub account_include: Vec<String>,
 
     /// Account exclude
