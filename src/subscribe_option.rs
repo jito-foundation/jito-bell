@@ -30,6 +30,7 @@ pub struct SubscribeOption {
 }
 
 impl SubscribeOption {
+    #[allow(clippy::too_many_arguments)]
     pub const fn new(
         endpoint: String,
         x_token: Option<String>,

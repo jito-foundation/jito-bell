@@ -30,7 +30,7 @@ pub struct JitoBellHandler {
 
 impl JitoBellHandler {
     pub fn new(config_path: PathBuf) -> Result<Self, JitoBellError> {
-        let config_str = std::fs::read_to_string(&config_path).map_err(|e| JitoBellError::Io(e))?;
+        let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str).map_err(|e| {
             JitoBellError::Config(format!(
