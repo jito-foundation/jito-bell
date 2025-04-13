@@ -34,12 +34,3 @@ impl From<serde_yaml::Error> for JitoBellError {
         JitoBellError::Config(err.to_string())
     }
 }
-
-// For tonic transport errors
-// impl From<GeyserGrpcClientError> for JitoBellError {
-//     fn from(err: GeyserGrpcClientError) -> Self {
-//         // This depends on whether GeyserGrpcBuilderError already wraps tonic::transport::Error
-//         // If not, we can directly convert to an appropriate error type
-//         JitoBellError::GeyserGrpcClient(GeyserGrpcClientError::GeyserGrpcClient)
-//     }
-// }
