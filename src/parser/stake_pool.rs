@@ -11,11 +11,10 @@ use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
 #[derive(Debug)]
 pub enum SplStakePoolProgram {
-    DepositStakeWithSlippage {
+    DepositStake {
         ix: Instruction,
-        minimum_pool_tokens_out: f64,
     },
-    WithdrawStakeWithSlippage {
+    WithdrawStake {
         ix: Instruction,
         minimum_lamports_out: f64,
     },
@@ -32,11 +31,8 @@ pub enum SplStakePoolProgram {
 impl std::fmt::Display for SplStakePoolProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SplStakePoolProgram::DepositStakeWithSlippage {
-                ix: _,
-                minimum_pool_tokens_out: _,
-            } => write!(f, "deposit_stake_with_slippage"),
-            SplStakePoolProgram::WithdrawStakeWithSlippage {
+            SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake_with_slippage"),
+            SplStakePoolProgram::WithdrawStake {
                 ix: _,
                 minimum_lamports_out: _,
             } => write!(f, "withdraw_stake_with_slippage"),
@@ -62,21 +58,12 @@ impl SplStakePoolProgram {
         };
 
         match stake_pool_ix {
-            StakePoolInstruction::DepositStakeWithSlippage {
-                minimum_pool_tokens_out,
-            } => Some(Self::parse_deposit_stake_with_slippage_ix(
-                instruction,
-                account_keys,
-                minimum_pool_tokens_out,
-            )),
-            StakePoolInstruction::WithdrawStakeWithSlippage {
-                pool_tokens_in: _,
-                minimum_lamports_out,
-            } => Some(Self::parse_withdraw_stake_with_slippage_ix(
-                instruction,
-                account_keys,
-                minimum_lamports_out,
-            )),
+            StakePoolInstruction::DepositStake => {
+                Some(Self::parse_deposit_stake_ix(instruction, account_keys))
+            }
+            StakePoolInstruction::WithdrawStake(amount) => Some(
+                Self::parse_withdraw_stake_with_slippage_ix(instruction, account_keys, amount),
+            ),
             StakePoolInstruction::DepositSol(amount) => Some(Self::parse_deposit_sol_ix(
                 instruction,
                 account_keys,
@@ -90,8 +77,8 @@ impl SplStakePoolProgram {
             _ => None,
         }
     }
-    /// Parse Deposit Stake With Slippage Instruction
-    /// https://github.com/solana-program/stake-pool/blob/4ad88c05c567d47cbf4f3ea7e6cb765e15b336b9/program/src/instruction.rs#L1834C1-L1845C64
+    /// Parse Deposit Stake Instruction
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L271-L289
     ///
     ///   0. `[w]` Stake pool
     ///   1. `[w]` Validator stake list storage account
@@ -112,25 +99,24 @@ impl SplStakePoolProgram {
     ///   12. '[]' Sysvar stake history account
     ///   13. `[]` Pool token program id,
     ///   14. `[]` Stake program id,
-    fn parse_deposit_stake_with_slippage_ix(
+    fn parse_deposit_stake_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
-        minimum_pool_tokens_out: u64,
     ) -> SplStakePoolProgram {
         let mut account_metas = [
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
@@ -145,10 +131,7 @@ impl SplStakePoolProgram {
             data: instruction.data.clone(),
         };
 
-        SplStakePoolProgram::DepositStakeWithSlippage {
-            ix,
-            minimum_pool_tokens_out: lamports_to_sol(minimum_pool_tokens_out),
-        }
+        SplStakePoolProgram::DepositStake { ix }
     }
 
     /// Parse Withdraw Stake With Slippage Instruction
@@ -198,7 +181,7 @@ impl SplStakePoolProgram {
             data: instruction.data.clone(),
         };
 
-        SplStakePoolProgram::WithdrawStakeWithSlippage {
+        SplStakePoolProgram::WithdrawStake {
             ix,
             minimum_lamports_out: lamports_to_sol(minimum_lamports_out),
         }

@@ -29,7 +29,6 @@ pub struct JitoTransactionParser {
 
 impl JitoTransactionParser {
     /// Construct new parser
-    ///
     pub fn new(transaction: SubscribeUpdateTransaction) -> Self {
         let mut transaction_signature = String::new();
         let mut programs = Vec::new();

@@ -112,46 +112,46 @@ impl JitoBellHandler {
                         {
                             info!("Found Instruction");
                             match spl_stake_program {
-                                SplStakePoolProgram::DepositStakeWithSlippage {
-                                    ix: _,
-                                    minimum_pool_tokens_out,
-                                } => {
+                                SplStakePoolProgram::DepositStake { ix: _ } => {
                                     info!("Found Instruction2");
-                                    if *minimum_pool_tokens_out >= instruction.threshold {
-                                        info!("Will Send Notification");
-                                        for destination in &instruction.notification.destinations {
-                                            match destination.as_str() {
-                                                "telegram" => {
-                                                    info!("Will Send Telegram Notification");
-                                                    self.send_telegram_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await
-                                                }
-                                                "slack" => {
-                                                    info!("Will Send Slack Notification");
-                                                    self.send_slack_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                "discord" => {
-                                                    info!("Will Send Discord Notification");
-                                                    self.send_discord_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                _ => {}
+                                    // if *minimum_pool_tokens_out >= instruction.threshold {
+                                    info!("Will Send Notification");
+                                    for destination in &instruction.notification.destinations {
+                                        match destination.as_str() {
+                                            "telegram" => {
+                                                info!("Will Send Telegram Notification");
+                                                // TODO:
+                                                self.send_telegram_message(
+                                                    &instruction.notification.description,
+                                                    100.0,
+                                                    &parser.transaction_signature,
+                                                )
+                                                .await
                                             }
+                                            "slack" => {
+                                                info!("Will Send Slack Notification");
+                                                // TODO:
+                                                self.send_slack_message(
+                                                    &instruction.notification.description,
+                                                    100.0,
+                                                    &parser.transaction_signature,
+                                                )
+                                                .await?
+                                            }
+                                            "discord" => {
+                                                info!("Will Send Discord Notification");
+                                                // TODO:
+                                                self.send_discord_message(
+                                                    &instruction.notification.description,
+                                                    100.0,
+                                                    &parser.transaction_signature,
+                                                )
+                                                .await?
+                                            }
+                                            _ => {}
                                         }
                                     }
+                                    // }
                                 }
                                 SplStakePoolProgram::DepositSol { ix: _, amount } => {
                                     if *amount >= instruction.threshold {
