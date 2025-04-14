@@ -1,18 +1,22 @@
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use stake_pool::SplStakePoolProgram;
+use token_2022::SplToken2022Program;
 use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
 pub mod stake_pool;
+pub mod token_2022;
 
 #[derive(Debug)]
 pub enum JitoBellProgram {
     SplStakePool(SplStakePoolProgram),
+    SplToken2022(SplToken2022Program),
 }
 
 impl std::fmt::Display for JitoBellProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             JitoBellProgram::SplStakePool(_) => write!(f, "spl_stake_pool"),
+            JitoBellProgram::SplToken2022(_) => write!(f, "spl-token-2022"),
         }
     }
 }
@@ -64,6 +68,16 @@ impl JitoTransactionParser {
                                     )
                                 {
                                     programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                }
+                            }
+                            program_id if program_id.eq(&SplToken2022Program::program_id()) => {
+                                if let Some(ix_info) =
+                                    SplToken2022Program::parse_spl_token_2022_program(
+                                        instruction,
+                                        &pubkeys,
+                                    )
+                                {
+                                    programs.push(JitoBellProgram::SplToken2022(ix_info));
                                 }
                             }
                             _ => continue,

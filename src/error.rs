@@ -1,3 +1,4 @@
+use spl_stake_pool::solana_program;
 use thiserror::Error;
 use yellowstone_grpc_client::{GeyserGrpcBuilderError, GeyserGrpcClientError};
 
@@ -26,6 +27,12 @@ pub enum JitoBellError {
 
     #[error("Subscription Error: {0}")]
     Subscription(String),
+
+    #[error("Solana program error: {0}")]
+    SolanaProgram(#[from] solana_program::program_error::ProgramError),
+
+    #[error("Solana RPC Client error: {0}")]
+    SolanaRpcClient(#[from] solana_rpc_client_api::client_error::Error),
 }
 
 // For serde_yaml errors
