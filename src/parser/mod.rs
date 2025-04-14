@@ -5,6 +5,7 @@ use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
 pub mod stake_pool;
 pub mod token_2022;
+pub mod vault;
 
 #[derive(Debug)]
 pub enum JitoBellProgram {
