@@ -227,7 +227,7 @@ impl JitoBellHandler {
 
                 if pool_mint_info.pubkey.eq(&pool_mint) {
                     for threshold in instruction.thresholds.iter() {
-                        if *minimum_lamports_out > threshold.value {
+                        if *minimum_lamports_out >= threshold.value {
                             self.dispatch_platform_notifications(
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
