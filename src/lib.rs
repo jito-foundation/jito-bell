@@ -31,10 +31,10 @@ pub mod subscribe_option;
 
 pub struct JitoBellHandler {
     /// Configuration for Notification
-    config: JitoBellConfig,
+    pub config: JitoBellConfig,
 
     /// RPC Client
-    rpc_client: RpcClient,
+    pub rpc_client: RpcClient,
 }
 
 impl JitoBellHandler {
