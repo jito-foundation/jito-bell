@@ -9,6 +9,7 @@ use solana_sdk::{
 use spl_stake_pool::instruction::StakePoolInstruction;
 use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
+/// SPL Stake Pool Program
 #[derive(Debug)]
 pub enum SplStakePoolProgram {
     DepositStake {
@@ -31,11 +32,11 @@ pub enum SplStakePoolProgram {
 impl std::fmt::Display for SplStakePoolProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake_with_slippage"),
+            SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake"),
             SplStakePoolProgram::WithdrawStake {
                 ix: _,
                 minimum_lamports_out: _,
-            } => write!(f, "withdraw_stake_with_slippage"),
+            } => write!(f, "withdraw_stake"),
             SplStakePoolProgram::DepositSol { ix: _, amount: _ } => write!(f, "deposit_sol"),
             SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => write!(f, "withdraw_sol"),
         }
@@ -48,8 +49,8 @@ impl SplStakePoolProgram {
         Pubkey::from_str("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy").unwrap()
     }
 
-    /// Parse SPL Stake Pool Instruction
-    pub fn parse_jito_stake_pool_ix(
+    /// Parse SPL Stake Pool program
+    pub fn parse_spl_stake_pool_program(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
     ) -> Option<SplStakePoolProgram> {
@@ -62,9 +63,11 @@ impl SplStakePoolProgram {
             StakePoolInstruction::DepositStake => {
                 Some(Self::parse_deposit_stake_ix(instruction, account_keys))
             }
-            StakePoolInstruction::WithdrawStake(amount) => Some(
-                Self::parse_withdraw_stake_with_slippage_ix(instruction, account_keys, amount),
-            ),
+            StakePoolInstruction::WithdrawStake(amount) => Some(Self::parse_withdraw_stake_ix(
+                instruction,
+                account_keys,
+                amount,
+            )),
             StakePoolInstruction::DepositSol(amount) => Some(Self::parse_deposit_sol_ix(
                 instruction,
                 account_keys,
@@ -136,14 +139,14 @@ impl SplStakePoolProgram {
         SplStakePoolProgram::DepositStake { ix }
     }
 
-    /// Parse Withdraw Stake With Slippage Instruction
-    /// https://github.com/solana-program/stake-pool/blob/4ad88c05c567d47cbf4f3ea7e6cb765e15b336b9/program/src/instruction.rs#L671-L683
+    /// Parse Withdraw Stake Instruction
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L313C1-L325C36
     ///
     ///   0. `[w]` Stake pool
     ///   1. `[w]` Validator stake list storage account
     ///   2. `[]` Stake pool withdraw authority
     ///   3. `[w]` Validator or reserve stake account to split
-    ///   4. `[w]` Uninitialized stake account to receive withdrawal
+    ///   4. `[w]` Unitialized stake account to receive withdrawal
     ///   5. `[]` User account to set as a new withdraw authority
     ///   6. `[s]` User transfer authority, for pool token account
     ///   7. `[w]` User account with pool tokens to burn from
@@ -152,25 +155,25 @@ impl SplStakePoolProgram {
     ///  10. `[]` Sysvar clock account (required)
     ///  11. `[]` Pool token program id
     ///  12. `[]` Stake program id,
-    fn parse_withdraw_stake_with_slippage_ix(
+    fn parse_withdraw_stake_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
         minimum_lamports_out: u64,
     ) -> SplStakePoolProgram {
         let mut account_metas = [
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
@@ -190,7 +193,7 @@ impl SplStakePoolProgram {
     }
 
     /// Parse Deposit SOL Instruction
-    /// https://github.com/solana-program/stake-pool/blob/4ad88c05c567d47cbf4f3ea7e6cb765e15b336b9/program/src/instruction.rs#L367C1-L377C64
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L357C1-L367C64
     ///
     ///   0. `[w]` Stake pool
     ///   1. `[]` Stake pool withdraw authority
@@ -209,17 +212,17 @@ impl SplStakePoolProgram {
         amount: u64,
     ) -> SplStakePoolProgram {
         let mut account_metas = [
+            AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
@@ -239,7 +242,7 @@ impl SplStakePoolProgram {
     }
 
     /// Parse Withdraw SOL Instruction
-    /// https://github.com/solana-program/stake-pool/blob/4ad88c05c567d47cbf4f3ea7e6cb765e15b336b9/program/src/instruction.rs#L391-L404
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L381C1-L394C64
     ///
     ///   0. `[w]` Stake pool
     ///   1. `[]` Stake pool withdraw authority
@@ -261,19 +264,19 @@ impl SplStakePoolProgram {
         amount: u64,
     ) -> SplStakePoolProgram {
         let mut account_metas = [
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {

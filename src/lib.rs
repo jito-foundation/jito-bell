@@ -30,6 +30,7 @@ pub struct JitoBellHandler {
 }
 
 impl JitoBellHandler {
+    /// Initialize Jito Bell Handler
     pub fn new(config_path: PathBuf) -> Result<Self, JitoBellError> {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
@@ -38,6 +39,7 @@ impl JitoBellHandler {
         Ok(Self { config })
     }
 
+    /// Start heart beating
     pub async fn heart_beat(
         &self,
         subscribe_option: &SubscribeOption,
@@ -87,7 +89,7 @@ impl JitoBellHandler {
                     }
                 }
                 Err(error) => {
-                    error!("stream error: {error:?}");
+                    error!("Stream error: {error:?}");
                     break;
                 }
             }
@@ -96,6 +98,7 @@ impl JitoBellHandler {
         Ok(())
     }
 
+    /// Send notification
     pub async fn send_notification(
         &self,
         parser: &JitoTransactionParser,
@@ -189,6 +192,7 @@ impl JitoBellHandler {
         Ok(())
     }
 
+    /// Dispatch platform notifications
     async fn dispatch_platform_notifications(
         &self,
         destinations: &[String],
