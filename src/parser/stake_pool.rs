@@ -12,6 +12,15 @@ use yellowstone_grpc_proto::prelude::CompiledInstruction;
 /// SPL Stake Pool Program
 #[derive(Debug)]
 pub enum SplStakePoolProgram {
+    Initialize,
+    AddValidatorToPool,
+    RemoveValidatorFromPool,
+    DecreaseValidatorStake,
+    IncreaseValidatorStake,
+    SetPreferredValidator,
+    UpdateValidatorListBalance,
+    UpdateStakePoolBalance,
+    CleanupRemovedValidatorEntries,
     DepositStake {
         ix: Instruction,
     },
@@ -19,26 +28,77 @@ pub enum SplStakePoolProgram {
         ix: Instruction,
         minimum_lamports_out: f64,
     },
+    SetManager,
+    SetFee,
+    SetStaker,
     DepositSol {
         ix: Instruction,
         amount: f64,
     },
+    SetFundingAuthority,
     WithdrawSol {
         ix: Instruction,
         amount: f64,
     },
+    CreateTokenMetadata,
+    UpdateTokenMetadata,
+    IncreaseAdditionalValidatorStake,
+    DecreaseAdditionalValidatorStake,
+    DecreaseValidatorStakeWithReserve,
+    Redelegate,
+    DepositStakeWithSlippage,
+    WithdrawStakeWithSlippage,
+    DepositSolWithSlippage,
+    WithdrawSolWithSlippage,
 }
 
 impl std::fmt::Display for SplStakePoolProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            SplStakePoolProgram::Initialize => write!(f, "initialize"),
+            SplStakePoolProgram::AddValidatorToPool => write!(f, "add_validator_pool"),
+            SplStakePoolProgram::RemoveValidatorFromPool => write!(f, "remove_validator_from_pool"),
+            SplStakePoolProgram::DecreaseValidatorStake => write!(f, "decrease_validator_stake"),
+            SplStakePoolProgram::IncreaseValidatorStake => write!(f, "increase_validator_stake"),
+            SplStakePoolProgram::SetPreferredValidator => write!(f, "set_preferred_validator"),
+            SplStakePoolProgram::UpdateValidatorListBalance => {
+                write!(f, "update_validator_list_balance")
+            }
+            SplStakePoolProgram::UpdateStakePoolBalance => write!(f, "update_stake_pool_balance"),
+            SplStakePoolProgram::CleanupRemovedValidatorEntries => {
+                write!(f, "cleanup_removed_validator_entries")
+            }
             SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake"),
             SplStakePoolProgram::WithdrawStake {
                 ix: _,
                 minimum_lamports_out: _,
             } => write!(f, "withdraw_stake"),
+            SplStakePoolProgram::SetManager => write!(f, "set_manager"),
+            SplStakePoolProgram::SetFee => write!(f, "set_fee"),
+            SplStakePoolProgram::SetStaker => write!(f, "set_staker"),
             SplStakePoolProgram::DepositSol { ix: _, amount: _ } => write!(f, "deposit_sol"),
+            SplStakePoolProgram::SetFundingAuthority => write!(f, "set_funding_authority"),
             SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => write!(f, "withdraw_sol"),
+            SplStakePoolProgram::CreateTokenMetadata => write!(f, "create_token_metadata"),
+            SplStakePoolProgram::UpdateTokenMetadata => write!(f, "update_token_metadata"),
+            SplStakePoolProgram::IncreaseAdditionalValidatorStake => {
+                write!(f, "increase_additional_validator_stake")
+            }
+            SplStakePoolProgram::DecreaseAdditionalValidatorStake => {
+                write!(f, "decrease_additional_validator_stake")
+            }
+            SplStakePoolProgram::DecreaseValidatorStakeWithReserve => {
+                write!(f, "decrease_validator_stake_with_reserve")
+            }
+            SplStakePoolProgram::Redelegate => write!(f, "redelegate"),
+            SplStakePoolProgram::DepositStakeWithSlippage => {
+                write!(f, "deposit_stake_with_slippage")
+            }
+            SplStakePoolProgram::WithdrawStakeWithSlippage => {
+                write!(f, "withdraw_stake_with_slippage")
+            }
+            SplStakePoolProgram::DepositSolWithSlippage => write!(f, "deposit_sol_with_slippage"),
+            SplStakePoolProgram::WithdrawSolWithSlippage => write!(f, "withdraw_sol_with_slippage"),
         }
     }
 }

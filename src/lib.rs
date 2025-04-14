@@ -138,20 +138,6 @@ impl JitoBellHandler {
                 }
                 JitoBellProgram::SplToken2022(_) => {
                     info!("Token 2022");
-                    // if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                    //     // info!("Found Program Config");
-                    //     if let Some(instruction) = program_config
-                    //         .instructions
-                    //         .get(&spl_stake_program.to_string())
-                    //     {
-                    //         self.handle_spl_stake_pool_program(
-                    //             parser,
-                    //             spl_stake_program,
-                    //             instruction,
-                    //         )
-                    //         .await?;
-                    //     }
-                    // }
                 }
             }
         }
@@ -166,13 +152,10 @@ impl JitoBellHandler {
         spl_stake_program: &SplStakePoolProgram,
         instruction: &Instruction,
     ) -> Result<(), JitoBellError> {
-        info!("Found Instruction");
+        info!("SPL Stake Program: {}", spl_stake_program);
+
         match spl_stake_program {
             SplStakePoolProgram::DepositStake { ix } => {
-                info!("Deposit Stake");
-                // if *minimum_pool_tokens_out >= instruction.threshold {
-                // TODO: Change Amount
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _stake_deposit_authority_info = &ix.accounts[2];
@@ -184,26 +167,6 @@ impl JitoBellHandler {
                 let _manager_fee_info = &ix.accounts[8];
                 let _referrer_fee_info = &ix.accounts[9];
                 let pool_mint_info = &ix.accounts[10];
-                // let clock_info = next_account_info(account_info_iter)?;
-                // let clock = &Clock::from_account_info(clock_info)?;
-                // let stake_history_info = next_account_info(account_info_iter)?;
-                // let token_program_info = next_account_info(account_info_iter)?;
-                // let stake_program_info = next_account_info(account_info_iter)?;
-
-                // let validator_stake_account_pubkey = validator_stake_account_info.pubkey;
-                // let validator_stake_account = self
-                //     .rpc_client
-                //     .get_account(&validator_stake_account_pubkey)
-                //     .await?;
-                // let pre_all_validator_lamports = validator_stake_account.lamports;
-
-                // let stake_pool_pubkey = stake_pool_info.pubkey;
-                // let mut stake_pool_acc = self.rpc_client.get_account(&stake_pool_pubkey).await?;
-                // let stake_pool = StakePool::deserialize(&mut stake_pool_acc.data.as_slice())?;
-
-                // let new_pool_tokens = stake_pool
-                //     .calc_pool_tokens_for_deposit(stake_lamports)
-                //     .unwrap();
 
                 for program in &parser.programs {
                     if let JitoBellProgram::SplToken2022(program) = program {
@@ -233,15 +196,11 @@ impl JitoBellHandler {
                         }
                     }
                 }
-
-                // }
             }
             SplStakePoolProgram::WithdrawStake {
                 ix: _,
                 minimum_lamports_out,
             } => {
-                info!("Deposit WithdrawStake");
-                // TODO: Change Amount
                 self.dispatch_platform_notifications(
                     &instruction.notification.destinations,
                     &instruction.notification.description,
@@ -271,6 +230,31 @@ impl JitoBellHandler {
                     )
                     .await?;
                 }
+            }
+            SplStakePoolProgram::Initialize
+            | SplStakePoolProgram::AddValidatorToPool
+            | SplStakePoolProgram::RemoveValidatorFromPool
+            | SplStakePoolProgram::DecreaseValidatorStake
+            | SplStakePoolProgram::IncreaseValidatorStake
+            | SplStakePoolProgram::SetPreferredValidator
+            | SplStakePoolProgram::UpdateValidatorListBalance
+            | SplStakePoolProgram::UpdateStakePoolBalance
+            | SplStakePoolProgram::CleanupRemovedValidatorEntries
+            | SplStakePoolProgram::SetManager
+            | SplStakePoolProgram::SetFee
+            | SplStakePoolProgram::SetStaker
+            | SplStakePoolProgram::SetFundingAuthority
+            | SplStakePoolProgram::CreateTokenMetadata
+            | SplStakePoolProgram::UpdateTokenMetadata
+            | SplStakePoolProgram::IncreaseAdditionalValidatorStake
+            | SplStakePoolProgram::DecreaseAdditionalValidatorStake
+            | SplStakePoolProgram::DecreaseValidatorStakeWithReserve
+            | SplStakePoolProgram::Redelegate
+            | SplStakePoolProgram::DepositStakeWithSlippage
+            | SplStakePoolProgram::WithdrawStakeWithSlippage
+            | SplStakePoolProgram::DepositSolWithSlippage
+            | SplStakePoolProgram::WithdrawSolWithSlippage => {
+                unreachable!()
             }
         }
 
