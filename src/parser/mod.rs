@@ -66,7 +66,7 @@ impl JitoTransactionParser {
                                     programs.push(JitoBellProgram::SplStakePool(ix_info));
                                 }
                             }
-                            _ => {}
+                            _ => continue,
                         }
                     }
                 }
