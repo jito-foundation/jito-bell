@@ -48,7 +48,7 @@ Available variables in templates:
 
 ## Specifying Notification Destinations
 
-For each monitored instruction, specify which notification channes to use:
+For each monitored instruction, specify which notification channels to use:
 
 ```yaml
 programs:
