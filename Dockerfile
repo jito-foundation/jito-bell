@@ -21,5 +21,5 @@ RUN apt-get update && apt-get install -y \
     libssl1.1 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/app/target/release/jito-bell /usr/local/bin/jito-bell
-COPY jito_bell_config.yaml /etc/jito-bell/config.yaml
+COPY jito_bell_config.yaml /etc/jito-bell/jito_bell_config.yaml
 ENTRYPOINT ["jito-bell"]

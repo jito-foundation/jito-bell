@@ -37,7 +37,7 @@ docker build -t jito-bell .
 ### Run
 
 ```bash
-docker run jito-bell --confile-file /etc/jito-bell/jito_bell_config.yaml
+docker run jito-bell --confilg-file /etc/jito-bell/jito_bell_config.yaml
 ```
 
 ## References
