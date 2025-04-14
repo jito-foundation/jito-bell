@@ -200,7 +200,7 @@ impl JitoBellHandler {
             match destination.as_str() {
                 "telegram" => {
                     info!("Will Send Telegram Notification");
-                    self.send_telegram_message(&description, amount, &transaction_signature)
+                    self.send_telegram_message(description, amount, transaction_signature)
                         .await
                 }
                 "slack" => {
