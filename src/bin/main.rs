@@ -3,6 +3,7 @@ use std::{env, path::PathBuf};
 use clap::{Parser, ValueEnum};
 use jito_bell::{subscribe_option::SubscribeOption, JitoBellHandler};
 use log::info;
+use solana_sdk::commitment_config::CommitmentConfig;
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
 
 #[derive(Debug, Clone, Parser)]
@@ -79,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
 
     let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
     let subscribe_option = SubscribeOption::new(
-        args.endpoint,
+        args.endpoint.clone(),
         args.x_token,
         commitment,
         args.vote,
@@ -92,7 +93,8 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Subscription configuration:\n{}", subscribe_option);
 
-    let handler = JitoBellHandler::new(args.config_file)?;
+    let commitment = CommitmentConfig::confirmed();
+    let handler = JitoBellHandler::new(args.endpoint.clone(), commitment, args.config_file)?;
 
     info!("Starting heartbeat...");
     handler.heart_beat(&subscribe_option).await?;

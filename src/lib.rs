@@ -5,7 +5,12 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
 use log::{error, info};
 use maplit::hashmap;
-use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
+use parser::{
+    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, JitoBellProgram,
+    JitoTransactionParser,
+};
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::commitment_config::CommitmentConfig;
 use subscribe_option::SubscribeOption;
 use tonic::transport::channel::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
@@ -27,16 +32,24 @@ pub mod subscribe_option;
 pub struct JitoBellHandler {
     /// Configuration for Notification
     config: JitoBellConfig,
+
+    /// RPC Client
+    rpc_client: RpcClient,
 }
 
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
-    pub fn new(config_path: PathBuf) -> Result<Self, JitoBellError> {
+    pub fn new(
+        endpoint: String,
+        commitment: CommitmentConfig,
+        config_path: PathBuf,
+    ) -> Result<Self, JitoBellError> {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
+        let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
-        Ok(Self { config })
+        Ok(Self { config, rpc_client })
     }
 
     /// Start heart beating
@@ -123,6 +136,23 @@ impl JitoBellHandler {
                         }
                     }
                 }
+                JitoBellProgram::SplToken2022(_) => {
+                    info!("Token 2022");
+                    // if let Some(program_config) = self.config.programs.get(&program.to_string()) {
+                    //     // info!("Found Program Config");
+                    //     if let Some(instruction) = program_config
+                    //         .instructions
+                    //         .get(&spl_stake_program.to_string())
+                    //     {
+                    //         self.handle_spl_stake_pool_program(
+                    //             parser,
+                    //             spl_stake_program,
+                    //             instruction,
+                    //         )
+                    //         .await?;
+                    //     }
+                    // }
+                }
             }
         }
 
@@ -138,17 +168,72 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         info!("Found Instruction");
         match spl_stake_program {
-            SplStakePoolProgram::DepositStake { ix: _ } => {
+            SplStakePoolProgram::DepositStake { ix } => {
                 info!("Deposit Stake");
                 // if *minimum_pool_tokens_out >= instruction.threshold {
                 // TODO: Change Amount
-                self.dispatch_platform_notifications(
-                    &instruction.notification.destinations,
-                    &instruction.notification.description,
-                    100.0,
-                    &parser.transaction_signature,
-                )
-                .await?;
+
+                let _stake_pool_info = &ix.accounts[0];
+                let _validator_list_info = &ix.accounts[1];
+                let _stake_deposit_authority_info = &ix.accounts[2];
+                let withdraw_authority_info = &ix.accounts[3];
+                let _stake_info = &ix.accounts[4];
+                let _validator_stake_account_info = &ix.accounts[5];
+                let _reserve_stake_account_info = &ix.accounts[6];
+                let dest_user_pool_info = &ix.accounts[7];
+                let _manager_fee_info = &ix.accounts[8];
+                let _referrer_fee_info = &ix.accounts[9];
+                let pool_mint_info = &ix.accounts[10];
+                // let clock_info = next_account_info(account_info_iter)?;
+                // let clock = &Clock::from_account_info(clock_info)?;
+                // let stake_history_info = next_account_info(account_info_iter)?;
+                // let token_program_info = next_account_info(account_info_iter)?;
+                // let stake_program_info = next_account_info(account_info_iter)?;
+
+                // let validator_stake_account_pubkey = validator_stake_account_info.pubkey;
+                // let validator_stake_account = self
+                //     .rpc_client
+                //     .get_account(&validator_stake_account_pubkey)
+                //     .await?;
+                // let pre_all_validator_lamports = validator_stake_account.lamports;
+
+                // let stake_pool_pubkey = stake_pool_info.pubkey;
+                // let mut stake_pool_acc = self.rpc_client.get_account(&stake_pool_pubkey).await?;
+                // let stake_pool = StakePool::deserialize(&mut stake_pool_acc.data.as_slice())?;
+
+                // let new_pool_tokens = stake_pool
+                //     .calc_pool_tokens_for_deposit(stake_lamports)
+                //     .unwrap();
+
+                for program in &parser.programs {
+                    if let JitoBellProgram::SplToken2022(program) = program {
+                        match program {
+                            SplToken2022Program::MintTo { ix, amount } => {
+                                let mint_info = &ix.accounts[0];
+                                let destination_account_info = &ix.accounts[1];
+                                let owner_info = &ix.accounts[2];
+
+                                if mint_info.pubkey.eq(&pool_mint_info.pubkey)
+                                    && destination_account_info
+                                        .pubkey
+                                        .eq(&dest_user_pool_info.pubkey)
+                                    && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
+                                {
+                                    self.dispatch_platform_notifications(
+                                        &instruction.notification.destinations,
+                                        &instruction.notification.description,
+                                        *amount as f64,
+                                        &parser.transaction_signature,
+                                    )
+                                    .await?;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // }
             }
             SplStakePoolProgram::WithdrawStake {
