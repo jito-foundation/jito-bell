@@ -96,6 +96,8 @@ async fn main() -> anyhow::Result<()> {
     let commitment = CommitmentConfig::confirmed();
     let handler = JitoBellHandler::new(args.endpoint.clone(), commitment, args.config_file)?;
 
+    info!("Jito Bell Config:\n{}", handler.config);
+
     info!("Starting heartbeat...");
     handler.heart_beat(&subscribe_option).await?;
 
