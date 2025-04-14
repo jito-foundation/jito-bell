@@ -48,6 +48,7 @@ impl SplStakePoolProgram {
         Pubkey::from_str("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy").unwrap()
     }
 
+    /// Parse SPL Stake Pool Instruction
     pub fn parse_jito_stake_pool_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
@@ -77,6 +78,7 @@ impl SplStakePoolProgram {
             _ => None,
         }
     }
+
     /// Parse Deposit Stake Instruction
     /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L271-L289
     ///
