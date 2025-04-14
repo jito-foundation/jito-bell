@@ -1,4 +1,13 @@
-use solana_sdk::instruction::Instruction;
+use std::str::FromStr;
+
+use borsh::BorshDeserialize;
+use jito_vault_sdk::instruction::VaultInstruction;
+use solana_sdk::{
+    instruction::{AccountMeta, Instruction},
+    native_token::lamports_to_sol,
+    pubkey::Pubkey,
+};
+use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
 /// Jito Vault Program
 #[derive(Debug)]
@@ -139,6 +148,104 @@ impl std::fmt::Display for JitoVaultProgram {
             JitoVaultProgram::SetConfigAdmin => {
                 write!(f, "set_config_admin")
             }
+        }
+    }
+}
+
+impl JitoVaultProgram {
+    pub fn program_id() -> Pubkey {
+        Pubkey::from_str("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8").unwrap()
+    }
+
+    /// Parse Jito Vault Program
+    pub fn parse_jito_vault_program(
+        instruction: &CompiledInstruction,
+        account_keys: &[Pubkey],
+    ) -> Option<JitoVaultProgram> {
+        let vault_ix = match VaultInstruction::try_from_slice(&instruction.data) {
+            Ok(ix) => ix,
+            Err(_) => return None,
+        };
+
+        match vault_ix {
+            VaultInstruction::MintTo {
+                amount_in: _,
+                min_amount_out,
+            } => Some(Self::parse_mint_to_ix(
+                instruction,
+                account_keys,
+                min_amount_out,
+            )),
+            VaultInstruction::EnqueueWithdrawal { amount } => Some(
+                Self::parse_enqueue_withdrawal_ix(instruction, account_keys, amount),
+            ),
+            _ => None,
+        }
+    }
+
+    pub fn parse_mint_to_ix(
+        instruction: &CompiledInstruction,
+        account_keys: &[Pubkey],
+        min_amount_out: u64,
+    ) -> Self {
+        let mut account_metas = [
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), true),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+        ];
+
+        for (index, account) in instruction.accounts.iter().enumerate() {
+            account_metas[index].pubkey = account_keys[*account as usize];
+        }
+
+        let ix = Instruction {
+            program_id: Self::program_id(),
+            accounts: account_metas.to_vec(),
+            data: instruction.data.clone(),
+        };
+
+        Self::MintTo {
+            ix,
+            min_amount_out: lamports_to_sol(min_amount_out) as u64,
+        }
+    }
+
+    pub fn parse_enqueue_withdrawal_ix(
+        instruction: &CompiledInstruction,
+        account_keys: &[Pubkey],
+        amount: u64,
+    ) -> Self {
+        let mut account_metas = [
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), true),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+        ];
+
+        for (index, account) in instruction.accounts.iter().enumerate() {
+            account_metas[index].pubkey = account_keys[*account as usize];
+        }
+
+        let ix = Instruction {
+            program_id: Self::program_id(),
+            accounts: account_metas.to_vec(),
+            data: instruction.data.clone(),
+        };
+
+        Self::EnqueueWithdrawal {
+            ix,
+            amount: lamports_to_sol(amount) as u64,
         }
     }
 }

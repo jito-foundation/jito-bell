@@ -15,6 +15,7 @@ chrono = "0.4.26"
 clap = { version = "4.3.0", features = ["derive", "env"] }
 env_logger = "0.11.3"
 futures = "0.3.24"
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 log = "0.4.17"
 maplit = "1.0.2"
 reqwest = { version = "0.11.0", features = ["json"] }
