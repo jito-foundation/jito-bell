@@ -18,7 +18,7 @@ weight: 1
 1. Create a new channel or group in Telegram where notifications will be sent
 2. Make your bot an administrator of the channel/group
     - For channels: Got to channel info -> Administrators -> Add Administrator -> search for your bot
-    - For groups: Go to group info -> Administorators -> Add Admin -> search for your bot
+    - For groups: Go to group info -> Administrators -> Add Admin -> search for your bot
 3. Give the bot permission to post messages
 
 ## Step 3: Get Chat ID
