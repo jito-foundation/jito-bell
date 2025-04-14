@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
-use log::{error, info};
+use log::{debug, error};
 use maplit::hashmap;
 use parser::{
     stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, JitoBellProgram,
@@ -100,7 +100,7 @@ impl JitoBellHandler {
                     if let Some(UpdateOneof::Transaction(transaction)) = msg.update_oneof {
                         let parser = JitoTransactionParser::new(transaction);
 
-                        info!("Instruction: {:?}", parser.programs);
+                        debug!("Instruction: {:?}", parser.programs);
 
                         self.send_notification(&parser).await?;
                     }
@@ -120,13 +120,13 @@ impl JitoBellHandler {
         &self,
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
-        info!("Before Send notification");
+        debug!("Before Send notification");
         for program in &parser.programs {
             match program {
                 JitoBellProgram::SplStakePool(spl_stake_program) => {
-                    info!("SPL Stake Pool");
+                    debug!("SPL Stake Pool");
                     if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                        info!("Found Program Config");
+                        debug!("Found Program Config");
                         if let Some(instruction) = program_config
                             .instructions
                             .get(&spl_stake_program.to_string())
@@ -141,7 +141,7 @@ impl JitoBellHandler {
                     }
                 }
                 JitoBellProgram::SplToken2022(_) => {
-                    info!("Token 2022");
+                    debug!("Token 2022");
                 }
             }
         }
@@ -156,7 +156,7 @@ impl JitoBellHandler {
         spl_stake_program: &SplStakePoolProgram,
         instruction: &Instruction,
     ) -> Result<(), JitoBellError> {
-        info!("SPL Stake Program: {}", spl_stake_program);
+        debug!("SPL Stake Program: {}", spl_stake_program);
 
         let pool_mint = Pubkey::from_str(&instruction.pool_mint).unwrap();
 
@@ -313,17 +313,17 @@ impl JitoBellHandler {
         for destination in destinations {
             match destination.as_str() {
                 "telegram" => {
-                    info!("Will Send Telegram Notification");
+                    debug!("Will Send Telegram Notification");
                     self.send_telegram_message(description, amount, transaction_signature)
                         .await
                 }
                 "slack" => {
-                    info!("Will Send Slack Notification");
+                    debug!("Will Send Slack Notification");
                     self.send_slack_message(description, amount, transaction_signature)
                         .await?
                 }
                 "discord" => {
-                    info!("Will Send Discord Notification");
+                    debug!("Will Send Discord Notification");
                     self.send_discord_message(description, amount, transaction_signature)
                         .await?
                 }
