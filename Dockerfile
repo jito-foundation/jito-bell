@@ -24,10 +24,6 @@ COPY --from=builder /usr/src/app/target/release/jito-bell /usr/local/bin/jito-be
 COPY jito_bell_config.yaml /etc/jito-bell/jito_bell_config.yaml
 ENTRYPOINT ["jito-bell"]
 
-# Create directory for mounting custom config
-RUN mkdir -p /config
-VOLUME ["/config"]
-
 # Default command with placeholders for required arguments
 ENTRYPOINT ["jito-bell"]
-CMD ["-e", "ENDPOINT_PLACEHOLDER", "--x-token", "TOKEN_PLACEHOLDER", "--account-include", "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy", "--config-file", "/config/jito_bell_config.yaml"]
+CMD ["-e", "ENDPOINT_PLACEHOLDER", "--x-token", "TOKEN_PLACEHOLDER", "--account-include", "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy", "--config-file", "/etc/jito-bell/jito_bell_config.yaml"]
