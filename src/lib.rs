@@ -124,6 +124,9 @@ impl JitoBellHandler {
         debug!("Before Send notification");
         for program in &parser.programs {
             match program {
+                JitoBellProgram::SplToken2022(_) => {
+                    debug!("Token 2022");
+                }
                 JitoBellProgram::SplStakePool(spl_stake_program) => {
                     debug!("SPL Stake Pool");
                     if let Some(program_config) = self.config.programs.get(&program.to_string()) {
@@ -141,9 +144,18 @@ impl JitoBellHandler {
                         }
                     }
                 }
-                JitoBellProgram::SplToken2022(_) => {
-                    debug!("Token 2022");
-                }
+                _ => {} // JitoBellProgram::JitoVault(jito_vault_program) => {
+                        //     debug!("Jito Vault");
+                        //     if let Some(program_config) = self.config.programs.get(&program.to_string()) {
+                        //         debug!("Found Program Config");
+                        //         if let Some(instruction) = program_config
+                        //             .instructions
+                        //             .get(&jito_vault_program.to_string())
+                        //         {
+                        //             self.handle(parser, spl_stake_program, instruction).await?;
+                        //         }
+                        //     }
+                        // }
             }
         }
 
