@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -10,7 +10,7 @@ use parser::{
     JitoTransactionParser,
 };
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use subscribe_option::SubscribeOption;
 use tonic::transport::channel::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
@@ -50,6 +50,10 @@ impl JitoBellHandler {
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
         Ok(Self { config, rpc_client })
+    }
+
+    pub fn rpc_client(&self) -> &RpcClient {
+        &self.rpc_client
     }
 
     /// Start heart beating
@@ -154,6 +158,8 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         info!("SPL Stake Program: {}", spl_stake_program);
 
+        let pool_mint = Pubkey::from_str(&instruction.pool_mint).unwrap();
+
         match spl_stake_program {
             SplStakePoolProgram::DepositStake { ix } => {
                 let _stake_pool_info = &ix.accounts[0];
@@ -168,29 +174,31 @@ impl JitoBellHandler {
                 let _referrer_fee_info = &ix.accounts[9];
                 let pool_mint_info = &ix.accounts[10];
 
-                for program in &parser.programs {
-                    if let JitoBellProgram::SplToken2022(program) = program {
-                        match program {
-                            SplToken2022Program::MintTo { ix, amount } => {
-                                let mint_info = &ix.accounts[0];
-                                let destination_account_info = &ix.accounts[1];
-                                let owner_info = &ix.accounts[2];
+                if pool_mint_info.pubkey.eq(&pool_mint) {
+                    for program in &parser.programs {
+                        if let JitoBellProgram::SplToken2022(program) = program {
+                            match program {
+                                SplToken2022Program::MintTo { ix, amount } => {
+                                    let mint_info = &ix.accounts[0];
+                                    let destination_account_info = &ix.accounts[1];
+                                    let owner_info = &ix.accounts[2];
 
-                                if mint_info.pubkey.eq(&pool_mint_info.pubkey)
-                                    && destination_account_info
-                                        .pubkey
-                                        .eq(&dest_user_pool_info.pubkey)
-                                    && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
-                                {
-                                    self.dispatch_platform_notifications(
-                                        &instruction.notification.destinations,
-                                        &instruction.notification.description,
-                                        *amount as f64,
-                                        &parser.transaction_signature,
-                                    )
-                                    .await?;
+                                    if mint_info.pubkey.eq(&pool_mint_info.pubkey)
+                                        && destination_account_info
+                                            .pubkey
+                                            .eq(&dest_user_pool_info.pubkey)
+                                        && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
+                                    {
+                                        self.dispatch_platform_notifications(
+                                            &instruction.notification.destinations,
+                                            &instruction.notification.description,
+                                            *amount as f64,
+                                            &parser.transaction_signature,
+                                        )
+                                        .await?;
 
-                                    break;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -198,19 +206,43 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::WithdrawStake {
-                ix: _,
+                ix,
                 minimum_lamports_out,
             } => {
-                self.dispatch_platform_notifications(
-                    &instruction.notification.destinations,
-                    &instruction.notification.description,
-                    *minimum_lamports_out,
-                    &parser.transaction_signature,
-                )
-                .await?;
+                let _stake_pool_info = &ix.accounts[0];
+                let _validator_list_info = &ix.accounts[1];
+                let _withdraw_authority_info = &ix.accounts[2];
+                let _stake_split_from = &ix.accounts[3];
+                let _stake_split_to = &ix.accounts[4];
+                let _user_stake_authority_info = &ix.accounts[5];
+                let _user_transfer_authority_info = &ix.accounts[6];
+                let _burn_from_pool_info = &ix.accounts[7];
+                let _manager_fee_info = &ix.accounts[8];
+                let pool_mint_info = &ix.accounts[9];
+
+                if pool_mint_info.pubkey.eq(&pool_mint)
+                    && *minimum_lamports_out > instruction.threshold
+                {
+                    self.dispatch_platform_notifications(
+                        &instruction.notification.destinations,
+                        &instruction.notification.description,
+                        *minimum_lamports_out,
+                        &parser.transaction_signature,
+                    )
+                    .await?;
+                }
             }
-            SplStakePoolProgram::DepositSol { ix: _, amount } => {
-                if *amount >= instruction.threshold {
+            SplStakePoolProgram::DepositSol { ix, amount } => {
+                let _stake_pool_info = &ix.accounts[0];
+                let _withdraw_authority_info = &ix.accounts[1];
+                let _reserve_stake_account_info = &ix.accounts[2];
+                let _from_user_lamports_info = &ix.accounts[3];
+                let _dest_user_pool_info = &ix.accounts[4];
+                let _manager_fee_info = &ix.accounts[5];
+                let _referrer_fee_info = &ix.accounts[6];
+                let pool_mint_info = &ix.accounts[7];
+
+                if pool_mint_info.pubkey.eq(&pool_mint) && *amount >= instruction.threshold {
                     self.dispatch_platform_notifications(
                         &instruction.notification.destinations,
                         &instruction.notification.description,
@@ -220,8 +252,17 @@ impl JitoBellHandler {
                     .await?;
                 }
             }
-            SplStakePoolProgram::WithdrawSol { ix: _, amount } => {
-                if *amount >= instruction.threshold {
+            SplStakePoolProgram::WithdrawSol { ix, amount } => {
+                let _stake_pool_info = &ix.accounts[0];
+                let _withdraw_authority_info = &ix.accounts[1];
+                let _user_transfer_authority_info = &ix.accounts[2];
+                let _burn_from_pool_info = &ix.accounts[3];
+                let _reserve_stake_info = &ix.accounts[4];
+                let _destination_lamports_info = &ix.accounts[5];
+                let _manager_fee_info = &ix.accounts[6];
+                let pool_mint_info = &ix.accounts[7];
+
+                if pool_mint_info.pubkey.eq(&pool_mint) && *amount >= instruction.threshold {
                     self.dispatch_platform_notifications(
                         &instruction.notification.destinations,
                         &instruction.notification.description,
