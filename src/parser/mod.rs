@@ -20,15 +20,15 @@ impl std::fmt::Display for JitoBellProgram {
 /// Parse Transaction
 #[derive(Debug)]
 pub struct JitoTransactionParser {
-    /// Transaction Hash
+    /// Transaction signature
     pub transaction_signature: String,
 
-    /// Instructions
+    /// The array of programs related to Jito Network
     pub programs: Vec<JitoBellProgram>,
 }
 
 impl JitoTransactionParser {
-    /// Construct new parser
+    /// Initialize new parser
     pub fn new(transaction: SubscribeUpdateTransaction) -> Self {
         let mut transaction_signature = String::new();
         let mut programs = Vec::new();
@@ -55,9 +55,10 @@ impl JitoTransactionParser {
                     for instruction in &msg.instructions {
                         let program_id = &pubkeys[instruction.program_id_index as usize];
                         if program_id.eq(&SplStakePoolProgram::program_id()) {
-                            if let Some(ix_info) =
-                                SplStakePoolProgram::parse_jito_stake_pool_ix(instruction, &pubkeys)
-                            {
+                            if let Some(ix_info) = SplStakePoolProgram::parse_spl_stake_pool_program(
+                                instruction,
+                                &pubkeys,
+                            ) {
                                 programs.push(JitoBellProgram::SplStakePool(ix_info));
                             }
                         }

@@ -31,11 +31,11 @@ pub enum SplStakePoolProgram {
 impl std::fmt::Display for SplStakePoolProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake_with_slippage"),
+            SplStakePoolProgram::DepositStake { ix: _ } => write!(f, "deposit_stake"),
             SplStakePoolProgram::WithdrawStake {
                 ix: _,
                 minimum_lamports_out: _,
-            } => write!(f, "withdraw_stake_with_slippage"),
+            } => write!(f, "withdraw_stake"),
             SplStakePoolProgram::DepositSol { ix: _, amount: _ } => write!(f, "deposit_sol"),
             SplStakePoolProgram::WithdrawSol { ix: _, amount: _ } => write!(f, "withdraw_sol"),
         }
@@ -48,8 +48,8 @@ impl SplStakePoolProgram {
         Pubkey::from_str("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy").unwrap()
     }
 
-    /// Parse SPL Stake Pool Instruction
-    pub fn parse_jito_stake_pool_ix(
+    /// Parse SPL Stake Pool program
+    pub fn parse_spl_stake_pool_program(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
     ) -> Option<SplStakePoolProgram> {
