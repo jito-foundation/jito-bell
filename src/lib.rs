@@ -39,7 +39,7 @@ impl JitoBellHandler {
         Ok(Self { config })
     }
 
-    /// Heart Beat
+    /// Start heart beating
     pub async fn heart_beat(
         &self,
         subscribe_option: &SubscribeOption,
@@ -89,7 +89,7 @@ impl JitoBellHandler {
                     }
                 }
                 Err(error) => {
-                    error!("stream error: {error:?}");
+                    error!("Stream error: {error:?}");
                     break;
                 }
             }

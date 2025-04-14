@@ -9,6 +9,7 @@ use solana_sdk::{
 use spl_stake_pool::instruction::StakePoolInstruction;
 use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
+/// SPL Stake Pool Program
 #[derive(Debug)]
 pub enum SplStakePoolProgram {
     DepositStake {
