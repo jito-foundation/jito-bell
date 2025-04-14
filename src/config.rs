@@ -25,17 +25,16 @@ impl std::fmt::Display for JitoBellConfig {
             writeln!(f, "  Instruction")?;
             for instruction in program.instructions.values() {
                 writeln!(f, "    Pool Mint: {}", instruction.pool_mint)?;
-                writeln!(f, "    Threshold: {}", instruction.threshold)?;
 
-                writeln!(f, "    Notification")?;
-                writeln!(
-                    f,
-                    "    Description: {}",
-                    instruction.notification.description
-                )?;
+                writeln!(f, "    Thresholds")?;
+                for threshold in instruction.thresholds.iter() {
+                    writeln!(f, "    Threshold Value: {}", threshold.value)?;
+                    writeln!(f, "    Notification")?;
+                    writeln!(f, "    Description: {}", threshold.notification.description)?;
 
-                let destinations = instruction.notification.destinations.join(",");
-                writeln!(f, "    Destinations: {}", destinations)?;
+                    let destinations = threshold.notification.destinations.join(",");
+                    writeln!(f, "    Destinations: {}", destinations)?;
+                }
             }
         }
 

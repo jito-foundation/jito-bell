@@ -28,6 +28,7 @@ pub mod notification_info;
 pub mod parser;
 pub mod program;
 pub mod subscribe_option;
+pub mod threshold_config;
 
 pub struct JitoBellHandler {
     /// Configuration for Notification
@@ -189,13 +190,17 @@ impl JitoBellHandler {
                                             .eq(&dest_user_pool_info.pubkey)
                                         && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
                                     {
-                                        self.dispatch_platform_notifications(
-                                            &instruction.notification.destinations,
-                                            &instruction.notification.description,
-                                            *amount as f64,
-                                            &parser.transaction_signature,
-                                        )
-                                        .await?;
+                                        for threshold in instruction.thresholds.iter() {
+                                            if *amount as f64 > threshold.value {
+                                                self.dispatch_platform_notifications(
+                                                    &threshold.notification.destinations,
+                                                    &threshold.notification.description,
+                                                    *amount as f64,
+                                                    &parser.transaction_signature,
+                                                )
+                                                .await?;
+                                            }
+                                        }
 
                                         break;
                                     }
@@ -220,16 +225,18 @@ impl JitoBellHandler {
                 let _manager_fee_info = &ix.accounts[8];
                 let pool_mint_info = &ix.accounts[9];
 
-                if pool_mint_info.pubkey.eq(&pool_mint)
-                    && *minimum_lamports_out > instruction.threshold
-                {
-                    self.dispatch_platform_notifications(
-                        &instruction.notification.destinations,
-                        &instruction.notification.description,
-                        *minimum_lamports_out,
-                        &parser.transaction_signature,
-                    )
-                    .await?;
+                if pool_mint_info.pubkey.eq(&pool_mint) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *minimum_lamports_out > threshold.value {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *minimum_lamports_out,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
                 }
             }
             SplStakePoolProgram::DepositSol { ix, amount } => {
@@ -242,14 +249,18 @@ impl JitoBellHandler {
                 let _referrer_fee_info = &ix.accounts[6];
                 let pool_mint_info = &ix.accounts[7];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) && *amount >= instruction.threshold {
-                    self.dispatch_platform_notifications(
-                        &instruction.notification.destinations,
-                        &instruction.notification.description,
-                        100.0,
-                        &parser.transaction_signature,
-                    )
-                    .await?;
+                if pool_mint_info.pubkey.eq(&pool_mint) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *amount >= threshold.value {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *amount,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
                 }
             }
             SplStakePoolProgram::WithdrawSol { ix, amount } => {
@@ -262,14 +273,18 @@ impl JitoBellHandler {
                 let _manager_fee_info = &ix.accounts[6];
                 let pool_mint_info = &ix.accounts[7];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) && *amount >= instruction.threshold {
-                    self.dispatch_platform_notifications(
-                        &instruction.notification.destinations,
-                        &instruction.notification.description,
-                        100.0,
-                        &parser.transaction_signature,
-                    )
-                    .await?;
+                if pool_mint_info.pubkey.eq(&pool_mint) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *amount >= threshold.value {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *amount,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
                 }
             }
             SplStakePoolProgram::Initialize
