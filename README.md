@@ -26,5 +26,19 @@ cargo r -- -e {endpoint} --x-token {x-token} --account-include SPoo1Ku8WFXoNDMHP
 - [DepositSol](https://github.com/solana-program/stake-pool/blob/0740ef57b0cd202e948641545c2761557cc8c794/program/src/instruction.rs#L378)
 - [WithdrawSol](https://github.com/solana-program/stake-pool/blob/0740ef57b0cd202e948641545c2761557cc8c794/program/src/instruction.rs#L405)
 
+## Getting Started
+
+### Build
+
+```bash
+docker build -t jito-bell .
+```
+
+### Run
+
+```bash
+docker run jito-bell --confile-file /etc/jito-bell/jito_bell_config.yaml
+```
+
 ## References
 - https://github.com/rpcpool/yellowstone-grpc/blob/master/examples/rust/src/bin/tx-blocktime.rs
