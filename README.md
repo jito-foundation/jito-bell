@@ -37,11 +37,11 @@ docker build -t jito-bell .
 ### Run
 
 ```bash
-docker run -v /path/to/your/config/dir:/config jito-bell \
+docker run jito-bell \
   -e "https://your-endpoint.com" \
-  --x-token "your-token-here" \
-  --account-include SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy \
-  --config-file /config/jito_bell_config.yaml
+  -x-token "your-token-here" \
+  -account-include SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy \
+  -config-file /etc/jito-bell/jito_bell_config.yaml
 ```
 
 ## References
