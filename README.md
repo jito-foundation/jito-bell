@@ -9,7 +9,7 @@
 
 ## Programs
 
-### [Stake Pool](https://github.com/solana-program/stake-pool/blob/main/program/src/lib.rs)
+### [SPL Stake Pool](https://github.com/solana-program/stake-pool/blob/main/program/src/lib.rs)
 
 ```bash
 cargo r -- -e {endpoint} --x-token {x-token} --account-include SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy
@@ -25,6 +25,20 @@ cargo r -- -e {endpoint} --x-token {x-token} --account-include SPoo1Ku8WFXoNDMHP
 - [WithdrawStake](https://github.com/solana-program/stake-pool/blob/0740ef57b0cd202e948641545c2761557cc8c794/program/src/instruction.rs#L337)
 - [DepositSol](https://github.com/solana-program/stake-pool/blob/0740ef57b0cd202e948641545c2761557cc8c794/program/src/instruction.rs#L378)
 - [WithdrawSol](https://github.com/solana-program/stake-pool/blob/0740ef57b0cd202e948641545c2761557cc8c794/program/src/instruction.rs#L405)
+
+### [Jito Vault Program](https://github.com/jito-foundation/restaking)
+
+```bash
+cargo r -- -e {endpoint} --x-token {x-token} --account-include Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8
+```
+
+- Program ID: Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8
+
+
+#### Instructions
+
+- [MintTo](https://github.com/jito-foundation/restaking/blob/623b1816b9a93e3678c29c426e9b38ef2f324554/vault_sdk/src/instruction.rs#L132-L135)
+- [EnqueueWithdrawal](https://github.com/jito-foundation/restaking/blob/623b1816b9a93e3678c29c426e9b38ef2f324554/vault_sdk/src/instruction.rs#L149-L151)
 
 ## Getting Started
 
