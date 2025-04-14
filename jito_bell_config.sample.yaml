@@ -78,6 +78,47 @@ programs:
             notification:
               description: "Whale SOL withdrawal from JitoSOL detected"
               destinations: ["telegram", "slack", "discord"]
+  jito_vault:
+    program_id: "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
+    instructions:
+      mint_to:
+        vrt: ""
+        thresholds:
+          - value: 0.1  # SOL
+            notification:
+              description: "JitoSOL stake deposit detected"
+              destinations: ["telegram"]
+          - value: 1000.0  # SOL
+            notification:
+              description: "Large JitoSOL stake deposit detected"
+              destinations: ["telegram"]
+          - value: 5000.0  # SOL
+            notification:
+              description: "Very large JitoSOL stake deposit detected"
+              destinations: ["telegram", "slack"]
+          - value: 10000.0  # SOL
+            notification:
+              description: "Whale JitoSOL stake deposit detected"
+              destinations: ["telegram", "slack", "discord"]
+      enqueue_withdrawal:
+        vrt: ""
+        thresholds:
+          - value: 0.1  # SOL
+            notification:
+              description: "JitoSOL stake deposit detected"
+              destinations: ["telegram"]
+          - value: 1000.0  # SOL
+            notification:
+              description: "Large JitoSOL stake deposit detected"
+              destinations: ["telegram"]
+          - value: 5000.0  # SOL
+            notification:
+              description: "Very large JitoSOL stake deposit detected"
+              destinations: ["telegram", "slack"]
+          - value: 10000.0  # SOL
+            notification:
+              description: "Whale JitoSOL stake deposit detected"
+              destinations: ["telegram", "slack", "discord"]
   
 notifications:
   slack:

@@ -1,13 +1,15 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
+use borsh::BorshDeserialize;
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
+use jito_vault_client::accounts::Vault;
 use log::{debug, error};
 use maplit::hashmap;
 use parser::{
-    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, JitoBellProgram,
-    JitoTransactionParser,
+    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
+    JitoBellProgram, JitoTransactionParser,
 };
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
@@ -51,10 +53,6 @@ impl JitoBellHandler {
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
         Ok(Self { config, rpc_client })
-    }
-
-    pub fn rpc_client(&self) -> &RpcClient {
-        &self.rpc_client
     }
 
     /// Start heart beating
@@ -144,18 +142,19 @@ impl JitoBellHandler {
                         }
                     }
                 }
-                _ => {} // JitoBellProgram::JitoVault(jito_vault_program) => {
-                        //     debug!("Jito Vault");
-                        //     if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                        //         debug!("Found Program Config");
-                        //         if let Some(instruction) = program_config
-                        //             .instructions
-                        //             .get(&jito_vault_program.to_string())
-                        //         {
-                        //             self.handle(parser, spl_stake_program, instruction).await?;
-                        //         }
-                        //     }
-                        // }
+                JitoBellProgram::JitoVault(jito_vault_program) => {
+                    debug!("Jito Vault");
+                    if let Some(program_config) = self.config.programs.get(&program.to_string()) {
+                        debug!("Found Program Config");
+                        if let Some(instruction) = program_config
+                            .instructions
+                            .get(&jito_vault_program.to_string())
+                        {
+                            self.handle_jito_vault_program(parser, jito_vault_program, instruction)
+                                .await?;
+                        }
+                    }
+                }
             }
         }
 
@@ -171,7 +170,13 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("SPL Stake Program: {}", spl_stake_program);
 
-        let pool_mint = Pubkey::from_str(&instruction.pool_mint).unwrap();
+        let pool_mint = if let Some(address) = &instruction.pool_mint {
+            Pubkey::from_str(address).unwrap()
+        } else {
+            return Err(JitoBellError::Config(
+                "Specify Pool Mint Address".to_string(),
+            ));
+        };
 
         match spl_stake_program {
             SplStakePoolProgram::DepositStake { ix } => {
@@ -322,6 +327,109 @@ impl JitoBellHandler {
             | SplStakePoolProgram::WithdrawStakeWithSlippage
             | SplStakePoolProgram::DepositSolWithSlippage
             | SplStakePoolProgram::WithdrawSolWithSlippage => {
+                unreachable!()
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle Jito Vault Program
+    async fn handle_jito_vault_program(
+        &self,
+        parser: &JitoTransactionParser,
+        jito_vault_program: &JitoVaultProgram,
+        instruction: &Instruction,
+    ) -> Result<(), JitoBellError> {
+        debug!("Jito Vault Program: {}", jito_vault_program);
+
+        let vrt = if let Some(address) = &instruction.vrt {
+            Pubkey::from_str(address).unwrap()
+        } else {
+            return Err(JitoBellError::Config("Specify VRT Address".to_string()));
+        };
+
+        match jito_vault_program {
+            JitoVaultProgram::MintTo { ix, min_amount_out } => {
+                let _config_info = &ix.accounts[0];
+                let _vault_info = &ix.accounts[1];
+                let vrt_mint_info = &ix.accounts[2];
+                let _depositor_info = &ix.accounts[3];
+                let _depositor_token_account = &ix.accounts[4];
+                let _vault_token_account = &ix.accounts[5];
+                let _depositor_vrt_token_account = &ix.accounts[6];
+                let _vault_fee_token_account = &ix.accounts[7];
+
+                if vrt_mint_info.pubkey.eq(&vrt) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *min_amount_out >= threshold.value as u64 {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *min_amount_out as f64,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
+                }
+            }
+            JitoVaultProgram::EnqueueWithdrawal { ix, amount } => {
+                let _config_info = &ix.accounts[0];
+                let vault_info = &ix.accounts[1];
+                let _vault_staker_withdrawal_ticket_info = &ix.accounts[2];
+                let _vault_staker_withdrawal_ticket_token_account_info = &ix.accounts[3];
+                let _staker_info = &ix.accounts[4];
+                let _staker_vrt_token_account_info = &ix.accounts[5];
+                let _base_info = &ix.accounts[6];
+
+                let vault_acc = self.rpc_client.get_account(&vault_info.pubkey).await?;
+                let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
+
+                if vault.vrt_mint.eq(&vrt) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *amount >= threshold.value as u64 {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *amount as f64,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
+                }
+            }
+            JitoVaultProgram::InitializeConfig
+            | JitoVaultProgram::InitializeVault
+            | JitoVaultProgram::InitializeVaultWithMint
+            | JitoVaultProgram::InitializeVaultOperatorDelegation
+            | JitoVaultProgram::InitializeVaultNcnTicket
+            | JitoVaultProgram::InitializeVaultNcnSlasherOperatorTicket
+            | JitoVaultProgram::InitializeVaultNcnSlasherTicket
+            | JitoVaultProgram::WarmupVaultNcnTicket
+            | JitoVaultProgram::CooldownVaultNcnTicket
+            | JitoVaultProgram::WarmupVaultNcnSlasherTicket
+            | JitoVaultProgram::CooldownVaultNcnSlasherTicket
+            | JitoVaultProgram::ChangeWithdrawalTicketOwner
+            | JitoVaultProgram::BurnWithdrawalTicket
+            | JitoVaultProgram::SetDepositCapacity
+            | JitoVaultProgram::SetFees
+            | JitoVaultProgram::SetProgramFee
+            | JitoVaultProgram::SetProgramFeeWallet
+            | JitoVaultProgram::SetIsPaused
+            | JitoVaultProgram::DelegateTokenAccount
+            | JitoVaultProgram::SetAdmin
+            | JitoVaultProgram::SetSecondaryAdmin
+            | JitoVaultProgram::AddDelegation
+            | JitoVaultProgram::CooldownDelegation
+            | JitoVaultProgram::UpdateVaultBalance
+            | JitoVaultProgram::InitializeVaultUpdateStateTracker
+            | JitoVaultProgram::CrankVaultUpdateStateTracker
+            | JitoVaultProgram::CloseVaultUpdateStateTracker
+            | JitoVaultProgram::CreateTokenMetadata
+            | JitoVaultProgram::UpdateTokenMetadata
+            | JitoVaultProgram::SetConfigAdmin => {
                 unreachable!()
             }
         }

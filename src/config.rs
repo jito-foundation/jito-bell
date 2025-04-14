@@ -25,7 +25,14 @@ impl std::fmt::Display for JitoBellConfig {
             writeln!(f, "  Instruction")?;
             for (key, instruction) in program.instructions.iter() {
                 writeln!(f, "    Instruction: {}", key)?;
-                writeln!(f, "        Pool Mint: {}", instruction.pool_mint)?;
+
+                if let Some(pool_mint_address) = &instruction.pool_mint {
+                    writeln!(f, "        Pool Mint: {}", pool_mint_address)?;
+                }
+
+                if let Some(vrt_address) = &instruction.vrt {
+                    writeln!(f, "        VRT: {}", vrt_address)?;
+                }
 
                 writeln!(f, "        Thresholds")?;
                 for threshold in instruction.thresholds.iter() {
