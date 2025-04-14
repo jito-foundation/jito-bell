@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
+use instruction::Instruction;
 use log::{error, info};
 use maplit::hashmap;
 use parser::{stake_pool::SplStakePoolProgram, JitoBellProgram, JitoTransactionParser};
@@ -43,7 +44,7 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
             .x_token(subscribe_option.x_token.clone())?
-            .tls_config(ClientTlsConfig::new().with_native_roots())?
+            .tls_config(ClientTlsConfig::new())?
             .connect()
             .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
@@ -66,7 +67,6 @@ impl JitoBellHandler {
             commitment: Some(subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
-            from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
@@ -111,88 +111,109 @@ impl JitoBellHandler {
                             .instructions
                             .get(&spl_stake_program.to_string())
                         {
-                            info!("Found Instruction");
-                            match spl_stake_program {
-                                SplStakePoolProgram::DepositStakeWithSlippage {
-                                    ix: _,
-                                    minimum_pool_tokens_out,
-                                } => {
-                                    info!("Found Instruction2");
-                                    if *minimum_pool_tokens_out >= instruction.threshold {
-                                        info!("Will Send Notification");
-                                        for destination in &instruction.notification.destinations {
-                                            match destination.as_str() {
-                                                "telegram" => {
-                                                    info!("Will Send Telegram Notification");
-                                                    self.send_telegram_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await
-                                                }
-                                                "slack" => {
-                                                    info!("Will Send Slack Notification");
-                                                    self.send_slack_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                "discord" => {
-                                                    info!("Will Send Discord Notification");
-                                                    self.send_discord_message(
-                                                        &instruction.notification.description,
-                                                        *minimum_pool_tokens_out,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                    }
-                                }
-                                SplStakePoolProgram::DepositSol { ix: _, amount } => {
-                                    if *amount >= instruction.threshold {
-                                        for destination in &instruction.notification.destinations {
-                                            match destination.as_str() {
-                                                "telegram" => {
-                                                    self.send_telegram_message(
-                                                        &instruction.notification.description,
-                                                        *amount,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await
-                                                }
-                                                "slack" => {
-                                                    self.send_slack_message(
-                                                        &instruction.notification.description,
-                                                        *amount,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                "discord" => {
-                                                    info!("Will Send Discord Notification");
-                                                    self.send_discord_message(
-                                                        &instruction.notification.description,
-                                                        *amount,
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
+                            self.handle_spl_stake_pool_program(
+                                parser,
+                                spl_stake_program,
+                                instruction,
+                            )
+                            .await?;
                         }
                     }
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle SPL Stake Pool Program
+    async fn handle_spl_stake_pool_program(
+        &self,
+        parser: &JitoTransactionParser,
+        spl_stake_program: &SplStakePoolProgram,
+        instruction: &Instruction,
+    ) -> Result<(), JitoBellError> {
+        info!("Found Instruction");
+        match spl_stake_program {
+            SplStakePoolProgram::DepositStake { ix: _ } => {
+                info!("Deposit Stake");
+                // if *minimum_pool_tokens_out >= instruction.threshold {
+                // TODO: Change Amount
+                self.dispatch_platform_notifications(
+                    &instruction.notification.destinations,
+                    &instruction.notification.description,
+                    100.0,
+                    &parser.transaction_signature,
+                )
+                .await?;
+                // }
+            }
+            SplStakePoolProgram::WithdrawStake {
+                ix: _,
+                minimum_lamports_out,
+            } => {
+                info!("Deposit WithdrawStake");
+                // TODO: Change Amount
+                self.dispatch_platform_notifications(
+                    &instruction.notification.destinations,
+                    &instruction.notification.description,
+                    *minimum_lamports_out,
+                    &parser.transaction_signature,
+                )
+                .await?;
+            }
+            SplStakePoolProgram::DepositSol { ix: _, amount } => {
+                if *amount >= instruction.threshold {
+                    self.dispatch_platform_notifications(
+                        &instruction.notification.destinations,
+                        &instruction.notification.description,
+                        100.0,
+                        &parser.transaction_signature,
+                    )
+                    .await?;
+                }
+            }
+            SplStakePoolProgram::WithdrawSol { ix: _, amount } => {
+                if *amount >= instruction.threshold {
+                    self.dispatch_platform_notifications(
+                        &instruction.notification.destinations,
+                        &instruction.notification.description,
+                        100.0,
+                        &parser.transaction_signature,
+                    )
+                    .await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn dispatch_platform_notifications(
+        &self,
+        destinations: &[String],
+        description: &str,
+        amount: f64,
+        transaction_signature: &str,
+    ) -> Result<(), JitoBellError> {
+        for destination in destinations {
+            match destination.as_str() {
+                "telegram" => {
+                    info!("Will Send Telegram Notification");
+                    self.send_telegram_message(description, amount, transaction_signature)
+                        .await
+                }
+                "slack" => {
+                    info!("Will Send Slack Notification");
+                    self.send_slack_message(description, amount, transaction_signature)
+                        .await?
+                }
+                "discord" => {
+                    info!("Will Send Discord Notification");
+                    self.send_discord_message(description, amount, transaction_signature)
+                        .await?
+                }
+                _ => {}
             }
         }
 
