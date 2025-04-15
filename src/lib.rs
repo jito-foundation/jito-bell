@@ -362,7 +362,7 @@ impl JitoBellHandler {
 
                 if vrt_mint_info.pubkey.eq(&vrt) {
                     for threshold in instruction.thresholds.iter() {
-                        let min_amount_out = *min_amount_out as f64 / 1_000_000_000 as f64;
+                        let min_amount_out = *min_amount_out as f64 / 1_000_000_000_f64;
                         if min_amount_out >= threshold.value {
                             self.dispatch_platform_notifications(
                                 &threshold.notification.destinations,
@@ -389,7 +389,7 @@ impl JitoBellHandler {
 
                 if vault.vrt_mint.eq(&vrt) {
                     for threshold in instruction.thresholds.iter() {
-                        let amount = *amount as f64 / 1_000_000_000 as f64;
+                        let amount = *amount as f64 / 1_000_000_000_f64;
                         if amount >= threshold.value {
                             self.dispatch_platform_notifications(
                                 &threshold.notification.destinations,
