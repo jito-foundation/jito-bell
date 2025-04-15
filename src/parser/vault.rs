@@ -4,7 +4,6 @@ use borsh::BorshDeserialize;
 use jito_vault_sdk::instruction::VaultInstruction;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
-    native_token::lamports_to_sol,
     pubkey::Pubkey,
 };
 use yellowstone_grpc_proto::prelude::CompiledInstruction;
@@ -221,10 +220,7 @@ impl JitoVaultProgram {
             data: instruction.data.clone(),
         };
 
-        Self::MintTo {
-            ix,
-            min_amount_out: lamports_to_sol(min_amount_out) as u64,
-        }
+        Self::MintTo { ix, min_amount_out }
     }
 
     pub fn parse_enqueue_withdrawal_ix(
@@ -254,9 +250,6 @@ impl JitoVaultProgram {
             data: instruction.data.clone(),
         };
 
-        Self::EnqueueWithdrawal {
-            ix,
-            amount: lamports_to_sol(amount) as u64,
-        }
+        Self::EnqueueWithdrawal { ix, amount }
     }
 }
