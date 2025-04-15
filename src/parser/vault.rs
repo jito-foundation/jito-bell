@@ -183,6 +183,16 @@ impl JitoVaultProgram {
         }
     }
 
+    // #[account(0, name = "config")]
+    // #[account(1, writable, name = "vault")]
+    // #[account(2, writable, name = "vrt_mint")]
+    // #[account(3, writable, signer, name = "depositor")]
+    // #[account(4, writable, name = "depositor_token_account")]
+    // #[account(5, writable, name = "vault_token_account")]
+    // #[account(6, writable, name = "depositor_vrt_token_account")]
+    // #[account(7, writable, name = "vault_fee_token_account")]
+    // #[account(8, name = "token_program")]
+    // #[account(9, signer, optional, name = "mint_signer", description = "Signer for minting")]
     pub fn parse_mint_to_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
@@ -198,6 +208,7 @@ impl JitoVaultProgram {
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
