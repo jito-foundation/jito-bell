@@ -164,10 +164,7 @@ impl SplStakePoolProgram {
     ///   12. '[]' Sysvar stake history account
     ///   13. `[]` Pool token program id,
     ///   14. `[]` Stake program id,
-    fn parse_deposit_stake_ix(
-        instruction: &CompiledInstruction,
-        account_keys: &[Pubkey],
-    ) -> SplStakePoolProgram {
+    fn parse_deposit_stake_ix(instruction: &CompiledInstruction, account_keys: &[Pubkey]) -> Self {
         let mut account_metas = [
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
