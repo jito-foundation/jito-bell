@@ -1,0 +1,15 @@
+services:
+  jito-bell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jito-bell
+    environment:
+      - RUST_LOG=${RUST_LOG:-debug}
+      - ENDPOINT=${ENDPOINT} 
+      - X_TOKEN=${X_TOKEN}
+      - ACCOUNT_INCLUDE=${ACCOUNT_INCLUDE}
+      - CONFIG_FILE=${CONFIG_FILE}
+    volumes:
+      - ./jito_bell_config.yaml:/jito_bell_config.yaml
+    restart: on-failure:5

@@ -13,6 +13,7 @@ anyhow = "1.0.62"
 borsh = "0.10.0"
 chrono = "0.4.26"
 clap = { version = "4.3.0", features = ["derive", "env"] }
+dotenv = "0.15.0"
 env_logger = "0.11.3"
 futures = "0.3.24"
 jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
