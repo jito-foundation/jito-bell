@@ -9,42 +9,42 @@ use yellowstone_grpc_proto::geyser::CommitmentLevel;
 #[derive(Debug, Clone, Parser)]
 #[clap(author, version, about)]
 struct Args {
-    #[clap(short, long, default_value_t = String::from("http://127.0.0.1:10000"))]
+    #[clap(short, long, env = "ENDPOINT")]
     /// Service endpoint
     endpoint: String,
 
-    #[clap(long)]
+    #[clap(long, env = "X_TOKEN")]
     x_token: Option<String>,
 
     /// Commitment level: processed, confirmed or finalized
-    #[clap(long)]
+    #[clap(long, env)]
     commitment: Option<ArgsCommitment>,
 
     /// Filter vote transactions
-    #[clap(long)]
+    #[clap(long, env)]
     vote: Option<bool>,
 
     /// Filter failed transactions
-    #[clap(long)]
+    #[clap(long, env)]
     failed: Option<bool>,
 
     /// Filter by transaction signature
-    #[clap(long)]
+    #[clap(long, env)]
     signature: Option<String>,
 
     /// Filter included account in transactions
-    #[clap(long)]
+    #[clap(long, env = "ACCOUNT_INCLUDE", value_delimiter = ',')]
     account_include: Vec<String>,
 
     /// Filter excluded account in transactions
-    #[clap(long)]
+    #[clap(long, env)]
     account_exclude: Vec<String>,
 
     /// Filter required account in transactions
-    #[clap(long)]
+    #[clap(long, env)]
     account_required: Vec<String>,
 
-    #[clap(long)]
+    #[clap(long, env = "CONFIG_FILE")]
     config_file: PathBuf,
 }
 
@@ -68,6 +68,7 @@ impl From<ArgsCommitment> for CommitmentLevel {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenv::dotenv().ok();
     env::set_var(
         env_logger::DEFAULT_FILTER_ENV,
         env::var_os(env_logger::DEFAULT_FILTER_ENV).unwrap_or_else(|| "info".into()),
