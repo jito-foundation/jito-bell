@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: jito-bell
     container_name: jito-bell
     environment:
       - RUST_LOG=${RUST_LOG:-debug}
