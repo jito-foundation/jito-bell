@@ -42,6 +42,18 @@ cargo r -- -e {endpoint} --x-token {x-token} --account-include Vau1t6sLNxnzB7ZDs
 
 ## Getting Started
 
+### Create `.env` file
+
+```bash
+cp .env.example .env
+```
+
+### Create ` jito_bell_config.yaml`
+
+```bash
+cp jito_bell_config_example.yaml jito_bell_config.yaml
+```
+
 ### Build
 
 ```bash
