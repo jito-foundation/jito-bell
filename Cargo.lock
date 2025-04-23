@@ -2163,6 +2163,7 @@ dependencies = [
  "dotenv",
  "env_logger 0.11.8",
  "futures",
+ "jito-steward",
  "jito-vault-client",
  "jito-vault-sdk",
  "log",
@@ -2181,6 +2182,51 @@ dependencies = [
  "tonic",
  "yellowstone-grpc-client",
  "yellowstone-grpc-proto",
+]
+
+[[package]]
+name = "jito-programs-vote-state"
+version = "0.1.5"
+source = "git+https://github.com/jito-foundation/jito-programs?rev=b230b2b5cdb911232a66cdd85f83828e6933cc1c#b230b2b5cdb911232a66cdd85f83828e6933cc1c"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-steward"
+version = "0.1.0"
+source = "git+https://github.com/aoikurokawa/stakenet?branch=ak%2Ftip_distribution#ec6c2d729978538eb685d591fa2252e37b4c4c47"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "blake3",
+ "borsh 0.10.4",
+ "bytemuck",
+ "cfg-if",
+ "semver",
+ "serde",
+ "serde_derive",
+ "spl-pod",
+ "spl-stake-pool",
+ "static_assertions",
+ "thiserror 1.0.69",
+ "type-layout",
+ "validator-history",
+]
+
+[[package]]
+name = "jito-tip-distribution"
+version = "0.1.5"
+source = "git+https://github.com/jito-foundation/jito-programs?rev=b230b2b5cdb911232a66cdd85f83828e6933cc1c#b230b2b5cdb911232a66cdd85f83828e6933cc1c"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state",
+ "solana-program",
+ "solana-security-txt",
 ]
 
 [[package]]
@@ -2381,6 +2427,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83faa42c0a078c393f6b29d5db232d8be22776a891f8f56e5284faee4a20b327"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "memoffset"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "043175f069eda7b85febe4a74abbaeff828d9f8b448515d3151a14a3542811aa"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -3768,7 +3823,7 @@ dependencies = [
  "libsecp256k1",
  "light-poseidon",
  "log",
- "memoffset",
+ "memoffset 0.9.1",
  "num-bigint 0.4.6",
  "num-derive 0.4.2",
  "num-traits",
@@ -4838,6 +4893,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
+name = "type-layout"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074069282ba5be5078f1bdb34112b963516d50f262bf4c1082fee1f6ada11d74"
+dependencies = [
+ "memoffset 0.5.6",
+ "type-layout-derive",
+]
+
+[[package]]
+name = "type-layout-derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc4a1cf66ce820973c4b31c5ef47a8e930a53ffbcec191212c33f5a3ad75c6cd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4951,6 +5027,37 @@ name = "utf8parse"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
+
+[[package]]
+name = "validator-history"
+version = "0.1.0"
+source = "git+https://github.com/aoikurokawa/stakenet?branch=ak%2Ftip_distribution#ec6c2d729978538eb685d591fa2252e37b4c4c47"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "bytemuck",
+ "cfg-if",
+ "jito-tip-distribution",
+ "semver",
+ "serde",
+ "serde_derive",
+ "solana-security-txt",
+ "static_assertions",
+ "thiserror 1.0.69",
+ "type-layout",
+ "validator-history-vote-state",
+]
+
+[[package]]
+name = "validator-history-vote-state"
+version = "0.1.2"
+source = "git+https://github.com/aoikurokawa/stakenet?branch=ak%2Ftip_distribution#ec6c2d729978538eb685d591fa2252e37b4c4c47"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "solana-program",
+]
 
 [[package]]
 name = "vcpkg"
