@@ -186,7 +186,7 @@ impl SplStakePoolProgram {
         for (index, account) in instruction.accounts.iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
-                    account_meta.pubkey = *account
+                    account_meta.pubkey = *account;
                 }
             }
         }
@@ -240,7 +240,7 @@ impl SplStakePoolProgram {
         for (index, account) in instruction.accounts.iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
-                    account_meta.pubkey = *account
+                    account_meta.pubkey = *account;
                 }
             }
         }
@@ -293,7 +293,7 @@ impl SplStakePoolProgram {
         for (index, account) in instruction.accounts.iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
-                    account_meta.pubkey = *account
+                    account_meta.pubkey = *account;
                 }
             }
         }
@@ -351,7 +351,7 @@ impl SplStakePoolProgram {
         for (index, account) in instruction.accounts.iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
-                    account_meta.pubkey = *account
+                    account_meta.pubkey = *account;
                 }
             }
         }
