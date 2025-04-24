@@ -1,7 +1,7 @@
-use std::{env, path::PathBuf};
+use std::{env, io::Write, path::PathBuf};
 
 use clap::{Parser, ValueEnum};
-use jito_bell::{subscribe_option::SubscribeOption, JitoBellHandler};
+use jito_bell::{multi_writer::MultiWriter, subscribe_option::SubscribeOption, JitoBellHandler};
 use log::info;
 use solana_sdk::commitment_config::CommitmentConfig;
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
@@ -69,11 +69,34 @@ impl From<ArgsCommitment> for CommitmentLevel {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
+
+    let log_path =
+        env::var("LOG_FILE_PATH").unwrap_or_else(|_| "/var/log/jito-bell/app.log".to_string());
+
+    if let Some(dir) = std::path::Path::new(&log_path).parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+
     env::set_var(
         env_logger::DEFAULT_FILTER_ENV,
         env::var_os(env_logger::DEFAULT_FILTER_ENV).unwrap_or_else(|| "info".into()),
     );
-    env_logger::init();
+
+    let env = env_logger::Env::default();
+    env_logger::Builder::from_env(env)
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{} [{}] {}: {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.target(),
+                record.args()
+            )
+        })
+        .write_style(env_logger::WriteStyle::Always)
+        .target(env_logger::Target::Pipe(Box::new(MultiWriter::new())))
+        .init();
 
     let args = Args::parse();
 

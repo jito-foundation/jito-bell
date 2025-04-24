@@ -25,6 +25,7 @@ use crate::config::JitoBellConfig;
 pub mod config;
 mod error;
 pub mod instruction;
+pub mod multi_writer;
 pub mod notification_config;
 pub mod notification_info;
 pub mod parser;
@@ -119,7 +120,6 @@ impl JitoBellHandler {
         &self,
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
-        debug!("Before Send notification");
         for program in &parser.programs {
             match program {
                 JitoBellProgram::SplToken2022(_) => {
@@ -128,7 +128,6 @@ impl JitoBellHandler {
                 JitoBellProgram::SplStakePool(spl_stake_program) => {
                     debug!("SPL Stake Pool");
                     if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                        debug!("Found Program Config");
                         if let Some(instruction) = program_config
                             .instructions
                             .get(&spl_stake_program.to_string())
