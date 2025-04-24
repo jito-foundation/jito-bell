@@ -12,6 +12,7 @@ name = "jito-bell"
 path = "src/bin/main.rs"
 
 [dependencies]
+anchor-lang = "0.30.1"
 anyhow = "1.0.62"
 borsh = "0.10.0"
 chrono = "0.4.26"
@@ -19,7 +20,6 @@ clap = { version = "4.3.0", features = ["derive", "env"] }
 dotenv = "0.15.0"
 env_logger = "0.11.3"
 futures = "0.3.24"
-jito-steward = { package = "jito-steward", git = "https://github.com/aoikurokawa/stakenet", branch = "ak/tip_distribution", features = ["idl-build"] }
 jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 log = "0.4.17"
