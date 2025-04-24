@@ -29,11 +29,11 @@ impl MultiWriter {
 impl std::io::Write for MultiWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         // Always write to stdout
-        std::io::stdout().write(buf)?;
+        std::io::stdout().write_all(buf)?;
 
         // Also write to file if available
         if let Some(file) = &mut self.file {
-            file.write(buf)?;
+            file.write_all(buf)?;
         }
 
         Ok(buf.len())
