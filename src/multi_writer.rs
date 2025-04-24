@@ -1,5 +1,6 @@
 use std::env;
 
+#[derive(Default)]
 pub struct MultiWriter {
     file: Option<std::fs::File>,
 }
