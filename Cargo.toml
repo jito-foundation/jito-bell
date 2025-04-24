@@ -15,6 +15,7 @@ path = "src/bin/main.rs"
 anchor-lang = "0.30.1"
 anyhow = "1.0.62"
 borsh = "0.10.0"
+bytemuck = "1.22.0"
 chrono = "0.4.26"
 clap = { version = "4.3.0", features = ["derive", "env"] }
 dotenv = "0.15.0"

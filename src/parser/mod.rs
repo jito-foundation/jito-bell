@@ -5,6 +5,7 @@ use vault::JitoVaultProgram;
 use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
 pub mod stake_pool;
+pub mod stakenet;
 pub mod token_2022;
 pub mod vault;
 
