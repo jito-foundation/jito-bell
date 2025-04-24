@@ -25,6 +25,7 @@ use crate::config::JitoBellConfig;
 pub mod config;
 mod error;
 pub mod instruction;
+pub mod multi_writer;
 pub mod notification_config;
 pub mod notification_info;
 pub mod parser;
