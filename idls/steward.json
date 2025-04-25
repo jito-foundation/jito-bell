@@ -3271,23 +3271,16 @@
     },
     {
       "name": "StewardStateEnum",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
-        "kind": "enum",
-        "variants": [
+        "kind": "struct",
+        "fields": [
           {
-            "name": "ComputeScores"
-          },
-          {
-            "name": "ComputeDelegations"
-          },
-          {
-            "name": "Idle"
-          },
-          {
-            "name": "ComputeInstantUnstake"
-          },
-          {
-            "name": "Rebalance"
+            "name": "value",
+            "type": "u64"
           }
         ]
       }
