@@ -525,7 +525,7 @@ impl JitoBellHandler {
                         },
                         {
                             "name": "Transaction",
-                            "value": format!("[View on Explorer](https://explorer.solana.com/tx/{})", sig),
+                            "value": format!("[View on Explorer](https://solscan.io/tx/{})", sig),
                             "inline": true
                         }
                     ],
@@ -600,7 +600,7 @@ impl JitoBellHandler {
                             },
                             {
                                 "type": "mrkdwn",
-                                "text": format!("*Transaction:* <https://explorer.solana.com/tx/{}|View on Explorer>", sig)
+                                "text": format!("*Transaction:* <https://solscan.io/tx/{}|View on Explorer>", sig)
                             }
                         ]
                     }
