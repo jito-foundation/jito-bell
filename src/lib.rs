@@ -169,24 +169,16 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("SPL Stake Program: {}", spl_stake_program);
 
-        let stake_pool = if let Some(address) = &instruction.stake_pool {
-            Pubkey::from_str(address).unwrap()
-        } else {
-            return Err(JitoBellError::Config(
-                "Specify Pool Mint Address".to_string(),
-            ));
-        };
-
-        let pool_mint = if let Some(address) = &instruction.pool_mint {
-            Pubkey::from_str(address).unwrap()
-        } else {
-            return Err(JitoBellError::Config(
-                "Specify Pool Mint Address".to_string(),
-            ));
-        };
-
         match spl_stake_program {
             SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
+                let stake_pool = if let Some(address) = &instruction.stake_pool {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -217,6 +209,14 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DepositStake { ix } => {
+                let pool_mint = if let Some(address) = &instruction.pool_mint {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _stake_deposit_authority_info = &ix.accounts[2];
@@ -268,6 +268,14 @@ impl JitoBellHandler {
                 ix,
                 minimum_lamports_out,
             } => {
+                let pool_mint = if let Some(address) = &instruction.pool_mint {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -294,6 +302,14 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DepositSol { ix, amount } => {
+                let pool_mint = if let Some(address) = &instruction.pool_mint {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _reserve_stake_account_info = &ix.accounts[2];
@@ -318,6 +334,14 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::WithdrawSol { ix, amount } => {
+                let pool_mint = if let Some(address) = &instruction.pool_mint {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _user_transfer_authority_info = &ix.accounts[2];
@@ -342,6 +366,14 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix, amount } => {
+                let stake_pool = if let Some(address) = &instruction.stake_pool {
+                    Pubkey::from_str(address).unwrap()
+                } else {
+                    return Err(JitoBellError::Config(
+                        "Specify Pool Mint Address".to_string(),
+                    ));
+                };
+
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _stake_pool_withdraw_authority_info = &ix.accounts[2];
