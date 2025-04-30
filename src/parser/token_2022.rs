@@ -72,7 +72,11 @@ impl SplToken2022Program {
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
-            account_metas[index].pubkey = account_keys[*account as usize];
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
         }
 
         let ix = Instruction {
@@ -132,7 +136,7 @@ mod tests {
         if let Some(SplToken2022Program::MintTo { amount, .. }) = parsed {
             assert_eq!(amount, sol);
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected MintTo variant");
         }
     }
 }

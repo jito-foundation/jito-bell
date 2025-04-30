@@ -582,7 +582,7 @@ mod tests {
         assert!(parsed.is_some());
         if let Some(SplStakePoolProgram::DepositStake { ix: _ }) = parsed {
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected DepositStake variant");
         }
     }
 
@@ -613,7 +613,7 @@ mod tests {
         {
             assert_eq!(minimum_lamports_out, lamports_to_sol(lamports));
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected WithdrawStake variant");
         }
     }
 
@@ -640,7 +640,7 @@ mod tests {
         if let Some(SplStakePoolProgram::DepositSol { ix: _, amount }) = parsed {
             assert_eq!(amount, lamports_to_sol(lamports));
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected DepositSol variant");
         }
     }
 
@@ -667,7 +667,7 @@ mod tests {
         if let Some(SplStakePoolProgram::WithdrawSol { ix: _, amount }) = parsed {
             assert_eq!(amount, lamports_to_sol(lamports));
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected WithdrawSol variant");
         }
     }
 
@@ -698,7 +698,7 @@ mod tests {
         {
             assert_eq!(amount, lamports_to_sol(lamports));
         } else {
-            panic!("Expected IncreaseValidatorStake variant");
+            panic!("Expected DecreaseValidatorStakeWithReserve variant");
         }
     }
 }
