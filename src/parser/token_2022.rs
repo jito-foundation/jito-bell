@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -24,7 +22,7 @@ impl std::fmt::Display for SplToken2022Program {
 impl SplToken2022Program {
     /// Retrieve Program ID of SPL Token 2022 Program
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb").unwrap()
+        spl_token_2022::id()
     }
 
     /// Parse SPL Token 2022 program
@@ -74,7 +72,11 @@ impl SplToken2022Program {
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
-            account_metas[index].pubkey = account_keys[*account as usize];
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
         }
 
         let ix = Instruction {
@@ -84,5 +86,57 @@ impl SplToken2022Program {
         };
 
         SplToken2022Program::MintTo { ix, amount }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
+    use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+    use crate::parser::token_2022::SplToken2022Program;
+
+    fn create_test_pubkeys(count: usize) -> Vec<Pubkey> {
+        (0..count).map(|_| Keypair::new().pubkey()).collect()
+    }
+
+    fn create_compiled_instruction(
+        program_id_index: u32,
+        accounts: Vec<u8>,
+        data: Vec<u8>,
+    ) -> CompiledInstruction {
+        CompiledInstruction {
+            program_id_index,
+            accounts,
+            data,
+        }
+    }
+
+    #[test]
+    fn test_mint_to() {
+        let ix_number = 7;
+        let num_account = 4;
+        let sol: u64 = 5; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&sol.to_le_bytes());
+
+        // Create account indices
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplToken2022Program::parse_spl_token_2022_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplToken2022Program::MintTo { amount, .. }) = parsed {
+            assert_eq!(amount, sol);
+        } else {
+            panic!("Expected MintTo variant");
+        }
     }
 }

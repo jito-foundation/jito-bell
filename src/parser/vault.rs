@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use borsh::BorshDeserialize;
 use jito_vault_sdk::instruction::VaultInstruction;
 use solana_sdk::{
@@ -153,7 +151,7 @@ impl std::fmt::Display for JitoVaultProgram {
 
 impl JitoVaultProgram {
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8").unwrap()
+        jito_vault_client::programs::JITO_VAULT_ID
     }
 
     /// Parse Jito Vault Program
@@ -182,16 +180,16 @@ impl JitoVaultProgram {
         }
     }
 
-    // #[account(0, name = "config")]
-    // #[account(1, writable, name = "vault")]
-    // #[account(2, writable, name = "vrt_mint")]
-    // #[account(3, writable, signer, name = "depositor")]
-    // #[account(4, writable, name = "depositor_token_account")]
-    // #[account(5, writable, name = "vault_token_account")]
-    // #[account(6, writable, name = "depositor_vrt_token_account")]
-    // #[account(7, writable, name = "vault_fee_token_account")]
-    // #[account(8, name = "token_program")]
-    // #[account(9, signer, optional, name = "mint_signer", description = "Signer for minting")]
+    /// #[account(0, name = "config")]
+    /// #[account(1, writable, name = "vault")]
+    /// #[account(2, writable, name = "vrt_mint")]
+    /// #[account(3, writable, signer, name = "depositor")]
+    /// #[account(4, writable, name = "depositor_token_account")]
+    /// #[account(5, writable, name = "vault_token_account")]
+    /// #[account(6, writable, name = "depositor_vrt_token_account")]
+    /// #[account(7, writable, name = "vault_fee_token_account")]
+    /// #[account(8, name = "token_program")]
+    /// #[account(9, signer, optional, name = "mint_signer", description = "Signer for minting")]
     pub fn parse_mint_to_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
@@ -211,7 +209,11 @@ impl JitoVaultProgram {
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
-            account_metas[index].pubkey = account_keys[*account as usize];
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
         }
 
         let ix = Instruction {
@@ -223,6 +225,16 @@ impl JitoVaultProgram {
         Self::MintTo { ix, min_amount_out }
     }
 
+    /// #[account(0, name = "config")]
+    /// #[account(1, writable, name = "vault")]
+    /// #[account(2, writable, name = "vault_staker_withdrawal_ticket")]
+    /// #[account(3, writable, name = "vault_staker_withdrawal_ticket_token_account")]
+    /// #[account(4, writable, signer, name = "staker")]
+    /// #[account(5, writable, name = "staker_vrt_token_account")]
+    /// #[account(6, signer, name = "base")]
+    /// #[account(7, name = "token_program")]
+    /// #[account(8, name = "system_program")]
+    /// #[account(9, signer, optional, name = "burn_signer", description = "Signer for burning")]
     pub fn parse_enqueue_withdrawal_ix(
         instruction: &CompiledInstruction,
         account_keys: &[Pubkey],
@@ -238,10 +250,15 @@ impl JitoVaultProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), true),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
-            account_metas[index].pubkey = account_keys[*account as usize];
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
         }
 
         let ix = Instruction {
@@ -251,5 +268,87 @@ impl JitoVaultProgram {
         };
 
         Self::EnqueueWithdrawal { ix, amount }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
+    use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+    use crate::parser::vault::JitoVaultProgram;
+
+    fn create_test_pubkeys(count: usize) -> Vec<Pubkey> {
+        (0..count).map(|_| Keypair::new().pubkey()).collect()
+    }
+
+    fn create_compiled_instruction(
+        program_id_index: u32,
+        accounts: Vec<u8>,
+        data: Vec<u8>,
+    ) -> CompiledInstruction {
+        CompiledInstruction {
+            program_id_index,
+            accounts,
+            data,
+        }
+    }
+
+    #[test]
+    fn test_mint_to() {
+        let ix_number = 11;
+        let num_account = 10;
+        let amount_in: u64 = 5; // 5 SOL
+        let min_amount_out: u64 = 5; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&amount_in.to_le_bytes());
+        data.extend_from_slice(&min_amount_out.to_le_bytes());
+
+        // Create account indices
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = JitoVaultProgram::parse_jito_vault_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(JitoVaultProgram::MintTo { min_amount_out, .. }) = parsed {
+            assert_eq!(min_amount_out, 5); // Ensure parsed value matches expected value
+        } else {
+            panic!("Expected MintTo variant");
+        }
+    }
+
+    #[test]
+    fn test_enqueue_withdrawal() {
+        let ix_number = 12;
+        let num_account = 10;
+        let amount: u64 = 5; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&amount.to_le_bytes());
+
+        // Create account indices
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = JitoVaultProgram::parse_jito_vault_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(JitoVaultProgram::EnqueueWithdrawal { amount, .. }) = parsed {
+            assert_eq!(amount, 5);
+        } else {
+            panic!("Expected MintTo variant");
+        }
     }
 }
