@@ -346,7 +346,7 @@ mod tests {
         // Validate result
         assert!(parsed.is_some());
         if let Some(JitoVaultProgram::EnqueueWithdrawal { amount, .. }) = parsed {
-            assert_eq!(amount, amount);
+            assert_eq!(amount, 5);
         } else {
             panic!("Expected MintTo variant");
         }
