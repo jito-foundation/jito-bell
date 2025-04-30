@@ -535,19 +535,20 @@ mod tests {
     #[test]
     fn test_parse_increase_validator_stake() {
         let ix_number = 4;
-        let account_keys = create_test_pubkeys(14);
-
+        let num_account = 14;
         let lamports: u64 = 5_000_000_000; // 5 SOL
         let transient_stake_seed: u64 = 123;
+
+        let account_keys = create_test_pubkeys(num_account);
 
         let mut data = vec![ix_number];
         data.extend_from_slice(&lamports.to_le_bytes());
         data.extend_from_slice(&transient_stake_seed.to_le_bytes());
 
         // Create account indices
-        let accounts = (0..14).map(|i| i as u8).collect();
+        let accounts = (0..num_account).map(|i| i as u8).collect();
 
-        let instruction = create_compiled_instruction(14, accounts, data);
+        let instruction = create_compiled_instruction(1, accounts, data);
 
         // Parse the instruction
         let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
@@ -564,11 +565,13 @@ mod tests {
     #[test]
     fn test_parse_deposit_stake() {
         let ix_number = 9;
-        let account_keys = create_test_pubkeys(15);
+        let num_account = 15;
+
+        let account_keys = create_test_pubkeys(num_account);
 
         let data = vec![ix_number];
 
-        let accounts = (0..15).map(|i| i as u8).collect();
+        let accounts = (0..num_account).map(|i| i as u8).collect();
 
         let instruction = create_compiled_instruction(14, accounts, data);
 
@@ -578,6 +581,122 @@ mod tests {
         // Validate result
         assert!(parsed.is_some());
         if let Some(SplStakePoolProgram::DepositStake { ix: _ }) = parsed {
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
+        }
+    }
+
+    #[test]
+    fn test_parse_withdraw_stake() {
+        let ix_number = 10;
+        let num_account = 13;
+        let lamports: u64 = 5_000_000_000; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&lamports.to_le_bytes());
+
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::WithdrawStake {
+            ix: _,
+            minimum_lamports_out,
+        }) = parsed
+        {
+            assert_eq!(minimum_lamports_out, lamports_to_sol(lamports));
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
+        }
+    }
+
+    #[test]
+    fn test_parse_deposit_sol() {
+        let ix_number = 14;
+        let num_account = 11;
+        let lamports: u64 = 5_000_000_000; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&lamports.to_le_bytes());
+
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::DepositSol { ix: _, amount }) = parsed {
+            assert_eq!(amount, lamports_to_sol(lamports));
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
+        }
+    }
+
+    #[test]
+    fn test_parse_withdraw_sol() {
+        let ix_number = 16;
+        let num_account = 13;
+        let lamports: u64 = 5_000_000_000; // 5 SOL
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&lamports.to_le_bytes());
+
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::WithdrawSol { ix: _, amount }) = parsed {
+            assert_eq!(amount, lamports_to_sol(lamports));
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
+        }
+    }
+
+    #[test]
+    fn test_parse_decrease_validator_stake_with_reserve() {
+        let ix_number = 21;
+        let num_account = 11;
+        let lamports: u64 = 5_000_000_000; // 5 SOL
+        let transient_stake_seed: u64 = 123;
+
+        let account_keys = create_test_pubkeys(num_account);
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&lamports.to_le_bytes());
+        data.extend_from_slice(&transient_stake_seed.to_le_bytes());
+
+        let accounts = (0..num_account).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(1, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix: _, amount }) =
+            parsed
+        {
+            assert_eq!(amount, lamports_to_sol(lamports));
         } else {
             panic!("Expected IncreaseValidatorStake variant");
         }
