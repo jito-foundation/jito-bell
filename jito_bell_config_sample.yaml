@@ -2,6 +2,25 @@ programs:
   spl_stake_pool:
     program_id: "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
     instructions:
+      increase_validator_stake:
+        stake_pool: "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+        thresholds:
+          - value: 0.1  # SOL
+            notification:
+              description: "JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 1000.0  # SOL
+            notification:
+              description: "Large JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 5000.0  # SOL
+            notification:
+              description: "Very large JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 10000.0  # SOL
+            notification:
+              description: "Whale JitoSOL stake deposit detected"
+              destinations: ["slack"]
       deposit_stake:
         pool_mint: "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
         thresholds:
@@ -77,6 +96,25 @@ programs:
           - value: 10000.0  # SOL
             notification:
               description: "Whale SOL withdrawal from JitoSOL detected"
+              destinations: ["slack"]
+      decrease_validator_stake_with_reserve:
+        stake_pool: "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+        thresholds:
+          - value: 0.1  # SOL
+            notification:
+              description: "JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 1000.0  # SOL
+            notification:
+              description: "Large JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 5000.0  # SOL
+            notification:
+              description: "Very large JitoSOL stake deposit detected"
+              destinations: ["slack"]
+          - value: 10000.0  # SOL
+            notification:
+              description: "Whale JitoSOL stake deposit detected"
               destinations: ["slack"]
   jito_vault:
     program_id: "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"

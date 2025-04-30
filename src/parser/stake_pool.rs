@@ -16,7 +16,10 @@ pub enum SplStakePoolProgram {
     AddValidatorToPool,
     RemoveValidatorFromPool,
     DecreaseValidatorStake,
-    IncreaseValidatorStake,
+    IncreaseValidatorStake {
+        ix: Instruction,
+        amount: f64,
+    },
     SetPreferredValidator,
     UpdateValidatorListBalance,
     UpdateStakePoolBalance,
@@ -44,7 +47,10 @@ pub enum SplStakePoolProgram {
     UpdateTokenMetadata,
     IncreaseAdditionalValidatorStake,
     DecreaseAdditionalValidatorStake,
-    DecreaseValidatorStakeWithReserve,
+    DecreaseValidatorStakeWithReserve {
+        ix: Instruction,
+        amount: f64,
+    },
     Redelegate,
     DepositStakeWithSlippage,
     WithdrawStakeWithSlippage,
@@ -59,7 +65,9 @@ impl std::fmt::Display for SplStakePoolProgram {
             SplStakePoolProgram::AddValidatorToPool => write!(f, "add_validator_pool"),
             SplStakePoolProgram::RemoveValidatorFromPool => write!(f, "remove_validator_from_pool"),
             SplStakePoolProgram::DecreaseValidatorStake => write!(f, "decrease_validator_stake"),
-            SplStakePoolProgram::IncreaseValidatorStake => write!(f, "increase_validator_stake"),
+            SplStakePoolProgram::IncreaseValidatorStake { ix: _, amount: _ } => {
+                write!(f, "increase_validator_stake")
+            }
             SplStakePoolProgram::SetPreferredValidator => write!(f, "set_preferred_validator"),
             SplStakePoolProgram::UpdateValidatorListBalance => {
                 write!(f, "update_validator_list_balance")
@@ -87,7 +95,7 @@ impl std::fmt::Display for SplStakePoolProgram {
             SplStakePoolProgram::DecreaseAdditionalValidatorStake => {
                 write!(f, "decrease_additional_validator_stake")
             }
-            SplStakePoolProgram::DecreaseValidatorStakeWithReserve => {
+            SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix: _, amount: _ } => {
                 write!(f, "decrease_validator_stake_with_reserve")
             }
             SplStakePoolProgram::Redelegate => write!(f, "redelegate"),
@@ -120,6 +128,14 @@ impl SplStakePoolProgram {
         };
 
         match stake_pool_ix {
+            StakePoolInstruction::IncreaseValidatorStake {
+                lamports,
+                transient_stake_seed: _,
+            } => Some(Self::parse_increase_validator_stake_ix(
+                instruction,
+                account_keys,
+                lamports,
+            )),
             StakePoolInstruction::DepositStake => {
                 Some(Self::parse_deposit_stake_ix(instruction, account_keys))
             }
@@ -138,7 +154,74 @@ impl SplStakePoolProgram {
                 account_keys,
                 amount,
             )),
+            StakePoolInstruction::DecreaseValidatorStakeWithReserve {
+                lamports,
+                transient_stake_seed: _,
+            } => Some(Self::parse_decrease_validator_stake_with_reserve_ix(
+                instruction,
+                account_keys,
+                lamports,
+            )),
             _ => None,
+        }
+    }
+
+    /// Parse Increase Validator Stake Instruction
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L163-L199
+    ///
+    ///  0. `[]` Stake pool
+    ///  1. `[s]` Stake pool staker
+    ///  2. `[]` Stake pool withdraw authority
+    ///  3. `[w]` Validator list
+    ///  4. `[w]` Stake pool reserve stake
+    ///  5. `[w]` Transient stake account
+    ///  6. `[]` Validator stake account
+    ///  7. `[]` Validator vote account to delegate to
+    ///  8. '[]' Clock sysvar
+    ///  9. '[]' Rent sysvar
+    /// 10. `[]` Stake History sysvar
+    /// 11. `[]` Stake Config sysvar
+    /// 12. `[]` System program
+    /// 13. `[]` Stake program
+    fn parse_increase_validator_stake_ix(
+        instruction: &CompiledInstruction,
+        account_keys: &[Pubkey],
+        lamports: u64,
+    ) -> Self {
+        let mut account_metas = [
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+        ];
+
+        for (index, account) in instruction.accounts.iter().enumerate() {
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
+        }
+
+        let ix = Instruction {
+            program_id: SplStakePoolProgram::program_id(),
+            accounts: account_metas.to_vec(),
+            data: instruction.data.clone(),
+        };
+
+        SplStakePoolProgram::IncreaseValidatorStake {
+            ix,
+            amount: lamports_to_sol(lamports),
         }
     }
 
@@ -365,6 +448,59 @@ impl SplStakePoolProgram {
         SplStakePoolProgram::WithdrawSol {
             ix,
             amount: lamports_to_sol(amount),
+        }
+    }
+
+    /// Parse Decrease Validator Stake With Reserve Instruction
+    /// https://github.com/solana-labs/solana-program-library/blob/b7dd8fee93815b486fce98d3d43d1d0934980226/stake-pool/program/src/instruction.rs#L512-L541
+    ///
+    ///  0. `[]` Stake pool
+    ///  1. `[s]` Stake pool staker
+    ///  2. `[]` Stake pool withdraw authority
+    ///  3. `[w]` Validator list
+    ///  4. `[w]` Reserve stake account, to fund rent exempt reserve
+    ///  5. `[w]` Canonical stake account to split from
+    ///  6. `[w]` Transient stake account to receive split
+    ///  7. `[]` Clock sysvar
+    ///  8. '[]' Stake history sysvar
+    ///  9. `[]` System program
+    /// 10. `[]` Stake program
+    fn parse_decrease_validator_stake_with_reserve_ix(
+        instruction: &CompiledInstruction,
+        account_keys: &[Pubkey],
+        lamports: u64,
+    ) -> SplStakePoolProgram {
+        let mut account_metas = [
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+        ];
+
+        for (index, account) in instruction.accounts.iter().enumerate() {
+            if let Some(account_meta) = account_metas.get_mut(index) {
+                if let Some(account) = account_keys.get(*account as usize) {
+                    account_meta.pubkey = *account;
+                }
+            }
+        }
+
+        let ix = Instruction {
+            program_id: SplStakePoolProgram::program_id(),
+            accounts: account_metas.to_vec(),
+            data: instruction.data.clone(),
+        };
+
+        SplStakePoolProgram::DecreaseValidatorStakeWithReserve {
+            ix,
+            amount: lamports_to_sol(lamports),
         }
     }
 }

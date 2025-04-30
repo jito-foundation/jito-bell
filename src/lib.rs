@@ -169,6 +169,14 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("SPL Stake Program: {}", spl_stake_program);
 
+        let stake_pool = if let Some(address) = &instruction.stake_pool {
+            Pubkey::from_str(address).unwrap()
+        } else {
+            return Err(JitoBellError::Config(
+                "Specify Pool Mint Address".to_string(),
+            ));
+        };
+
         let pool_mint = if let Some(address) = &instruction.pool_mint {
             Pubkey::from_str(address).unwrap()
         } else {
@@ -178,6 +186,36 @@ impl JitoBellHandler {
         };
 
         match spl_stake_program {
+            SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
+                let stake_pool_info = &ix.accounts[0];
+                let _staker_info = &ix.accounts[1];
+                let _withdraw_authority_info = &ix.accounts[2];
+                let _validator_list_info = &ix.accounts[3];
+                let _reserve_stake_account_info = &ix.accounts[4];
+                let _maybe_ephemeral_stake_account_info = &ix.accounts[5];
+                let _validator_stake_account_info = &ix.accounts[6];
+                let _validator_vote_account_info = &ix.accounts[7];
+                let _clock_info = &ix.accounts[8];
+                let _rent_info = &ix.accounts[9];
+                let _stake_history_info = &ix.accounts[10];
+                let _stake_config_info = &ix.accounts[11];
+                let _system_program_info = &ix.accounts[12];
+                let _stake_program_info = &ix.accounts[13];
+
+                if stake_pool_info.pubkey.eq(&stake_pool) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *amount > threshold.value {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *amount,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
+                }
+            }
             SplStakePoolProgram::DepositStake { ix } => {
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
@@ -303,11 +341,37 @@ impl JitoBellHandler {
                     }
                 }
             }
+            SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix, amount } => {
+                let stake_pool_info = &ix.accounts[0];
+                let _staker_info = &ix.accounts[1];
+                let _stake_pool_withdraw_authority_info = &ix.accounts[2];
+                let _validator_list_info = &ix.accounts[3];
+                let _reserve_stake_account_info = &ix.accounts[4];
+                let _validator_stake_info = &ix.accounts[5];
+                let _transient_stake_info = &ix.accounts[6];
+                let _clock_info = &ix.accounts[7];
+                let _stake_history_info = &ix.accounts[8];
+                let _system_program_info = &ix.accounts[9];
+                let _stake_program_info = &ix.accounts[10];
+
+                if stake_pool_info.pubkey.eq(&stake_pool) {
+                    for threshold in instruction.thresholds.iter() {
+                        if *amount > threshold.value {
+                            self.dispatch_platform_notifications(
+                                &threshold.notification.destinations,
+                                &threshold.notification.description,
+                                *amount,
+                                &parser.transaction_signature,
+                            )
+                            .await?;
+                        }
+                    }
+                }
+            }
             SplStakePoolProgram::Initialize
             | SplStakePoolProgram::AddValidatorToPool
             | SplStakePoolProgram::RemoveValidatorFromPool
             | SplStakePoolProgram::DecreaseValidatorStake
-            | SplStakePoolProgram::IncreaseValidatorStake
             | SplStakePoolProgram::SetPreferredValidator
             | SplStakePoolProgram::UpdateValidatorListBalance
             | SplStakePoolProgram::UpdateStakePoolBalance
@@ -320,7 +384,6 @@ impl JitoBellHandler {
             | SplStakePoolProgram::UpdateTokenMetadata
             | SplStakePoolProgram::IncreaseAdditionalValidatorStake
             | SplStakePoolProgram::DecreaseAdditionalValidatorStake
-            | SplStakePoolProgram::DecreaseValidatorStakeWithReserve
             | SplStakePoolProgram::Redelegate
             | SplStakePoolProgram::DepositStakeWithSlippage
             | SplStakePoolProgram::WithdrawStakeWithSlippage
