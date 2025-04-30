@@ -675,7 +675,7 @@ mod tests {
     fn test_parse_decrease_validator_stake_with_reserve() {
         let ix_number = 21;
         let num_account = 11;
-        let lamports: u64 = 5_000_000_000; // 5 SOL
+        let lamports: u64 = 6_000_000_000; // 6 SOL
         let transient_stake_seed: u64 = 123;
 
         let account_keys = create_test_pubkeys(num_account);
