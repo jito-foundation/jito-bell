@@ -1,5 +1,9 @@
 # Jito Bell
 
+[![Build Status](https://github.com/jito-foundation/jito-bell/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/jito-foundation/jito-bell/actions)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
 <p align="center">
   <img src="./docs/assets/images/jito-bell-logo-full.png" alt="Jito Bell">
 </p>
