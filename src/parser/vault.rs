@@ -318,7 +318,7 @@ mod tests {
         // Validate result
         assert!(parsed.is_some());
         if let Some(JitoVaultProgram::MintTo { min_amount_out, .. }) = parsed {
-            assert_eq!(min_amount_out, min_amount_out);
+            assert_eq!(min_amount_out, 5); // Ensure parsed value matches expected value
         } else {
             panic!("Expected MintTo variant");
         }
