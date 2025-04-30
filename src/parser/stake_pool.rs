@@ -7,7 +7,8 @@ use solana_sdk::{
     pubkey::Pubkey,
 };
 use spl_stake_pool::instruction::StakePoolInstruction;
-use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+use super::instruction::ParsableInstruction;
 
 /// SPL Stake Pool Program
 #[derive(Debug, PartialEq)]
@@ -118,11 +119,11 @@ impl SplStakePoolProgram {
     }
 
     /// Parse SPL Stake Pool program
-    pub fn parse_spl_stake_pool_program(
-        instruction: &CompiledInstruction,
+    pub fn parse_spl_stake_pool_program<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SplStakePoolProgram> {
-        let stake_pool_ix = match StakePoolInstruction::try_from_slice(&instruction.data) {
+        let stake_pool_ix = match StakePoolInstruction::try_from_slice(&instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };
@@ -183,8 +184,8 @@ impl SplStakePoolProgram {
     /// 11. `[]` Stake Config sysvar
     /// 12. `[]` System program
     /// 13. `[]` Stake program
-    fn parse_increase_validator_stake_ix(
-        instruction: &CompiledInstruction,
+    fn parse_increase_validator_stake_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         lamports: u64,
     ) -> Self {
@@ -207,7 +208,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -218,7 +219,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::IncreaseValidatorStake {
@@ -249,7 +250,10 @@ impl SplStakePoolProgram {
     ///   12. '[]' Sysvar stake history account
     ///   13. `[]` Pool token program id,
     ///   14. `[]` Stake program id,
-    fn parse_deposit_stake_ix(instruction: &CompiledInstruction, account_keys: &[Pubkey]) -> Self {
+    fn parse_deposit_stake_ix<T: ParsableInstruction>(
+        instruction: &T,
+        account_keys: &[Pubkey],
+    ) -> Self {
         let mut account_metas = [
             AccountMeta::new(Pubkey::new_unique(), false),
             AccountMeta::new(Pubkey::new_unique(), false),
@@ -268,7 +272,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -279,7 +283,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::DepositStake { ix }
@@ -301,8 +305,8 @@ impl SplStakePoolProgram {
     ///  10. `[]` Sysvar clock account (required)
     ///  11. `[]` Pool token program id
     ///  12. `[]` Stake program id,
-    fn parse_withdraw_stake_ix(
-        instruction: &CompiledInstruction,
+    fn parse_withdraw_stake_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         minimum_lamports_out: u64,
     ) -> SplStakePoolProgram {
@@ -322,7 +326,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -333,7 +337,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::WithdrawStake {
@@ -356,8 +360,8 @@ impl SplStakePoolProgram {
     ///   8. `[]` System program account
     ///   9. `[]` Token program id
     ///  10. `[s]` (Optional) Stake pool sol deposit authority.
-    fn parse_deposit_sol_ix(
-        instruction: &CompiledInstruction,
+    fn parse_deposit_sol_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         amount: u64,
     ) -> SplStakePoolProgram {
@@ -375,7 +379,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -386,7 +390,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::DepositSol {
@@ -412,8 +416,8 @@ impl SplStakePoolProgram {
     ///  10. `[]` Stake program account
     ///  11. `[]` Token program id
     ///  12. `[s]` (Optional) Stake pool sol withdraw authority
-    fn parse_withdraw_sol_ix(
-        instruction: &CompiledInstruction,
+    fn parse_withdraw_sol_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         amount: u64,
     ) -> SplStakePoolProgram {
@@ -433,7 +437,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -444,7 +448,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::WithdrawSol {
@@ -467,8 +471,8 @@ impl SplStakePoolProgram {
     ///  8. '[]' Stake history sysvar
     ///  9. `[]` System program
     /// 10. `[]` Stake program
-    fn parse_decrease_validator_stake_with_reserve_ix(
-        instruction: &CompiledInstruction,
+    fn parse_decrease_validator_stake_with_reserve_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         lamports: u64,
     ) -> SplStakePoolProgram {
@@ -486,7 +490,7 @@ impl SplStakePoolProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -497,7 +501,7 @@ impl SplStakePoolProgram {
         let ix = Instruction {
             program_id: SplStakePoolProgram::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplStakePoolProgram::DecreaseValidatorStakeWithReserve {

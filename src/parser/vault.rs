@@ -4,7 +4,8 @@ use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
 };
-use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+use super::instruction::ParsableInstruction;
 
 /// Jito Vault Program
 #[derive(Debug)]
@@ -155,11 +156,11 @@ impl JitoVaultProgram {
     }
 
     /// Parse Jito Vault Program
-    pub fn parse_jito_vault_program(
-        instruction: &CompiledInstruction,
+    pub fn parse_jito_vault_program<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<JitoVaultProgram> {
-        let vault_ix = match VaultInstruction::try_from_slice(&instruction.data) {
+        let vault_ix = match VaultInstruction::try_from_slice(&instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };
@@ -190,8 +191,8 @@ impl JitoVaultProgram {
     /// #[account(7, writable, name = "vault_fee_token_account")]
     /// #[account(8, name = "token_program")]
     /// #[account(9, signer, optional, name = "mint_signer", description = "Signer for minting")]
-    pub fn parse_mint_to_ix(
-        instruction: &CompiledInstruction,
+    pub fn parse_mint_to_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         min_amount_out: u64,
     ) -> Self {
@@ -208,7 +209,7 @@ impl JitoVaultProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -219,7 +220,7 @@ impl JitoVaultProgram {
         let ix = Instruction {
             program_id: Self::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         Self::MintTo { ix, min_amount_out }
@@ -235,8 +236,8 @@ impl JitoVaultProgram {
     /// #[account(7, name = "token_program")]
     /// #[account(8, name = "system_program")]
     /// #[account(9, signer, optional, name = "burn_signer", description = "Signer for burning")]
-    pub fn parse_enqueue_withdrawal_ix(
-        instruction: &CompiledInstruction,
+    pub fn parse_enqueue_withdrawal_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         amount: u64,
     ) -> Self {
@@ -253,7 +254,7 @@ impl JitoVaultProgram {
             AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -264,7 +265,7 @@ impl JitoVaultProgram {
         let ix = Instruction {
             program_id: Self::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         Self::EnqueueWithdrawal { ix, amount }
