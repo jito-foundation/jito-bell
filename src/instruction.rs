@@ -4,6 +4,9 @@ use crate::threshold_config::ThresholdConfig;
 
 #[derive(Deserialize, Debug)]
 pub struct Instruction {
+    /// Stake Pool address
+    pub stake_pool: Option<String>,
+
     /// Pool mint token address
     pub pool_mint: Option<String>,
 

@@ -58,6 +58,24 @@ jobs:
         with:
           name: jito-bell
           path: target/release/jito-bell
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run tests
+        run: cargo test --workspace
+      - name: Run doc tests
+        run: cargo test --doc
+      - name: Check examples
+        run: cargo check --examples
   
   create_release:
     name: Create Release
