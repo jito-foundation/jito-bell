@@ -558,8 +558,11 @@ impl JitoBellHandler {
                     self.send_discord_message(description, amount, transaction_signature)
                         .await?
                 }
-                _ => {
-                    unreachable!()
+                destianation => {
+                    error!("Unknown notification type: {destianation}");
+                    return Err(JitoBellError::Notification(format!(
+                        "Invalid Notification Type: {destianation}"
+                    )));
                 }
             }
         }
