@@ -546,7 +546,7 @@ impl JitoBellHandler {
                 "telegram" => {
                     debug!("Will Send Telegram Notification");
                     self.send_telegram_message(description, amount, transaction_signature)
-                        .await
+                        .await?
                 }
                 "slack" => {
                     debug!("Will Send Slack Notification");
@@ -558,7 +558,12 @@ impl JitoBellHandler {
                     self.send_discord_message(description, amount, transaction_signature)
                         .await?
                 }
-                _ => {}
+                destination => {
+                    error!("Unknown notification type: {destination}");
+                    return Err(JitoBellError::Notification(format!(
+                        "Invalid Notification Type: {destination}"
+                    )));
+                }
             }
         }
 
@@ -566,7 +571,12 @@ impl JitoBellHandler {
     }
 
     /// Send message to Telegram
-    async fn send_telegram_message(&self, description: &str, amount: f64, sig: &str) {
+    async fn send_telegram_message(
+        &self,
+        description: &str,
+        amount: f64,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
         if let Some(telegram_config) = &self.config.notifications.telegram {
             let template = self
                 .config
@@ -588,13 +598,17 @@ impl JitoBellHandler {
                 .post(&url)
                 .form(&[("chat_id", chat_id), ("text", &message)])
                 .send()
-                .await
-                .unwrap();
+                .await?;
 
             if !response.status().is_success() {
-                println!("Failed to send Telegram message: {:?}", response.status());
+                return Err(JitoBellError::Notification(format!(
+                    "Failed to send Telegram message: {}",
+                    response.status(),
+                )));
             }
         }
+
+        Ok(())
     }
 
     /// Send message to Discord
