@@ -10,7 +10,7 @@ use spl_stake_pool::instruction::StakePoolInstruction;
 use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
 /// SPL Stake Pool Program
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SplStakePoolProgram {
     Initialize,
     AddValidatorToPool,
@@ -503,6 +503,83 @@ impl SplStakePoolProgram {
         SplStakePoolProgram::DecreaseValidatorStakeWithReserve {
             ix,
             amount: lamports_to_sol(lamports),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use solana_sdk::{
+        native_token::lamports_to_sol, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    };
+    use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+    use crate::parser::stake_pool::SplStakePoolProgram;
+
+    fn create_test_pubkeys(count: usize) -> Vec<Pubkey> {
+        (0..count).map(|_| Keypair::new().pubkey()).collect()
+    }
+
+    fn create_compiled_instruction(
+        program_id_index: u32,
+        accounts: Vec<u8>,
+        data: Vec<u8>,
+    ) -> CompiledInstruction {
+        CompiledInstruction {
+            program_id_index,
+            accounts,
+            data,
+        }
+    }
+
+    #[test]
+    fn test_parse_increase_validator_stake() {
+        let ix_number = 4;
+        let account_keys = create_test_pubkeys(14);
+
+        let lamports: u64 = 5_000_000_000; // 5 SOL
+        let transient_stake_seed: u64 = 123;
+
+        let mut data = vec![ix_number];
+        data.extend_from_slice(&lamports.to_le_bytes());
+        data.extend_from_slice(&transient_stake_seed.to_le_bytes());
+
+        // Create account indices
+        let accounts = (0..14).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(14, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::IncreaseValidatorStake { amount, .. }) = parsed {
+            assert_eq!(amount, lamports_to_sol(lamports));
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
+        }
+    }
+
+    #[test]
+    fn test_parse_deposit_stake() {
+        let ix_number = 9;
+        let account_keys = create_test_pubkeys(15);
+
+        let data = vec![ix_number];
+
+        let accounts = (0..15).map(|i| i as u8).collect();
+
+        let instruction = create_compiled_instruction(14, accounts, data);
+
+        // Parse the instruction
+        let parsed = SplStakePoolProgram::parse_spl_stake_pool_program(&instruction, &account_keys);
+
+        // Validate result
+        assert!(parsed.is_some());
+        if let Some(SplStakePoolProgram::DepositStake { ix: _ }) = parsed {
+        } else {
+            panic!("Expected IncreaseValidatorStake variant");
         }
     }
 }
