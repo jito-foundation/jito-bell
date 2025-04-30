@@ -1,6 +1,8 @@
 # Jito Bell
 
-![Jito Bell](./docs/assets/images/jito-bell-logo-full.png)
+<p align="center">
+  <img src="./docs/assets/images/jito-bell-logo-full.png" alt="Jito Bell">
+</p>
 
 ## Overview
 
