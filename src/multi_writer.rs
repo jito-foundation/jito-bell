@@ -17,7 +17,7 @@ impl MultiWriter {
         {
             Ok(file) => Some(file),
             Err(e) => {
-                eprintln!("Failed to open log file {}: {}", log_path, e);
+                log::error!("Failed to open log file {}: {}", log_path, e);
                 None
             }
         };
