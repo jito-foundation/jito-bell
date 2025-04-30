@@ -191,7 +191,20 @@ impl SplStakePoolProgram {
         // Initialize account_metas with default AccountMeta objects.
         // These will be replaced with actual values in the loop below.
         let mut account_metas = vec![
-            AccountMeta::new_readonly(Pubkey::default(), false); 15
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), true),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
+            AccountMeta::new_readonly(Pubkey::new_unique(), false),
         ];
 
         for (index, account) in instruction.accounts.iter().enumerate() {
