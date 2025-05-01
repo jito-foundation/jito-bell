@@ -3,7 +3,8 @@ use solana_sdk::{
     pubkey::Pubkey,
 };
 use spl_token_2022::instruction::TokenInstruction;
-use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+use super::instruction::ParsableInstruction;
 
 /// SPL Stake Pool Program
 #[derive(Debug)]
@@ -26,11 +27,11 @@ impl SplToken2022Program {
     }
 
     /// Parse SPL Token 2022 program
-    pub fn parse_spl_token_2022_program(
-        instruction: &CompiledInstruction,
+    pub fn parse_spl_token_2022_program<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SplToken2022Program> {
-        let token_ix = match TokenInstruction::unpack(&instruction.data) {
+        let token_ix = match TokenInstruction::unpack(instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };
@@ -58,8 +59,8 @@ impl SplToken2022Program {
     ///   1. `[writable]` The account to mint tokens to.
     ///   2. `[]` The mint's multisignature mint-tokens authority.
     ///   3. ..3+M `[signer]` M signer accounts.
-    pub fn parse_mint_to_ix(
-        instruction: &CompiledInstruction,
+    pub fn parse_mint_to_ix<T: ParsableInstruction>(
+        instruction: &T,
         account_keys: &[Pubkey],
         amount: u64,
     ) -> SplToken2022Program {
@@ -71,7 +72,7 @@ impl SplToken2022Program {
             AccountMeta::new_readonly(Pubkey::new_unique(), true),
         ];
 
-        for (index, account) in instruction.accounts.iter().enumerate() {
+        for (index, account) in instruction.accounts().iter().enumerate() {
             if let Some(account_meta) = account_metas.get_mut(index) {
                 if let Some(account) = account_keys.get(*account as usize) {
                     account_meta.pubkey = *account;
@@ -82,7 +83,7 @@ impl SplToken2022Program {
         let ix = Instruction {
             program_id: Self::program_id(),
             accounts: account_metas.to_vec(),
-            data: instruction.data.clone(),
+            data: instruction.data().to_vec(),
         };
 
         SplToken2022Program::MintTo { ix, amount }

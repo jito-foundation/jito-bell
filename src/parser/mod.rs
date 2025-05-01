@@ -4,6 +4,7 @@ use token_2022::SplToken2022Program;
 use vault::JitoVaultProgram;
 use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
+pub mod instruction;
 pub mod stake_pool;
 pub mod token_2022;
 pub mod vault;
@@ -40,6 +41,7 @@ impl JitoTransactionParser {
     pub fn new(transaction: SubscribeUpdateTransaction) -> Self {
         let mut transaction_signature = String::new();
         let mut programs = Vec::new();
+        let mut pubkeys: Vec<Pubkey> = Vec::new();
 
         if let Some(tx) = transaction.transaction {
             if let Some(tx) = tx.transaction {
@@ -50,7 +52,7 @@ impl JitoTransactionParser {
                 transaction_signature = tx_signature.to_string();
 
                 if let Some(msg) = tx.message {
-                    let pubkeys: Vec<Pubkey> = msg
+                    pubkeys = msg
                         .account_keys
                         .iter()
                         .map(|account_key| {
@@ -61,38 +63,86 @@ impl JitoTransactionParser {
                         .collect();
 
                     for instruction in &msg.instructions {
-                        let program_id = &pubkeys[instruction.program_id_index as usize];
+                        if let Some(program_id) =
+                            &pubkeys.get(instruction.program_id_index as usize)
+                        {
+                            match *program_id {
+                                program_id if program_id.eq(&SplToken2022Program::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplToken2022Program::parse_spl_token_2022_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                                    }
+                                }
+                                program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplStakePoolProgram::parse_spl_stake_pool_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                    }
+                                }
+                                program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        JitoVaultProgram::parse_jito_vault_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::JitoVault(ix_info));
+                                    }
+                                }
+                                _ => continue,
+                            }
+                        }
+                    }
+                }
+            }
 
-                        match *program_id {
-                            program_id if program_id.eq(&SplToken2022Program::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplToken2022Program::parse_spl_token_2022_program(
-                                        instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplToken2022(ix_info));
+            if let Some(meta) = tx.meta {
+                for instructions in meta.inner_instructions {
+                    for instruction in instructions.instructions {
+                        if let Some(program_id) =
+                            &pubkeys.get(instruction.program_id_index as usize)
+                        {
+                            match *program_id {
+                                program_id if program_id.eq(&SplToken2022Program::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplToken2022Program::parse_spl_token_2022_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplStakePoolProgram::parse_spl_stake_pool_program(
-                                        instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplStakePoolProgram::parse_spl_stake_pool_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
-                                if let Some(ix_info) = JitoVaultProgram::parse_jito_vault_program(
-                                    instruction,
-                                    &pubkeys,
-                                ) {
-                                    programs.push(JitoBellProgram::JitoVault(ix_info));
+                                program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        JitoVaultProgram::parse_jito_vault_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::JitoVault(ix_info));
+                                    }
                                 }
+                                _ => continue,
                             }
-                            _ => continue,
                         }
                     }
                 }
