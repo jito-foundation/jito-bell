@@ -6,6 +6,10 @@ lint:
 	cargo fmt --all --check
 	cargo clippy
 
+.PHONY: test
+test:
+	cargo test
+
 # Build release
 .PHONY: build-release
 build-release:
