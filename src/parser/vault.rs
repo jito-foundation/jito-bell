@@ -160,7 +160,7 @@ impl JitoVaultProgram {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<JitoVaultProgram> {
-        let vault_ix = match VaultInstruction::try_from_slice(&instruction.data()) {
+        let vault_ix = match VaultInstruction::try_from_slice(instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };

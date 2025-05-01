@@ -63,38 +63,42 @@ impl JitoTransactionParser {
                         .collect();
 
                     for instruction in &msg.instructions {
-                        let program_id = &pubkeys[instruction.program_id_index as usize];
-
-                        match *program_id {
-                            program_id if program_id.eq(&SplToken2022Program::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplToken2022Program::parse_spl_token_2022_program(
-                                        instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplToken2022(ix_info));
+                        if let Some(program_id) =
+                            &pubkeys.get(instruction.program_id_index as usize)
+                        {
+                            match *program_id {
+                                program_id if program_id.eq(&SplToken2022Program::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplToken2022Program::parse_spl_token_2022_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplStakePoolProgram::parse_spl_stake_pool_program(
-                                        instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplStakePoolProgram::parse_spl_stake_pool_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
-                                if let Some(ix_info) = JitoVaultProgram::parse_jito_vault_program(
-                                    instruction,
-                                    &pubkeys,
-                                ) {
-                                    programs.push(JitoBellProgram::JitoVault(ix_info));
+                                program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        JitoVaultProgram::parse_jito_vault_program(
+                                            instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::JitoVault(ix_info));
+                                    }
                                 }
+                                _ => continue,
                             }
-                            _ => continue,
                         }
                     }
                 }
@@ -103,38 +107,42 @@ impl JitoTransactionParser {
             if let Some(meta) = tx.meta {
                 for instructions in meta.inner_instructions {
                     for instruction in instructions.instructions {
-                        let program_id = &pubkeys[instruction.program_id_index as usize];
-
-                        match *program_id {
-                            program_id if program_id.eq(&SplToken2022Program::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplToken2022Program::parse_spl_token_2022_program(
-                                        &instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplToken2022(ix_info));
+                        if let Some(program_id) =
+                            &pubkeys.get(instruction.program_id_index as usize)
+                        {
+                            match *program_id {
+                                program_id if program_id.eq(&SplToken2022Program::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplToken2022Program::parse_spl_token_2022_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
-                                if let Some(ix_info) =
-                                    SplStakePoolProgram::parse_spl_stake_pool_program(
-                                        &instruction,
-                                        &pubkeys,
-                                    )
-                                {
-                                    programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        SplStakePoolProgram::parse_spl_stake_pool_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                    }
                                 }
-                            }
-                            program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
-                                if let Some(ix_info) = JitoVaultProgram::parse_jito_vault_program(
-                                    &instruction,
-                                    &pubkeys,
-                                ) {
-                                    programs.push(JitoBellProgram::JitoVault(ix_info));
+                                program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
+                                    if let Some(ix_info) =
+                                        JitoVaultProgram::parse_jito_vault_program(
+                                            &instruction,
+                                            &pubkeys,
+                                        )
+                                    {
+                                        programs.push(JitoBellProgram::JitoVault(ix_info));
+                                    }
                                 }
+                                _ => continue,
                             }
-                            _ => continue,
                         }
                     }
                 }

@@ -31,7 +31,7 @@ impl SplToken2022Program {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SplToken2022Program> {
-        let token_ix = match TokenInstruction::unpack(&instruction.data()) {
+        let token_ix = match TokenInstruction::unpack(instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };

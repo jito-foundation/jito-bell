@@ -123,7 +123,7 @@ impl SplStakePoolProgram {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SplStakePoolProgram> {
-        let stake_pool_ix = match StakePoolInstruction::try_from_slice(&instruction.data()) {
+        let stake_pool_ix = match StakePoolInstruction::try_from_slice(instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };
