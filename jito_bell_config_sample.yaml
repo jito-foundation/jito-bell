@@ -168,7 +168,7 @@ programs:
         - value: 100000.0  # USD
           notification:
             description: "Very large Withdrawal worth $100,000+ detected"
-            destinations: ["telegram", "slack", "discord"]             destinations: ["telegram", "slack", "discord"]
+            destinations: ["telegram", "slack", "discord"]
   
 notifications:
   slack:
