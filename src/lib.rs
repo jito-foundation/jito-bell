@@ -755,7 +755,7 @@ impl JitoBellHandler {
                             },
                             {
                                 "type": "mrkdwn",
-                                "text": format!("*Transaction:* {}/tx/{}|View on Explorer>", self.config.explorer_url, sig)
+                                "text": format!("*Transaction:* <{}/tx/{}|View on Explorer>", self.config.explorer_url, sig)
                             }
                         ]
                     }
