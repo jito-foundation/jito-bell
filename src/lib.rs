@@ -1,6 +1,10 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use borsh::BorshDeserialize;
+use defillama_rs::{
+    models::{Chain, Token},
+    DefiLlamaClient,
+};
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
@@ -544,9 +548,25 @@ impl JitoBellHandler {
                     }
 
                     // USD amount
-                    let base_url = String::from("https://coins.llama.fi/prices/current/solana:");
-                    let url = format!("{base_url}{}", vrt);
-                    for usd_threshold in instruction.usd_thresholds.iter() {}
+                    let client = DefiLlamaClient::new();
+                    let vrt = Token::new(Chain::Solana, vrt.to_string());
+                    let prices = client.get_price(&vrt).await?;
+
+                    if let Some(usd_price) = prices.coins.values().nth(0) {
+                        for usd_threshold in instruction.usd_thresholds.iter() {
+                            let amount = *amount as f64 * usd_price.price;
+                            if amount >= usd_threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &usd_threshold.notification.destinations,
+                                    &usd_threshold.notification.description,
+                                    amount,
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             JitoVaultProgram::InitializeConfig
