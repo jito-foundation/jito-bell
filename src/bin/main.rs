@@ -25,7 +25,7 @@ struct Args {
     vote: Option<bool>,
 
     /// Filter failed transactions
-    #[clap(long, env)]
+    #[clap(long, env = "FAILED")]
     failed: Option<bool>,
 
     /// Filter by transaction signature
