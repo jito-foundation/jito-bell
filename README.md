@@ -112,6 +112,6 @@ docker run jito-bell \
 ## References
 - https://github.com/rpcpool/yellowstone-grpc/blob/master/examples/rust/src/bin/tx-blocktime.rs
 
-## LICENCE
+## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE.txt) file for details.
