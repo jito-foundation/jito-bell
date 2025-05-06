@@ -528,6 +528,7 @@ impl JitoBellHandler {
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 if vault.vrt_mint.eq(&vrt) {
+                    // VRT amount
                     for threshold in instruction.thresholds.iter() {
                         let amount = *amount as f64 / 1_000_000_000_f64;
                         if amount >= threshold.value {
@@ -538,8 +539,14 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
+
+                    // USD amount
+                    let base_url = String::from("https://coins.llama.fi/prices/current/solana:");
+                    let url = format!("{base_url}{}", vrt);
+                    for usd_threshold in instruction.usd_thresholds.iter() {}
                 }
             }
             JitoVaultProgram::InitializeConfig

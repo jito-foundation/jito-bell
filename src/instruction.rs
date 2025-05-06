@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::threshold_config::ThresholdConfig;
+use crate::threshold_config::{ThresholdConfig, UsdThresholdConfig};
 
 #[derive(Deserialize, Debug)]
 pub struct Instruction {
@@ -16,4 +16,8 @@ pub struct Instruction {
     /// Thresholds (replaces the single threshold)
     #[serde(default)]
     pub thresholds: Vec<ThresholdConfig>,
+
+    /// Thresholds (replaces the single threshold)
+    #[serde(default)]
+    pub usd_thresholds: Vec<UsdThresholdConfig>,
 }
