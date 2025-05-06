@@ -7,17 +7,24 @@ use instruction::Instruction;
 use jito_vault_client::accounts::Vault;
 use log::{debug, error};
 use maplit::hashmap;
+use metrics::EpochMetrics;
 use parser::{
     stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
     JitoBellProgram, JitoTransactionParser,
 };
+use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
+use solana_sdk::{
+    clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig, pubkey::Pubkey,
+};
 use subscribe_option::SubscribeOption;
 use tonic::transport::channel::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
-use yellowstone_grpc_proto::prelude::{
-    subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
+use yellowstone_grpc_proto::{
+    geyser::SubscribeRequestFilterSlots,
+    prelude::{
+        subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
+    },
 };
 
 use crate::config::JitoBellConfig;
@@ -25,6 +32,7 @@ use crate::config::JitoBellConfig;
 pub mod config;
 mod error;
 pub mod instruction;
+mod metrics;
 pub mod multi_writer;
 pub mod notification_config;
 pub mod notification_info;
@@ -39,11 +47,14 @@ pub struct JitoBellHandler {
 
     /// RPC Client
     pub rpc_client: RpcClient,
+
+    /// Epoch Metrics
+    epoch_metrics: EpochMetrics,
 }
 
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
-    pub fn new(
+    pub async fn new(
         endpoint: String,
         commitment: CommitmentConfig,
         config_path: PathBuf,
@@ -53,12 +64,19 @@ impl JitoBellHandler {
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
-        Ok(Self { config, rpc_client })
+        let epoch = rpc_client.get_epoch_info().await?;
+        let epoch_metrics = EpochMetrics::new(epoch.epoch);
+
+        Ok(Self {
+            config,
+            rpc_client,
+            epoch_metrics,
+        })
     }
 
     /// Start heart beating
     pub async fn heart_beat(
-        &self,
+        &mut self,
         subscribe_option: &SubscribeOption,
     ) -> Result<(), JitoBellError> {
         let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
@@ -69,7 +87,9 @@ impl JitoBellHandler {
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
 
         let subscribe_request = SubscribeRequest {
-            slots: HashMap::new(),
+            slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
+                filter_by_commitment: Some(true),
+            } },
             accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
                 vote: subscribe_option.vote,
@@ -96,15 +116,41 @@ impl JitoBellHandler {
 
         while let Some(message) = stream.next().await {
             match message {
-                Ok(msg) => {
-                    if let Some(UpdateOneof::Transaction(transaction)) = msg.update_oneof {
+                Ok(msg) => match msg.update_oneof {
+                    Some(UpdateOneof::Slot(update_slot)) => {
+                        let current_epoch = update_slot.slot / DEFAULT_SLOTS_PER_EPOCH;
+                        if current_epoch != self.epoch_metrics.epoch {
+                            datapoint_info!(
+                                "jito-bell-stats",
+                                ("epoch", self.epoch_metrics.epoch, i64),
+                                ("transaction", self.epoch_metrics.tx, i64),
+                                (
+                                    "success_notification",
+                                    self.epoch_metrics.notification.success,
+                                    i64
+                                ),
+                                (
+                                    "fail_notification",
+                                    self.epoch_metrics.notification.fail,
+                                    i64
+                                ),
+                            );
+                            self.epoch_metrics = EpochMetrics::new(current_epoch);
+                        }
+                    }
+                    Some(UpdateOneof::Transaction(transaction)) => {
                         let parser = JitoTransactionParser::new(transaction);
+                        self.epoch_metrics.increment_tx_count();
 
                         debug!("Instruction: {:?}", parser.programs);
 
-                        self.send_notification(&parser).await?;
+                        match self.send_notification(&parser).await {
+                            Ok(()) => self.epoch_metrics.increment_success_notification_count(),
+                            Err(_e) => self.epoch_metrics.increment_fail_notification_count(),
+                        };
                     }
-                }
+                    _ => continue,
+                },
                 Err(error) => {
                     error!("Stream error: {error:?}");
                     break;
