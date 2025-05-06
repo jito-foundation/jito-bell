@@ -12,6 +12,9 @@ pub struct JitoBellConfig {
     /// Notifications Configuration
     pub notifications: NotificationConfig,
 
+    /// Block explorer url
+    pub explorer_url: String,
+
     /// Message Templates
     pub message_templates: HashMap<String, String>,
 }

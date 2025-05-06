@@ -680,7 +680,7 @@ impl JitoBellHandler {
                         },
                         {
                             "name": "Transaction",
-                            "value": format!("[View on Explorer](https://solscan.io/tx/{})", sig),
+                            "value": format!("[View on Explorer]({}/tx/{})", self.config.explorer_url, sig),
                             "inline": true
                         }
                     ],
@@ -755,7 +755,7 @@ impl JitoBellHandler {
                             },
                             {
                                 "type": "mrkdwn",
-                                "text": format!("*Transaction:* <https://solscan.io/tx/{}|View on Explorer>", sig)
+                                "text": format!("*Transaction:* <{}/tx/{}|View on Explorer>", self.config.explorer_url, sig)
                             }
                         ]
                     }

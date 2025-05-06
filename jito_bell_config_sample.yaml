@@ -170,6 +170,8 @@ notifications:
     bot_token: ""
     chat_id: ""
 
+explorer_url: "https://solscan.io"
+
 message_templates:
   default: "{{description}} - Amount: {{amount}} SOL - Tx: https://explorer.solana.com/tx/{{tx_hash}}"
   slack: "<!here> {{description}} - Amount: {{amount}} SOL - <https://explorer.solana.com/tx/{{tx_hash}}|View Transaction>"
