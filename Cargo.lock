@@ -2171,6 +2171,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "solana-metrics 2.2.13",
  "solana-rpc-client",
  "solana-rpc-client-api",
  "solana-sdk",
@@ -3678,6 +3679,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-atomic-u64"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52e52720efe60465b052b9e7445a01c17550666beec855cce66f44766697bc2"
+dependencies = [
+ "parking_lot",
+]
+
+[[package]]
+name = "solana-clock"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67c2177a1b9fe8326004f1151a5acd124420b737811080b1035df31349e4d892"
+dependencies = [
+ "solana-sdk-macro 2.2.1",
+]
+
+[[package]]
+name = "solana-cluster-type"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ace9fea2daa28354d107ea879cff107181d85cd4e0f78a2bedb10e1a428c97e"
+dependencies = [
+ "solana-hash",
+]
+
+[[package]]
 name = "solana-config-program"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3690,6 +3718,12 @@ dependencies = [
  "solana-program-runtime",
  "solana-sdk",
 ]
+
+[[package]]
+name = "solana-define-syscall"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf784bb2cb3e02cac9801813c30187344228d2ae952534902108f6150573a33d"
 
 [[package]]
 name = "solana-frozen-abi"
@@ -3729,6 +3763,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-hash"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf7bcb14392900fe02e4e34e90234fbf0c673d4e327888410ba99fa2ba0f4e99"
+dependencies = [
+ "bs58 0.5.1",
+ "js-sys",
+ "solana-atomic-u64",
+ "solana-sanitize",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "solana-logger"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3762,6 +3809,24 @@ dependencies = [
  "reqwest",
  "solana-sdk",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "solana-metrics"
+version = "2.2.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94a9d3aa657cc6e5bbec340693ced8e00399d80b8c9d28daa85f3ef123c345c"
+dependencies = [
+ "crossbeam-channel",
+ "gethostname",
+ "lazy_static",
+ "log",
+ "reqwest",
+ "solana-clock",
+ "solana-cluster-type",
+ "solana-sha256-hasher",
+ "solana-time-utils",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3812,7 +3877,7 @@ dependencies = [
  "sha3 0.10.8",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-sdk-macro",
+ "solana-sdk-macro 1.18.26",
  "thiserror 1.0.69",
  "tiny-bip39",
  "wasm-bindgen",
@@ -3841,7 +3906,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-measure",
- "solana-metrics",
+ "solana-metrics 1.18.26",
  "solana-sdk",
  "solana_rbpf",
  "thiserror 1.0.69",
@@ -3896,6 +3961,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-sanitize"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61f1bc1357b8188d9c4a3af3fc55276e56987265eb7ad073ae6f8180ee54cecf"
+
+[[package]]
 name = "solana-sdk"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3944,7 +4015,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-logger",
  "solana-program",
- "solana-sdk-macro",
+ "solana-sdk-macro 1.18.26",
  "thiserror 1.0.69",
  "uriparse",
  "wasm-bindgen",
@@ -3964,10 +4035,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-sdk-macro"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86280da8b99d03560f6ab5aca9de2e38805681df34e0bb8f238e69b29433b9df"
+dependencies = [
+ "bs58 0.5.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "solana-security-txt"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
+
+[[package]]
+name = "solana-sha256-hasher"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0037386961c0d633421f53560ad7c80675c0447cba4d1bb66d60974dd486c7ea"
+dependencies = [
+ "sha2 0.10.8",
+ "solana-define-syscall",
+ "solana-hash",
+]
+
+[[package]]
+name = "solana-time-utils"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6af261afb0e8c39252a04d026e3ea9c405342b08c871a2ad8aa5448e068c784c"
 
 [[package]]
 name = "solana-transaction-status"
@@ -4025,7 +4125,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-metrics",
+ "solana-metrics 1.18.26",
  "solana-program",
  "solana-program-runtime",
  "solana-sdk",
