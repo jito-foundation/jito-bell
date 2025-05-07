@@ -14,7 +14,7 @@ pub struct ThresholdConfig {
 #[derive(Deserialize, Debug)]
 pub struct UsdThresholdConfig {
     /// Threshold value in USD
-    pub value: f64,
+    pub value: u64,
 
     /// Notification configuration for this threshold
     pub notification: NotificationInfo,
