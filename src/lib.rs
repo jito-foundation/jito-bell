@@ -1,6 +1,10 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use borsh::BorshDeserialize;
+use defillama_rs::{
+    models::{Chain, Token},
+    DefiLlamaClient,
+};
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
@@ -247,6 +251,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 *amount,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -296,6 +301,7 @@ impl JitoBellHandler {
                                                     &threshold.notification.destinations,
                                                     &threshold.notification.description,
                                                     *amount as f64,
+                                                    "SOL",
                                                     &parser.transaction_signature,
                                                 )
                                                 .await?;
@@ -340,6 +346,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 *minimum_lamports_out,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -372,6 +379,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 *amount,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -404,6 +412,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 *amount,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -439,6 +448,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 *amount,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -508,6 +518,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 min_amount_out,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -528,6 +539,7 @@ impl JitoBellHandler {
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 if vault.vrt_mint.eq(&vrt) {
+                    // VRT amount
                     for threshold in instruction.thresholds.iter() {
                         let amount = *amount as f64 / 1_000_000_000_f64;
                         if amount >= threshold.value {
@@ -535,9 +547,35 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 amount,
+                                "SOL",
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
+                        }
+                    }
+
+                    // USD amount
+                    let client = DefiLlamaClient::new();
+                    let vrt = Token::new(Chain::Solana, vrt.to_string());
+                    let prices = client.get_price(&vrt).await?;
+
+                    if let Some(usd_price) = prices.coins.values().nth(0) {
+                        for usd_threshold in instruction.usd_thresholds.iter() {
+                            let amount = *amount as f64 / 1_000_000_000_f64;
+                            let amount = (amount * usd_price.price) as u64;
+
+                            if amount >= usd_threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &usd_threshold.notification.destinations,
+                                    &usd_threshold.notification.description,
+                                    amount as f64,
+                                    "USD",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
@@ -585,23 +623,24 @@ impl JitoBellHandler {
         destinations: &[String],
         description: &str,
         amount: f64,
+        unit: &str,
         transaction_signature: &str,
     ) -> Result<(), JitoBellError> {
         for destination in destinations {
             match destination.as_str() {
                 "telegram" => {
                     debug!("Will Send Telegram Notification");
-                    self.send_telegram_message(description, amount, transaction_signature)
+                    self.send_telegram_message(description, amount, unit, transaction_signature)
                         .await?
                 }
                 "slack" => {
                     debug!("Will Send Slack Notification");
-                    self.send_slack_message(description, amount, transaction_signature)
+                    self.send_slack_message(description, amount, unit, transaction_signature)
                         .await?
                 }
                 "discord" => {
                     debug!("Will Send Discord Notification");
-                    self.send_discord_message(description, amount, transaction_signature)
+                    self.send_discord_message(description, amount, unit, transaction_signature)
                         .await?
                 }
                 destination => {
@@ -621,6 +660,7 @@ impl JitoBellHandler {
         &self,
         description: &str,
         amount: f64,
+        unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
         if let Some(telegram_config) = &self.config.notifications.telegram {
@@ -632,6 +672,7 @@ impl JitoBellHandler {
             let message = template
                 .replace("{{description}}", description)
                 .replace("{{amount}}", &format!("{:.2}", amount))
+                .replace("{{currency_unit}}", unit)
                 .replace("{{tx_hash}}", sig);
 
             let bot_token = &telegram_config.bot_token;
@@ -662,6 +703,7 @@ impl JitoBellHandler {
         &self,
         description: &str,
         amount: f64,
+        unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
         if let Some(discord_config) = &self.config.notifications.discord {
@@ -675,7 +717,7 @@ impl JitoBellHandler {
                     "fields": [
                         {
                             "name": "Amount",
-                            "value": format!("{:.2} SOL", amount),
+                            "value": format!("{:.2} {unit}", amount),
                             "inline": true
                         },
                         {
@@ -724,6 +766,7 @@ impl JitoBellHandler {
         &self,
         description: &str,
         amount: f64,
+        unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
         if let Some(slack_config) = &self.config.notifications.slack {
@@ -751,7 +794,7 @@ impl JitoBellHandler {
                         "fields": [
                             {
                                 "type": "mrkdwn",
-                                "text": format!("*Amount:* {:.2} SOL", amount)
+                                "text": format!("*Amount:* {:.2} {unit}", amount)
                             },
                             {
                                 "type": "mrkdwn",

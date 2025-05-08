@@ -33,6 +33,9 @@ pub enum JitoBellError {
 
     #[error("Solana RPC Client error: {0}")]
     SolanaRpcClient(#[from] solana_rpc_client_api::client_error::Error),
+
+    #[error("Defillama error: {0}")]
+    DefiLlama(#[from] defillama_rs::DefillamaError),
 }
 
 // For serde_yaml errors
