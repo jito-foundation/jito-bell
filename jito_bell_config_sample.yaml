@@ -157,15 +157,15 @@ programs:
             notification:
               description: "Whale Withdrawal detected"
        usd_thresholds:  # New section for USD thresholds
-        - value: 1.0  # USD
+        - value: 1  # USD
           notification:
             description: "Withdrawal worth $1+ detected"
             destinations: ["slack"]
-        - value: 10000.0  # USD
+        - value: 10000  # USD
           notification:
             description: "Large Withdrawal worth $10,000+ detected"
             destinations: ["telegram", "slack"]
-        - value: 100000.0  # USD
+        - value: 100000  # USD
           notification:
             description: "Very large Withdrawal worth $100,000+ detected"
             destinations: ["telegram", "slack", "discord"]
