@@ -185,6 +185,6 @@ notifications:
 explorer_url: "https://solscan.io"
 
 message_templates:
-  default: "{{description}} - Amount: {{amount}} SOL - Tx: https://explorer.solana.com/tx/{{tx_hash}}"
-  slack: "<!here> {{description}} - Amount: {{amount}} SOL - <https://explorer.solana.com/tx/{{tx_hash}}|View Transaction>"
-  discord: "@here {{description}} - Amount: {{amount}} SOL - [View Transaction](https://explorer.solana.com/tx/{{tx_hash}})"
+  default: "{{description}} - Amount: {{amount}} {{currency_unit}} - Tx: https://explorer.solana.com/tx/{{tx_hash}}"
+  slack: "<!here> {{description}} - Amount: {{amount}} {{currency_unit}} - <https://explorer.solana.com/tx/{{tx_hash}}|View Transaction>"
+  discord: "@here {{description}} - Amount: {{amount}} {{currency_unit}} - [View Transaction](https://explorer.solana.com/tx/{{tx_hash}})"
