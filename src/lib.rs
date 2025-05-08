@@ -563,7 +563,7 @@ impl JitoBellHandler {
                     if let Some(usd_price) = prices.coins.values().nth(0) {
                         for usd_threshold in instruction.usd_thresholds.iter() {
                             let amount = *amount as f64 / 1_000_000_000_f64;
-                            let amount = (amount as f64 * usd_price.price) as u64;
+                            let amount = (amount * usd_price.price) as u64;
 
                             if amount >= usd_threshold.value {
                                 self.dispatch_platform_notifications(
