@@ -168,6 +168,8 @@ impl JitoBellHandler {
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
         for program in &parser.programs {
+            let program_str = program.to_string();
+
             match program {
                 JitoBellProgram::SplToken2022(_) => {
                     debug!("Token 2022");
@@ -175,7 +177,6 @@ impl JitoBellHandler {
                 JitoBellProgram::SplStakePool(spl_stake_program) => {
                     debug!("SPL Stake Pool");
 
-                    let program_str = program.to_string();
                     let spl_program_str = spl_stake_program.to_string();
 
                     let instruction_opt =
@@ -194,7 +195,6 @@ impl JitoBellHandler {
                 JitoBellProgram::JitoVault(jito_vault_program) => {
                     debug!("Jito Vault");
 
-                    let program_str = program.to_string();
                     let jito_vault_program_str = jito_vault_program.to_string();
 
                     let instruction_opt =
