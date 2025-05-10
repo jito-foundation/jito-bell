@@ -189,18 +189,23 @@ impl JitoBellHandler {
                 }
                 JitoBellProgram::JitoVault(jito_vault_program) => {
                     debug!("Jito Vault");
-                    let instruction_opt = {
-                        if let Some(program_config) = self.config.programs.get(&program.to_string())
-                        {
-                            program_config
-                                .instructions
-                                .get(&jito_vault_program.to_string())
-                        } else {
-                            None
-                        }
-                    };
+
+                    let program_str = program.to_string();
+                    let jito_vault_program_str = jito_vault_program.to_string();
+
+                    let instruction_opt =
+                        self.config
+                            .programs
+                            .get(&program_str)
+                            .and_then(|program_config| {
+                                program_config
+                                    .instructions
+                                    .get(&jito_vault_program_str)
+                                    .cloned()
+                            });
+
                     if let Some(instruction) = instruction_opt {
-                        self.handle_jito_vault_program(parser, jito_vault_program, instruction)
+                        self.handle_jito_vault_program(parser, jito_vault_program, &instruction)
                             .await?;
                     }
                 }
