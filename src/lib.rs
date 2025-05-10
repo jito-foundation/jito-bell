@@ -144,10 +144,7 @@ impl JitoBellHandler {
 
                         debug!("Instruction: {:?}", parser.programs);
 
-                        match self.send_notification(&parser).await {
-                            Ok(()) => self.epoch_metrics.increment_success_notification_count(),
-                            Err(_e) => self.epoch_metrics.increment_fail_notification_count(),
-                        };
+                        self.send_notification(&parser).await?;
                     }
                     _ => continue,
                 },
@@ -163,7 +160,7 @@ impl JitoBellHandler {
 
     /// Send notification
     pub async fn send_notification(
-        &self,
+        &mut self,
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
         for program in &parser.programs {
@@ -173,31 +170,38 @@ impl JitoBellHandler {
                 }
                 JitoBellProgram::SplStakePool(spl_stake_program) => {
                     debug!("SPL Stake Pool");
-                    if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                        if let Some(instruction) = program_config
-                            .instructions
-                            .get(&spl_stake_program.to_string())
-                        {
-                            self.handle_spl_stake_pool_program(
-                                parser,
-                                spl_stake_program,
-                                instruction,
-                            )
+
+                    let program_str = program.to_string();
+                    let spl_program_str = spl_stake_program.to_string();
+
+                    let instruction_opt =
+                        self.config
+                            .programs
+                            .get(&program_str)
+                            .and_then(|program_config| {
+                                program_config.instructions.get(&spl_program_str).cloned()
+                            });
+
+                    if let Some(instruction) = instruction_opt {
+                        self.handle_spl_stake_pool_program(parser, spl_stake_program, &instruction)
                             .await?;
-                        }
                     }
                 }
                 JitoBellProgram::JitoVault(jito_vault_program) => {
                     debug!("Jito Vault");
-                    if let Some(program_config) = self.config.programs.get(&program.to_string()) {
-                        debug!("Found Program Config");
-                        if let Some(instruction) = program_config
-                            .instructions
-                            .get(&jito_vault_program.to_string())
+                    let instruction_opt = {
+                        if let Some(program_config) = self.config.programs.get(&program.to_string())
                         {
-                            self.handle_jito_vault_program(parser, jito_vault_program, instruction)
-                                .await?;
+                            program_config
+                                .instructions
+                                .get(&jito_vault_program.to_string())
+                        } else {
+                            None
                         }
+                    };
+                    if let Some(instruction) = instruction_opt {
+                        self.handle_jito_vault_program(parser, jito_vault_program, instruction)
+                            .await?;
                     }
                 }
             }
@@ -208,7 +212,7 @@ impl JitoBellHandler {
 
     /// Handle SPL Stake Pool Program
     async fn handle_spl_stake_pool_program(
-        &self,
+        &mut self,
         parser: &JitoTransactionParser,
         spl_stake_program: &SplStakePoolProgram,
         instruction: &Instruction,
@@ -476,7 +480,7 @@ impl JitoBellHandler {
 
     /// Handle Jito Vault Program
     async fn handle_jito_vault_program(
-        &self,
+        &mut self,
         parser: &JitoTransactionParser,
         jito_vault_program: &JitoVaultProgram,
         instruction: &Instruction,
@@ -581,7 +585,7 @@ impl JitoBellHandler {
 
     /// Dispatch platform notifications
     async fn dispatch_platform_notifications(
-        &self,
+        &mut self,
         destinations: &[String],
         description: &str,
         amount: f64,
@@ -618,7 +622,7 @@ impl JitoBellHandler {
 
     /// Send message to Telegram
     async fn send_telegram_message(
-        &self,
+        &mut self,
         description: &str,
         amount: f64,
         sig: &str,
@@ -644,13 +648,28 @@ impl JitoBellHandler {
                 .post(&url)
                 .form(&[("chat_id", chat_id), ("text", &message)])
                 .send()
-                .await?;
+                .await;
 
-            if !response.status().is_success() {
-                return Err(JitoBellError::Notification(format!(
-                    "Failed to send Telegram message: {}",
-                    response.status(),
-                )));
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        self.epoch_metrics.increment_success_notification_count();
+                        return Ok(());
+                    } else {
+                        self.epoch_metrics.increment_fail_notification_count();
+                        return Err(JitoBellError::Notification(format!(
+                            "Failed to send Telegram message: {}",
+                            res.status(),
+                        )));
+                    }
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    return Err(JitoBellError::Notification(format!(
+                        "Failed to send Telegram message: {}",
+                        e
+                    )));
+                }
             }
         }
 
@@ -659,7 +678,7 @@ impl JitoBellHandler {
 
     /// Send message to Discord
     async fn send_discord_message(
-        &self,
+        &mut self,
         description: &str,
         amount: f64,
         sig: &str,
@@ -699,8 +718,10 @@ impl JitoBellHandler {
             match response {
                 Ok(res) => {
                     if res.status().is_success() {
+                        self.epoch_metrics.increment_success_notification_count();
                         return Ok(());
                     } else {
+                        self.epoch_metrics.increment_fail_notification_count();
                         return Err(JitoBellError::Notification(format!(
                             "Failed to send Discord message: {:?}",
                             res.status(),
@@ -708,6 +729,7 @@ impl JitoBellHandler {
                     }
                 }
                 Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
                     return Err(JitoBellError::Notification(format!(
                         "Error sending Discord message: {:?}",
                         e
@@ -721,7 +743,7 @@ impl JitoBellHandler {
 
     /// Send message to Slack
     async fn send_slack_message(
-        &self,
+        &mut self,
         description: &str,
         amount: f64,
         sig: &str,
@@ -768,14 +790,28 @@ impl JitoBellHandler {
                 .header("Content-Type", "application/json")
                 .json(&payload)
                 .send()
-                .await
-                .map_err(|e| JitoBellError::Notification(format!("Slack request error: {}", e)))?;
+                .await;
 
-            if !response.status().is_success() {
-                return Err(JitoBellError::Notification(format!(
-                    "Failed to send Slack message: Status {}",
-                    response.status()
-                )));
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        self.epoch_metrics.increment_success_notification_count();
+                        return Ok(());
+                    } else {
+                        self.epoch_metrics.increment_fail_notification_count();
+                        return Err(JitoBellError::Notification(format!(
+                            "Failed to send Slack message: Status {}",
+                            res.status()
+                        )));
+                    }
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    return Err(JitoBellError::Notification(format!(
+                        "Slack request error: {}",
+                        e
+                    )));
+                }
             }
         }
 
