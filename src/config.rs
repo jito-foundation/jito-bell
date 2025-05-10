@@ -50,6 +50,20 @@ impl std::fmt::Display for JitoBellConfig {
                     let destinations = threshold.notification.destinations.join(",");
                     writeln!(f, "               Destinations: {}", destinations)?;
                 }
+
+                writeln!(f, "        USD Thresholds")?;
+                for threshold in instruction.usd_thresholds.iter() {
+                    writeln!(f, "           USD Threshold Value: {}", threshold.value)?;
+                    writeln!(f, "           Notification")?;
+                    writeln!(
+                        f,
+                        "               Description: {}",
+                        threshold.notification.description
+                    )?;
+
+                    let destinations = threshold.notification.destinations.join(",");
+                    writeln!(f, "               Destinations: {}", destinations)?;
+                }
             }
         }
 
