@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::notification_info::NotificationInfo;
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ThresholdConfig {
     /// Threshold value in SOL
     pub value: f64,
@@ -11,7 +11,7 @@ pub struct ThresholdConfig {
     pub notification: NotificationInfo,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct UsdThresholdConfig {
     /// Threshold value in USD
     pub value: u64,
