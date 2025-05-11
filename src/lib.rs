@@ -235,6 +235,8 @@ impl JitoBellHandler {
     }
 
     /// Handle SPL Stake Pool Program
+    ///
+    /// - Notify only once for the first matching threshold.
     async fn handle_spl_stake_pool_program(
         &mut self,
         parser: &JitoTransactionParser,
@@ -516,6 +518,8 @@ impl JitoBellHandler {
     }
 
     /// Handle Jito Vault Program
+    ///
+    /// - Notify only once for the first matching threshold.
     async fn handle_jito_vault_program(
         &mut self,
         parser: &JitoTransactionParser,
