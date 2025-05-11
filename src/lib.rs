@@ -148,7 +148,9 @@ impl JitoBellHandler {
 
                         debug!("Instruction: {:?}", parser.programs);
 
-                        self.send_notification(&parser).await?;
+                        if let Err(e) = self.send_notification(&parser).await {
+                            error!("Error: {e}");
+                        }
                     }
                     _ => continue,
                 },
