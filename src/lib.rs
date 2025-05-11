@@ -534,13 +534,6 @@ impl JitoBellHandler {
             return Err(JitoBellError::Config("Specify VRT Address".to_string()));
         };
 
-        let mut sorted_thresholds = instruction.thresholds.clone();
-        sorted_thresholds.sort_by(|a, b| {
-            b.value
-                .partial_cmp(&a.value)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
         match jito_vault_program {
             JitoVaultProgram::MintTo { ix, min_amount_out } => {
                 let _config_info = &ix.accounts[0];
