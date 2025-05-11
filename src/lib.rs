@@ -230,6 +230,13 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("SPL Stake Program: {}", spl_stake_program);
 
+        let mut sorted_thresholds = instruction.thresholds.clone();
+        sorted_thresholds.sort_by(|a, b| {
+            b.value
+                .partial_cmp(&a.value)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         match spl_stake_program {
             SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
                 let stake_pool = if let Some(address) = &instruction.stake_pool {
@@ -256,13 +263,6 @@ impl JitoBellHandler {
                 let _stake_program_info = &ix.accounts[13];
 
                 if stake_pool_info.pubkey.eq(&stake_pool) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         if *amount > threshold.value {
                             self.dispatch_platform_notifications(
@@ -314,13 +314,6 @@ impl JitoBellHandler {
                                             .eq(&dest_user_pool_info.pubkey)
                                         && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
                                     {
-                                        let mut sorted_thresholds = instruction.thresholds.clone();
-                                        sorted_thresholds.sort_by(|a, b| {
-                                            b.value
-                                                .partial_cmp(&a.value)
-                                                .unwrap_or(std::cmp::Ordering::Equal)
-                                        });
-
                                         for threshold in sorted_thresholds.iter() {
                                             if *amount as f64 > threshold.value {
                                                 self.dispatch_platform_notifications(
@@ -367,13 +360,6 @@ impl JitoBellHandler {
                 let pool_mint_info = &ix.accounts[9];
 
                 if pool_mint_info.pubkey.eq(&pool_mint) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         if *minimum_lamports_out >= threshold.value {
                             self.dispatch_platform_notifications(
@@ -408,13 +394,6 @@ impl JitoBellHandler {
                 let pool_mint_info = &ix.accounts[7];
 
                 if pool_mint_info.pubkey.eq(&pool_mint) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         if *amount >= threshold.value {
                             self.dispatch_platform_notifications(
@@ -449,13 +428,6 @@ impl JitoBellHandler {
                 let pool_mint_info = &ix.accounts[7];
 
                 if pool_mint_info.pubkey.eq(&pool_mint) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         if *amount >= threshold.value {
                             self.dispatch_platform_notifications(
@@ -493,13 +465,6 @@ impl JitoBellHandler {
                 let _stake_program_info = &ix.accounts[10];
 
                 if stake_pool_info.pubkey.eq(&stake_pool) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         if *amount > threshold.value {
                             self.dispatch_platform_notifications(
@@ -558,6 +523,13 @@ impl JitoBellHandler {
             return Err(JitoBellError::Config("Specify VRT Address".to_string()));
         };
 
+        let mut sorted_thresholds = instruction.thresholds.clone();
+        sorted_thresholds.sort_by(|a, b| {
+            b.value
+                .partial_cmp(&a.value)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         match jito_vault_program {
             JitoVaultProgram::MintTo { ix, min_amount_out } => {
                 let _config_info = &ix.accounts[0];
@@ -570,13 +542,6 @@ impl JitoBellHandler {
                 let _vault_fee_token_account = &ix.accounts[7];
 
                 if vrt_mint_info.pubkey.eq(&vrt) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         let min_amount_out = *min_amount_out as f64 / 1_000_000_000_f64;
                         if min_amount_out >= threshold.value {
@@ -607,13 +572,6 @@ impl JitoBellHandler {
 
                 // VRT amount
                 if vault.vrt_mint.eq(&vrt) {
-                    let mut sorted_thresholds = instruction.thresholds.clone();
-                    sorted_thresholds.sort_by(|a, b| {
-                        b.value
-                            .partial_cmp(&a.value)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
                     for threshold in sorted_thresholds.iter() {
                         let amount = *amount as f64 / 1_000_000_000_f64;
                         if amount >= threshold.value {
