@@ -273,6 +273,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
@@ -330,6 +331,7 @@ impl JitoBellHandler {
                                                     &parser.transaction_signature,
                                                 )
                                                 .await?;
+                                                break;
                                             }
                                         }
 
@@ -382,6 +384,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
@@ -422,6 +425,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
@@ -462,6 +466,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
@@ -505,6 +510,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
@@ -582,6 +588,7 @@ impl JitoBellHandler {
                                 &parser.transaction_signature,
                             )
                             .await?;
+                            break;
                         }
                     }
                 }
