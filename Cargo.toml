@@ -1,6 +1,6 @@
 [package]
 name = "jito-bell"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Jito Network Maintainers <support@jito.network>"]
 repository = "https://github.com/jito-foundation/jito-bell"
 edition = "2021"
