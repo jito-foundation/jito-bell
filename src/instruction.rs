@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::threshold_config::{ThresholdConfig, UsdThresholdConfig};
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Instruction {
     /// Stake Pool address
     pub stake_pool: Option<String>,

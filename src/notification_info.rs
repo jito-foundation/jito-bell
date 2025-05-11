@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NotificationInfo {
     /// Description
     pub description: String,
