@@ -20,25 +20,25 @@ defillama-rs = "0.1.1"
 dotenv = "0.15.0"
 env_logger = "0.11.3"
 futures = "0.3.24"
-jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
+jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "448ed840dbed8522b15b8179082106c39b167bdd" }
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "448ed840dbed8522b15b8179082106c39b167bdd" }
 log = "0.4.17"
 maplit = "1.0.2"
 reqwest = { version = "0.11.0", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
-solana-metrics = "2.2.13"
-solana-rpc-client = "1.17.6"
-solana-rpc-client-api = "1.17.6"
-solana-sdk = "1.17.6"
-spl-stake-pool = { version = "^1.0.0", features = ["no-entrypoint"] }
-spl-token-2022 = { version = "0.9", features = [ "no-entrypoint", "serde-traits" ] }
+solana-metrics = "2.1.0"
+solana-rpc-client = "2.1.0"
+solana-rpc-client-api = "2.1.0"
+solana-sdk = "2.1.0"
+spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "7.0.0", features = [ "no-entrypoint", "serde-traits" ] }
 thiserror = "2.0.12"
 tokio = { version = "1.0.1", features = ["full"] }
 tonic = "0.10.0"
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-subscriber = "0.3.19"
-yellowstone-grpc-client = "1.15.4"
-yellowstone-grpc-proto = { version = "1.14.2", default-features = false }
+yellowstone-grpc-client = "6.1.0"
+yellowstone-grpc-proto = { version = "6.1.0", default-features = false }

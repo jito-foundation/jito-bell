@@ -11,7 +11,7 @@ pub struct SlackConfig {
 
 #[derive(Deserialize, Debug)]
 pub struct DiscordConfig {
-    /// Webhook ULR
+    /// Webhook URL
     pub webhook_url: String,
 }
 

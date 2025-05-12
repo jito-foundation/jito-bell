@@ -9,6 +9,7 @@ use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use instruction::Instruction;
 use jito_vault_client::accounts::Vault;
+// use jito_vault_sdk::inline_mpl_token_metadata;
 use log::{debug, error};
 use maplit::hashmap;
 use metrics::EpochMetrics;
@@ -23,8 +24,7 @@ use solana_sdk::{
 };
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
-use tonic::transport::channel::ClientTlsConfig;
-use yellowstone_grpc_client::GeyserGrpcClient;
+use yellowstone_grpc_client::{ClientTlsConfig, GeyserGrpcClient};
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
     prelude::{
@@ -106,6 +106,7 @@ impl JitoBellHandler {
         let subscribe_request = SubscribeRequest {
             slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
                 filter_by_commitment: Some(true),
+                interslot_updates: None,
             } },
             accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
@@ -123,6 +124,7 @@ impl JitoBellHandler {
             commitment: Some(subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
+            from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
@@ -546,6 +548,22 @@ impl JitoBellHandler {
                 let _vault_fee_token_account = &ix.accounts[7];
 
                 if vrt_mint_info.pubkey.eq(&vrt) {
+                    // let metadata_pubkey = Pubkey::find_program_address(
+                    //     &[
+                    //         b"metadata",
+                    //         inline_mpl_token_metadata::id().as_ref(),
+                    //         vrt.as_ref(),
+                    //     ],
+                    //     &inline_mpl_token_metadata::id(),
+                    // )
+                    // .0;
+                    // if let Ok(metadata) = self
+                    //     .rpc_client
+                    //     .get_account::<jito_vault_client::log::metadata::Metadata>(&metadata_pubkey)
+                    //     .await
+                    // {
+                    //     self.print_out(None, None, &metadata)?;
+                    // }
                     for threshold in self.sorted_thresholds(instruction).iter() {
                         let min_amount_out = *min_amount_out as f64 / 1_000_000_000_f64;
                         if min_amount_out >= threshold.value {
