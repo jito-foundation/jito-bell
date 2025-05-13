@@ -2168,7 +2168,7 @@ dependencies = [
 
 [[package]]
 name = "jito-bell"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "borsh 0.10.4",
@@ -2186,7 +2186,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "solana-metrics 2.2.13",
+ "solana-metrics 2.2.14",
  "solana-rpc-client",
  "solana-rpc-client-api",
  "solana-sdk",
@@ -3828,9 +3828,9 @@ dependencies = [
 
 [[package]]
 name = "solana-metrics"
-version = "2.2.13"
+version = "2.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d94a9d3aa657cc6e5bbec340693ced8e00399d80b8c9d28daa85f3ef123c345c"
+checksum = "8716615b9e9dfa0d4bf50539f1cc6d4a13392cfd450675da7b14665fff71fa7a"
 dependencies = [
  "crossbeam-channel",
  "gethostname",

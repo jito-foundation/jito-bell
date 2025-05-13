@@ -81,6 +81,10 @@ Define which program instructions to monitor
 
 ## Getting Started
 
+### Create Webhook URL
+
+If you don't know how to create it, you can follow [Webhook Integration Guide](https://github.com/jito-foundation/jito-bell/wiki/Webhook-Integration-Guide).
+
 ### Create `.env` file
 
 ```bash
