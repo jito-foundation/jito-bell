@@ -19,8 +19,10 @@ use parser::{
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
-    clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig, pubkey::Pubkey,
+    clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig, program_pack::Pack,
+    pubkey::Pubkey,
 };
+use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
 use tonic::transport::channel::ClientTlsConfig;
@@ -89,6 +91,21 @@ impl JitoBellHandler {
         });
 
         sorted_thresholds
+    }
+
+    /// Get divisor
+    ///
+    /// - Fetch Mint account to get decimals value, if fails return default 9
+    pub async fn divisor(&self, vrt: &Pubkey) -> f64 {
+        let decimals = match self.rpc_client.get_account(vrt).await {
+            Ok(mint_acc) => match Mint::unpack(&mint_acc.data) {
+                Ok(acc) => acc.decimals,
+                Err(_) => 9,
+            },
+            Err(_e) => 9,
+        };
+
+        10_f64.powi(decimals as i32)
     }
 
     /// Start heart beating
@@ -546,8 +563,10 @@ impl JitoBellHandler {
                 let _vault_fee_token_account = &ix.accounts[7];
 
                 if vrt_mint_info.pubkey.eq(&vrt) {
+                    let divisor = self.divisor(&vrt).await;
+
                     for threshold in self.sorted_thresholds(instruction).iter() {
-                        let min_amount_out = *min_amount_out as f64 / 1_000_000_000_f64;
+                        let min_amount_out = *min_amount_out as f64 / divisor;
                         if min_amount_out >= threshold.value {
                             self.dispatch_platform_notifications(
                                 &threshold.notification.destinations,
@@ -576,8 +595,10 @@ impl JitoBellHandler {
 
                 // VRT amount
                 if vault.vrt_mint.eq(&vrt) {
+                    let divisor = self.divisor(&vrt).await;
+
                     for threshold in self.sorted_thresholds(instruction).iter() {
-                        let amount = *amount as f64 / 1_000_000_000_f64;
+                        let amount = *amount as f64 / divisor;
                         if amount >= threshold.value {
                             self.dispatch_platform_notifications(
                                 &threshold.notification.destinations,
