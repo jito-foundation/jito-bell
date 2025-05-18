@@ -47,15 +47,28 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       
-      # Improved Linux MUSL environment setup with OpenSSL
-      - name: Install dependencies (Linux MUSL)
+      # Simple and focused Linux MUSL setup
+      - name: Install essential dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev pkg-config libssl-dev
-          # Create symlinks for OpenSSL to work with MUSL
-          sudo mkdir -p /usr/local/musl/include
-          sudo ln -s /usr/include/x86_64-linux-gnu/openssl /usr/local/musl/include/
+          sudo apt-get install -y pkg-config musl-tools libssl-dev
+      
+      # Install OpenSSL on macOS
+      - name: Install OpenSSL (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install openssl@3
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+          
+      # Install Vcpkg on Windows for OpenSSL
+      - name: Install OpenSSL (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          vcpkg integrate install
+          vcpkg install openssl:x64-windows-static
+          echo "OPENSSL_DIR=C:/vcpkg/installed/x64-windows-static" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
       
       # Set OpenSSL environment variables for Linux MUSL build
       - name: Setup OpenSSL env (Linux MUSL)
@@ -87,16 +100,11 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
       
-      # Alternative build approach for Linux MUSL with cross
-      - name: Install cross (Linux MUSL)
+      # Use docker for MUSL builds to ensure correct environment
+      - name: Build (Linux MUSL)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          cargo install cross --locked
-
-      - name: Build (Linux MUSL with cross)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          cross build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+          docker run --rm -v "$(pwd)":/home/rust/src -w /home/rust/src ekidd/rust-musl-builder:stable cargo build --release --target=x86_64-unknown-linux-musl --package ${{ inputs.package_path }}
       
       # Regular build for non-MUSL targets
       - name: Build (non-MUSL)
