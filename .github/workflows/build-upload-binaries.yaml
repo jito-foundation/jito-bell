@@ -47,10 +47,31 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       
-      - name: Install musl-tools (Linux only)
+      # Improved Linux MUSL environment setup with OpenSSL
+      - name: Install dependencies (Linux MUSL)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev pkg-config libssl-dev
+          # Create symlinks for OpenSSL to work with MUSL
+          sudo mkdir -p /usr/local/musl/include
+          sudo ln -s /usr/include/x86_64-linux-gnu/openssl /usr/local/musl/include/
       
+      # Set OpenSSL environment variables for Linux MUSL build
+      - name: Setup OpenSSL env (Linux MUSL)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+      
+      - name: Install OpenSSL (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install openssl@3
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -66,8 +87,21 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
       
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+      # Alternative build approach for Linux MUSL with cross
+      - name: Install cross (Linux MUSL)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo install cross --locked
+
+      - name: Build (Linux MUSL with cross)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cross build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+      
+      # Regular build for non-MUSL targets
+      - name: Build (non-MUSL)
+        if: matrix.os != 'ubuntu-latest'
+        run: cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       - name: Prepare binary (Unix)
         if: matrix.os != 'windows-latest'
