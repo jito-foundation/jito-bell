@@ -70,6 +70,21 @@ jobs:
           echo "OPENSSL_DIR=C:/vcpkg/installed/x64-windows-static" >> $env:GITHUB_ENV
           echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
       
+      # Set OpenSSL environment variables for Linux MUSL build
+      - name: Setup OpenSSL env (Linux MUSL)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+      
+      - name: Install OpenSSL (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install openssl@3
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -80,7 +95,7 @@ jobs:
         shell: bash
         run: |
           CRATE_NAME="${{ inputs.package_path }}"
-          VERSION=$(grep -m1 'version =' ${{ inputs.package_path }}/Cargo.toml | cut -d '"' -f2)
+          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
@@ -165,7 +180,7 @@ jobs:
         shell: bash
         run: |
           CRATE_NAME="${{ inputs.package_path }}"
-          VERSION=$(grep -m1 'version =' ${{ inputs.package_path }}/Cargo.toml | cut -d '"' -f2)
+          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
@@ -193,7 +208,6 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          echo "" >> RELEASE_NOTES.md
           echo "## Binaries" >> RELEASE_NOTES.md
           echo "- Linux (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
           echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
