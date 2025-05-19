@@ -1,0 +1,130 @@
+name: Publish Restaking Crates
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_path:
+        description: Which crate to publish
+        required: true
+        default: 'jito-bell'
+        type: choice
+        options:
+          - jito-bell
+      level:
+        description: Version increment level
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: Dry run (no actual publishing)
+        required: true
+        default: true
+        type: boolean
+      create_release:
+        description: Create a GitHub release
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run tests
+        run: cargo test --workspace
+      - name: Run doc tests
+        run: cargo test --doc
+      - name: Check examples
+        run: cargo check --examples
+
+  publish:
+    name: Publish Crates
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: write
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # get the whole history for changelog
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "jito-bell-publish"
+
+      # - name: Install Cargo Release
+      #   run: cargo install cargo-release
+
+      # - name: Set Git Author
+      #   run: |
+      #     git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #     git config --global user.name "github-actions[bot]"
+
+      - name: Extract crate name
+        id: extract_name
+        run: |
+          # Extract just the crate name from the path for use in tags and releases
+          CRATE_NAME="${{ inputs.package_path }}"
+          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
+          echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
+
+      # - name: Publish Crate
+      #   id: publish
+      #   working-directory: ${{ inputs.package_path }}
+      #   # env:
+      #     # CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      #   run: |
+      #     # Get current version before update
+      #     OLD_VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
+          
+      #     if [ "${{ inputs.dry_run }}" == "true" ]; then
+      #       # For dry-run mode, don't use the -x flag (dry-run is default)
+      #       cargo release ${{ inputs.level }} --no-confirm --no-push
+      #     else
+      #       # For actual execution, use the -x flag
+      #       cargo release ${{ inputs.level }} --no-confirm -x
+      #     fi
+          
+      #     # Get new version after update
+      #     NEW_VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
+          
+      #     # Set outputs for the release step
+      #     echo "old_version=${OLD_VERSION}" >> $GITHUB_OUTPUT
+      #     echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+      #     echo "new_git_tag=${{ steps.extract_name.outputs.crate_name }}-v${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Generate a changelog
+        if: github.event.inputs.create_release == 'true'
+        id: changelog
+        uses: metcalfc/changelog-generator@v4.1.0
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+          includePattern: ".*/${{ inputs.package_path }}/.*"
+
+      - name: Create GitHub release
+        if: github.event.inputs.create_release == 'true' && github.event.inputs.dry_run != 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.publish.outputs.new_git_tag }}
+          name: "${{ steps.extract_name.outputs.crate_name }} v${{ steps.extract_name.outputs.version }}"
+          body: ${{ steps.changelog.outputs.changelog }}
