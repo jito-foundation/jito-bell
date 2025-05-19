@@ -184,7 +184,7 @@ jobs:
         shell: bash
         run: |
           CRATE_NAME="${{ inputs.package_path }}"
-          VERSION=$(grep -m1 'version =' ${{ inputs.package_path }}/Cargo.toml | cut -d '"' -f2)
+          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
