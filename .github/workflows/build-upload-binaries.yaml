@@ -42,12 +42,24 @@ jobs:
           fetch-depth: 1
           ref: refs/tags/${{ github.event.inputs.release_tag }}
       
-      # Only set up Rust for non-Linux builds (macOS and Windows)
+      # Setup Rust for all builds
       - name: Setup Rust
-        if: matrix.os != 'ubuntu-latest'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      
+      # Install Protobuf dependencies on Windows
+      - name: Setup Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install protoc
+          choco install msys2
+          
+          # Add Protobuf to path
+          echo "C:\ProgramData\chocolatey\lib\protoc\tools\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          
+          # Verify protoc is installed
+          protoc --version
       
       # Install OpenSSL on macOS
       - name: Install OpenSSL (macOS)
@@ -65,12 +77,12 @@ jobs:
           echo "OPENSSL_DIR=C:/vcpkg/installed/x64-windows-static" >> $env:GITHUB_ENV
           echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
       
-      # Only use cache for non-Linux builds
+      # Use cache for non-Linux builds
       - name: Rust Cache
         if: matrix.os != 'ubuntu-latest'
         uses: Swatinem/rust-cache@v2
         with:
-          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v3"
+          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v4"
 
       - name: Extract crate name and version
         id: crate_info
@@ -92,17 +104,24 @@ jobs:
           # List the target directory to debug the path
           echo "Listing target directories:"
           find ./target -name "${{ inputs.package_path }}" | grep -v debug
-          
-          # Create the directory structure expected by later steps
-          mkdir -p ./target/x86_64-unknown-linux-musl/release/
-          
-          # In the muslrust container, the binary is placed directly in target/x86_64-unknown-linux-musl/release/
-          # No need to copy it as it's already in the right place
       
-      # Regular build for non-MUSL targets
-      - name: Build (non-MUSL)
-        if: matrix.os != 'ubuntu-latest'
-        run: cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+      # For Windows, use a different approach to build with protobuf
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          # Set environment variables for Protobuf
+          export PROTOC=$(which protoc)
+          export PROTOC_INCLUDE="C:/ProgramData/chocolatey/lib/protoc/tools/include"
+          
+          # Build with Cargo
+          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+      
+      # Regular build for macOS
+      - name: Build (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       - name: Prepare binary (Unix)
         if: matrix.os != 'windows-latest'
