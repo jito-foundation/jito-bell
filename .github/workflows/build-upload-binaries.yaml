@@ -32,9 +32,6 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             name: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            name: x86_64-pc-windows-msvc
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -48,40 +45,6 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       
-      # Windows-specific setup
-      - name: Setup Windows
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Install protoc binary
-          New-Item -ItemType Directory -Path "C:\protoc" -Force
-          Invoke-WebRequest -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-win64.zip" -OutFile "C:\protoc\protoc.zip"
-          Expand-Archive -Path "C:\protoc\protoc.zip" -DestinationPath "C:\protoc" -Force
-          
-          # Add protoc to system PATH
-          echo "C:\protoc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          
-          # Set environment variables to skip building protobuf-src
-          echo "PROTOC=C:\protoc\bin\protoc.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "PROTOC_INCLUDE=C:\protoc\include" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          
-          # For static OpenSSL linking
-          echo "OPENSSL_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "OPENSSL_DIR=C:\Program Files\OpenSSL-Win64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          
-          # Custom vars to prevent building protobuf-src
-          echo "PROTOBUF_SYS_PROTOC=C:\protoc\bin\protoc.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "PROTOBUF_SYS_PROTOC_BIN_PATH=C:\protoc\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "PROTOBUF_SYS_ROOT=C:\protoc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      
-      # Install OpenSSL on Windows
-      - name: Install OpenSSL on Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install openssl -y
-          echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      
       # Install OpenSSL on macOS
       - name: Install OpenSSL (macOS)
         if: matrix.os == 'macos-latest'
@@ -93,7 +56,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v6"
+          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v8"
 
       - name: Extract crate name and version
         id: crate_info
@@ -105,7 +68,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
       
-      # Use clux/muslrust Docker image for Linux MUSL build
+      # Use Docker for Linux MUSL build
       - name: Build Linux MUSL with Docker
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -116,58 +79,13 @@ jobs:
           echo "Listing target directories:"
           find ./target -name "${{ inputs.package_path }}" | grep -v debug
       
-      # Create a temporary Cargo configuration file to override dependencies for Windows
-      - name: Create Custom Cargo Config for Windows
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $ConfigContent = @"
-          [build]
-          rustflags = ["-C", "target-feature=+crt-static"]
-          
-          [target.x86_64-pc-windows-msvc.prost-build]
-          protoc = "C:/protoc/bin/protoc.exe"
-          
-          [env]
-          PROTOC = "C:/protoc/bin/protoc.exe"
-          PROTOBUF_SYS_NO_PKG_CONFIG = "1"
-          PROTOC_NO_VENDOR = "1"
-          "@
-          
-          # Create .cargo directory if it doesn't exist
-          if (-not (Test-Path ".cargo")) {
-            New-Item -ItemType Directory -Path ".cargo"
-          }
-          
-          # Write the config
-          Set-Content -Path ".cargo/config.toml" -Value $ConfigContent
-      
-      # For Windows, try building with workarounds
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Check installed protoc version
-          Write-Host "Protoc version:"
-          & "C:\protoc\bin\protoc.exe" --version
-          
-          # Try to build with a different approach
-          $env:PROTOC = "C:\protoc\bin\protoc.exe"
-          $env:PROTOBUF_SYS_PROTOC = "C:\protoc\bin\protoc.exe"
-          $env:PROTOBUF_SYS_NO_PKG_CONFIG = "1"
-          $env:PROTOC_NO_VENDOR = "1"
-          
-          # Run the build
-          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }} --no-default-features
-      
       # Regular build for macOS
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
-      - name: Prepare binary (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Prepare binary
         run: |
           CRATE_NAME="${{ steps.crate_info.outputs.crate_name }}"
           VERSION="${{ steps.crate_info.outputs.version }}"
@@ -192,41 +110,13 @@ jobs:
           # Create checksum
           shasum -a 256 "${BINARY_NAME}" > "${BINARY_NAME}.sha256"
       
-      - name: Prepare binary (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $CRATE_NAME = "${{ steps.crate_info.outputs.crate_name }}"
-          $VERSION = "${{ steps.crate_info.outputs.version }}"
-          $BINARY_NAME = "${CRATE_NAME}-v${VERSION}-${{ matrix.target }}.exe"
-          
-          Write-Host "Building binary with new version: $VERSION"
-          
-          # Copy binary to root with appropriate name
-          Copy-Item "./target/${{ matrix.target }}/release/${CRATE_NAME}.exe" -Destination $BINARY_NAME
-          
-          # Create checksum
-          $hash = Get-FileHash -Path $BINARY_NAME -Algorithm SHA256
-          $hash.Hash | Out-File -FilePath "${BINARY_NAME}.sha256"
-      
-      - name: Upload binary artifacts (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: |
             ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}
             ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}.sha256
-          retention-days: 7
-      
-      - name: Upload binary artifacts (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: |
-            ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}.exe
-            ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}.exe.sha256
           retention-days: 7
 
   publish-release:
@@ -265,19 +155,12 @@ jobs:
           name: x86_64-apple-darwin
           path: release-binaries
       
-      - name: Download Windows binary
-        uses: actions/download-artifact@v4
-        with:
-          name: x86_64-pc-windows-msvc
-          path: release-binaries
-
       - name: Generate release notes
         id: release_notes
         run: |
           echo "## Binaries" >> RELEASE_NOTES.md
           echo "- Linux (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
           echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
-          echo "- Windows (x86_64-pc-windows-msvc)" >> RELEASE_NOTES.md
           
           if [ -f "CHANGELOG.md" ]; then
             echo "" >> RELEASE_NOTES.md
