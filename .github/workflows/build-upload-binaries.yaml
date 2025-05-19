@@ -42,34 +42,12 @@ jobs:
           fetch-depth: 1
           ref: refs/tags/${{ github.event.inputs.release_tag }}
       
+      # Only set up Rust for non-Linux builds (macOS and Windows)
       - name: Setup Rust
+        if: matrix.os != 'ubuntu-latest'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      
-      # For Linux MUSL, install dependencies and set up OpenSSL properly
-      - name: Setup Linux MUSL with OpenSSL
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev pkg-config libssl-dev
-          
-          # Download and build OpenSSL for MUSL
-          wget https://www.openssl.org/source/openssl-3.2.0.tar.gz
-          tar -xzf openssl-3.2.0.tar.gz
-          cd openssl-3.2.0
-          
-          # Configure and build OpenSSL for MUSL with static libraries
-          CC="musl-gcc" ./Configure no-shared no-async --prefix=/usr/local/musl --openssldir=/usr/local/musl/ssl linux-x86_64
-          make -j$(nproc)
-          sudo make install
-          cd ..
-          
-          # Set environment variables for OpenSSL
-          echo "OPENSSL_DIR=/usr/local/musl" >> $GITHUB_ENV
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/local/musl/lib/pkgconfig" >> $GITHUB_ENV
       
       # Install OpenSSL on macOS
       - name: Install OpenSSL (macOS)
@@ -87,10 +65,12 @@ jobs:
           echo "OPENSSL_DIR=C:/vcpkg/installed/x64-windows-static" >> $env:GITHUB_ENV
           echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
       
+      # Only use cache for non-Linux builds
       - name: Rust Cache
+        if: matrix.os != 'ubuntu-latest'
         uses: Swatinem/rust-cache@v2
         with:
-          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v2"
+          key: "jito-bell-${{ matrix.target }}-${{ inputs.package_path }}-v3"
 
       - name: Extract crate name and version
         id: crate_info
@@ -102,8 +82,19 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
       
-      # Build all targets using cargo directly with proper environment setup
-      - name: Build
+      # Use clux/muslrust Docker image for Linux MUSL build
+      - name: Build Linux MUSL with Docker
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          docker run --rm -v $(pwd):/home/rust/src -w /home/rust/src clux/muslrust:stable cargo build --release --package ${{ inputs.package_path }}
+          
+          # The output will be in ./target/x86_64-unknown-linux-musl/release/
+          mkdir -p ./target/x86_64-unknown-linux-musl/release/
+          cp ./target/release/${{ inputs.package_path }} ./target/x86_64-unknown-linux-musl/release/
+      
+      # Regular build for non-MUSL targets
+      - name: Build (non-MUSL)
+        if: matrix.os != 'ubuntu-latest'
         run: cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       - name: Prepare binary (Unix)
@@ -203,32 +194,6 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
+          echo "" >> RELEASE_NOTES.md
           echo "## Binaries" >> RELEASE_NOTES.md
-          echo "- Linux (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
-          echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
-          echo "- Windows (x86_64-pc-windows-msvc)" >> RELEASE_NOTES.md
-          
-          if [ -f "CHANGELOG.md" ]; then
-            echo "" >> RELEASE_NOTES.md
-            echo "## Changelog" >> RELEASE_NOTES.md
-            # Extract the relevant section from CHANGELOG.md if it exists
-            grep -A 50 "^## ${{ steps.release_info.outputs.version }}" CHANGELOG.md | grep -B 50 -m 2 "^## " | head -n -1 >> RELEASE_NOTES.md || true
-          fi
-      
-      - name: Update release with binaries
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ github.event.inputs.release_tag }}
-          name: "${{ steps.release_info.outputs.crate_name }} v${{ steps.release_info.outputs.version }}"
-          bodyFile: "RELEASE_NOTES.md"
-          artifacts: "./release-binaries/*"
-          artifactErrorsFailBuild: false
-          allowUpdates: true
-          draft: ${{ github.event.inputs.publish_release != 'true' }}
-          
-      - name: Publish Release
-        if: github.event.inputs.publish_release == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release edit "${{ github.event.inputs.release_tag }}" --draft=false
+          echo "
