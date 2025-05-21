@@ -29,6 +29,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             name: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: x86_64-unknown-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
             name: x86_64-apple-darwin
@@ -78,6 +81,12 @@ jobs:
           # List the target directory to debug the path
           echo "Listing target directories:"
           find ./target -name "${{ inputs.package_path }}" | grep -v debug
+
+      # Standard build for Linux GNU
+      - name: Build Linux GNU
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       # Regular build for macOS
       - name: Build (macOS)
@@ -94,9 +103,12 @@ jobs:
           echo "Building binary with new version: $VERSION"
           
           # Find the binary
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ] && [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]; then
             # For Linux MUSL (built with Docker), find the binary
             BINARY_PATH=$(find ./target -name "$CRATE_NAME" -type f -executable | grep -v debug | head -n 1)
+          elif [ "${{ matrix.os }}" == "ubuntu-latest" ] && [ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]; then
+            # For Linux GNU, use the standard path
+            BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}"
           else
             # For macOS, use the standard path
             BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}"
@@ -154,12 +166,19 @@ jobs:
         with:
           name: x86_64-apple-darwin
           path: release-binaries
+
+      - name: Download Linux GNU binary
+        uses: actions/download-artifact@v4
+        with:
+          name: x86_64-unknown-linux-gnu
+          path: release-binaries
       
       - name: Generate release notes
         id: release_notes
         run: |
           echo "## Binaries" >> RELEASE_NOTES.md
-          echo "- Linux (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
+          echo "- Linux musl (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
+          echo "- Linux GNU (x86_64-unknown-linux-gnu)" >> RELEASE_NOTES.md
           echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
           
           if [ -f "CHANGELOG.md" ]; then
