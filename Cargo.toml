@@ -1,6 +1,6 @@
 [package]
 name = "jito-bell"
-version = "0.0.9"
+version = "0.0.10"
 authors = ["Jito Network Maintainers <support@jito.network>"]
 repository = "https://github.com/jito-foundation/jito-bell"
 edition = "2021"
@@ -24,6 +24,7 @@ jito-vault-client = { package = "jito-vault-client", git = "https://github.com/j
 jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 log = "0.4.17"
 maplit = "1.0.2"
+openssl = { version = "0.10.72", features = ["vendored"] }
 reqwest = { version = "0.11.0", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
