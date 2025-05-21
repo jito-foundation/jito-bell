@@ -71,9 +71,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
       
-      # Use Docker for Linux MUSL build
+      # Use Docker for Linux MUSL build ONLY
       - name: Build Linux MUSL with Docker
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
           # Run the build in Docker with muslrust
           docker run --rm -v $(pwd):/home/rust/src -w /home/rust/src clux/muslrust:stable cargo build --release --package ${{ inputs.package_path }}
@@ -82,9 +82,9 @@ jobs:
           echo "Listing target directories:"
           find ./target -name "${{ inputs.package_path }}" | grep -v debug
 
-      # Standard build for Linux GNU
+      # Standard build for Linux GNU ONLY
       - name: Build Linux GNU
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
@@ -103,14 +103,11 @@ jobs:
           echo "Building binary with new version: $VERSION"
           
           # Find the binary
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ] && [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]; then
+          if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]; then
             # For Linux MUSL (built with Docker), find the binary
             BINARY_PATH=$(find ./target -name "$CRATE_NAME" -type f -executable | grep -v debug | head -n 1)
-          elif [ "${{ matrix.os }}" == "ubuntu-latest" ] && [ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]; then
-            # For Linux GNU, use the standard path
-            BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}"
           else
-            # For macOS, use the standard path
+            # For Linux GNU and macOS, use the standard path
             BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}"
           fi
           
@@ -155,22 +152,22 @@ jobs:
       - name: Create release directory
         run: mkdir -p release-binaries
       
-      - name: Download Linux binary
+      - name: Download Linux MUSL binary
         uses: actions/download-artifact@v4
         with:
           name: x86_64-unknown-linux-musl
-          path: release-binaries
-      
-      - name: Download macOS binary
-        uses: actions/download-artifact@v4
-        with:
-          name: x86_64-apple-darwin
           path: release-binaries
 
       - name: Download Linux GNU binary
         uses: actions/download-artifact@v4
         with:
           name: x86_64-unknown-linux-gnu
+          path: release-binaries
+      
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: x86_64-apple-darwin
           path: release-binaries
       
       - name: Generate release notes
