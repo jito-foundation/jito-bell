@@ -44,60 +44,74 @@ impl JitoTransactionParser {
         let mut pubkeys: Vec<Pubkey> = Vec::new();
 
         if let Some(tx) = transaction.transaction {
-            if let Some(tx) = tx.transaction {
-                let signature_slice = &tx.signatures[0];
-                let mut slice = [0; 64];
-                slice.copy_from_slice(&signature_slice[..64]);
-                let tx_signature = Signature::from(slice);
-                transaction_signature = tx_signature.to_string();
+            if let Some(ref meta) = tx.meta {
+                if meta.err.is_none() {
+                    if let Some(tx) = tx.transaction {
+                        let signature_slice = &tx.signatures[0];
+                        let mut slice = [0; 64];
+                        slice.copy_from_slice(&signature_slice[..64]);
+                        let tx_signature = Signature::from(slice);
+                        transaction_signature = tx_signature.to_string();
 
-                if let Some(msg) = tx.message {
-                    pubkeys = msg
-                        .account_keys
-                        .iter()
-                        .map(|account_key| {
-                            let mut slice = [0; 32];
-                            slice.copy_from_slice(&account_key[..32]);
-                            Pubkey::new_from_array(slice)
-                        })
-                        .collect();
+                        if let Some(msg) = tx.message {
+                            pubkeys = msg
+                                .account_keys
+                                .iter()
+                                .map(|account_key| {
+                                    let mut slice = [0; 32];
+                                    slice.copy_from_slice(&account_key[..32]);
+                                    Pubkey::new_from_array(slice)
+                                })
+                                .collect();
 
-                    for instruction in &msg.instructions {
-                        if let Some(program_id) =
-                            &pubkeys.get(instruction.program_id_index as usize)
-                        {
-                            match *program_id {
-                                program_id if program_id.eq(&SplToken2022Program::program_id()) => {
-                                    if let Some(ix_info) =
-                                        SplToken2022Program::parse_spl_token_2022_program(
-                                            instruction,
-                                            &pubkeys,
-                                        )
-                                    {
-                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                            for instruction in &msg.instructions {
+                                if let Some(program_id) =
+                                    &pubkeys.get(instruction.program_id_index as usize)
+                                {
+                                    match *program_id {
+                                        program_id
+                                            if program_id
+                                                .eq(&SplToken2022Program::program_id()) =>
+                                        {
+                                            if let Some(ix_info) =
+                                                SplToken2022Program::parse_spl_token_2022_program(
+                                                    instruction,
+                                                    &pubkeys,
+                                                )
+                                            {
+                                                programs
+                                                    .push(JitoBellProgram::SplToken2022(ix_info));
+                                            }
+                                        }
+                                        program_id
+                                            if program_id
+                                                .eq(&SplStakePoolProgram::program_id()) =>
+                                        {
+                                            if let Some(ix_info) =
+                                                SplStakePoolProgram::parse_spl_stake_pool_program(
+                                                    instruction,
+                                                    &pubkeys,
+                                                )
+                                            {
+                                                programs
+                                                    .push(JitoBellProgram::SplStakePool(ix_info));
+                                            }
+                                        }
+                                        program_id
+                                            if program_id.eq(&JitoVaultProgram::program_id()) =>
+                                        {
+                                            if let Some(ix_info) =
+                                                JitoVaultProgram::parse_jito_vault_program(
+                                                    instruction,
+                                                    &pubkeys,
+                                                )
+                                            {
+                                                programs.push(JitoBellProgram::JitoVault(ix_info));
+                                            }
+                                        }
+                                        _ => continue,
                                     }
                                 }
-                                program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
-                                    if let Some(ix_info) =
-                                        SplStakePoolProgram::parse_spl_stake_pool_program(
-                                            instruction,
-                                            &pubkeys,
-                                        )
-                                    {
-                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
-                                    }
-                                }
-                                program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
-                                    if let Some(ix_info) =
-                                        JitoVaultProgram::parse_jito_vault_program(
-                                            instruction,
-                                            &pubkeys,
-                                        )
-                                    {
-                                        programs.push(JitoBellProgram::JitoVault(ix_info));
-                                    }
-                                }
-                                _ => continue,
                             }
                         }
                     }
