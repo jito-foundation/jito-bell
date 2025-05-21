@@ -2168,7 +2168,7 @@ dependencies = [
 
 [[package]]
 name = "jito-bell"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "borsh 0.10.4",
