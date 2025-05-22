@@ -12,36 +12,36 @@ name = "jito-bell"
 path = "src/bin/main.rs"
 
 [dependencies]
-anyhow = "1.0.62"
-borsh = "0.10.0"
-chrono = "0.4.26"
-clap = { version = "4.3.0", features = ["derive", "env"] }
-defillama-rs = "0.1.1"
-dotenv = "0.15.0"
-env_logger = "0.11.3"
-futures = "0.3.24"
-jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-log = "0.4.17"
-maplit = "1.0.2"
-openssl = { version = "0.10.72", features = ["vendored"] }
-reqwest = { version = "0.11.0", features = ["json"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-serde_yaml = "0.9.34"
-solana-metrics = "2.2.13"
-solana-rpc-client = "1.17.6"
-solana-rpc-client-api = "1.17.6"
-solana-sdk = "1.17.6"
-spl-stake-pool = { version = "^1.0.0", features = ["no-entrypoint"] }
-spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
-spl-token-2022 = { version = "0.9", features = [ "no-entrypoint", "serde-traits" ] }
+anyhow = { workspace = true }
+borsh = { workspace = true }
+borsh1 = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+defillama-rs = { workspace = true }
+dotenv = { workspace = true }
+env_logger = { workspace = true }
+futures = { workspace = true }
+jito-vault-client = { workspace = true }
+jito-vault-sdk = { workspace = true }
+log = { workspace = true }
+maplit = { workspace = true }
+openssl = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+solana-metrics = { workspace = true }
+solana-rpc-client = { workspace = true }
+solana-rpc-client-api = { workspace = true }
+solana-sdk = { workspace = true }
+spl-stake-pool = { workspace = true }
+spl-token = { workspace = true }
+spl-token-2022 = { workspace = true }
 thiserror = { workspace = true }
-tokio = { version = "1.0.1", features = ["full"] }
-tonic = "0.10.0"
-tracing = "0.1.41"
-tracing-appender = "0.2.3"
-tracing-subscriber = "0.3.19"
-yellowstone-grpc-client = "1.15.4"
-yellowstone-grpc-proto = { version = "1.14.2", default-features = false }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
+yellowstone-grpc-client = { workspace = true }
+yellowstone-grpc-proto = { workspace = true }
 
