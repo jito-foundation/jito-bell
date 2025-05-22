@@ -1,0 +1,18 @@
+[package]
+name = "stake-pool-parser"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+fetch = []
+serde = []
+anchor = []
+anchor-idl-build = []
+
+[dependencies]
+borsh = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+solana-program = { workspace = true }
+thiserror = { workspace = true }
+yellowstone-vixen-core = { workspace = true }
