@@ -25,13 +25,13 @@ use solana_sdk::{
 use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
+use tonic::transport::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
     prelude::{
         subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
     },
-    tonic::transport::ClientTlsConfig,
 };
 
 use crate::config::JitoBellConfig;

@@ -2191,6 +2191,7 @@ dependencies = [
  "spl-token-2022 4.0.1",
  "thiserror 2.0.12",
  "tokio",
+ "tonic",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
