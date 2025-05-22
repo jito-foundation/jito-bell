@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use ::borsh::BorshDeserialize;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     native_token::lamports_to_sol,
@@ -123,7 +122,7 @@ impl SplStakePoolProgram {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SplStakePoolProgram> {
-        let stake_pool_ix = match StakePoolInstruction::try_from_slice(instruction.data()) {
+        let stake_pool_ix = match borsh1::from_slice(instruction.data()) {
             Ok(ix) => ix,
             Err(_) => return None,
         };
