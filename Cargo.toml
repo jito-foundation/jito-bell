@@ -36,7 +36,7 @@ spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
 spl-token-2022 = { version = "4.0.0", features = [ "no-entrypoint", "serde-traits" ] }
 thiserror = "2.0.12"
 tokio = { version = "1.0.1", features = ["full"] }
-tonic = "0.12.1"
+tonic = { version = "0.13.1" }
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-subscriber = "0.3.19"

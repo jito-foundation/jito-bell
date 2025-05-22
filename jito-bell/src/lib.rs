@@ -25,13 +25,14 @@ use solana_sdk::{
 use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
-use tonic::transport::ClientTlsConfig;
+// use tonic::transport::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
     prelude::{
         subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
     },
+    tonic::transport::ClientTlsConfig,
 };
 
 use crate::config::JitoBellConfig;
@@ -115,7 +116,7 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
             .x_token(subscribe_option.x_token.clone())?
-            .tls_config(ClientTlsConfig::new())?
+            .tls_config(ClientTlsConfig::new().with_native_roots())?
             .connect()
             .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
