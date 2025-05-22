@@ -6,7 +6,6 @@
 //!
 
 use crate::{
-    SPL_STAKE_POOL_ID as ID,
     instructions::{
         AddValidatorToPool as AddValidatorToPoolIxAccounts,
         CleanupRemovedValidatorEntries as CleanupRemovedValidatorEntriesIxAccounts,
@@ -36,6 +35,7 @@ use crate::{
         WithdrawStake as WithdrawStakeIxAccounts,
         WithdrawStakeInstructionArgs as WithdrawStakeIxData,
     },
+    SPL_STAKE_POOL_ID as ID,
 };
 use borsh::BorshDeserialize;
 

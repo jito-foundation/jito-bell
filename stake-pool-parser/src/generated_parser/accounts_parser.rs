@@ -6,8 +6,8 @@
 //!
 
 use crate::{
-    SPL_STAKE_POOL_ID as ID,
     accounts::{StakePool, ValidatorList, ValidatorStakeInfo},
+    SPL_STAKE_POOL_ID as ID,
 };
 
 /// SplStakePool Program State
