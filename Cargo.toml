@@ -1,46 +1,14 @@
-[package]
-name = "jito-bell"
-version = "0.0.10"
-authors = ["Jito Network Maintainers <support@jito.network>"]
-repository = "https://github.com/jito-foundation/jito-bell"
-edition = "2021"
-readme = "README.md"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = [
+    "jito-bell",
+    "stake-pool-parser"
+]
+resolver = "2"
 
-[[bin]]
-name = "jito-bell"
-path = "src/bin/main.rs"
-
-[dependencies]
-anyhow = "1.0.62"
+[workspace.dependencies]
 borsh = "0.10.0"
-chrono = "0.4.26"
-clap = { version = "4.3.0", features = ["derive", "env"] }
-defillama-rs = "0.1.1"
-dotenv = "0.15.0"
-env_logger = "0.11.3"
-futures = "0.3.24"
-jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-log = "0.4.17"
-maplit = "1.0.2"
-openssl = { version = "0.10.72", features = ["vendored"] }
-reqwest = { version = "0.11.0", features = ["json"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-serde_yaml = "0.9.34"
-solana-metrics = "2.2.13"
-solana-rpc-client = "1.17.6"
-solana-rpc-client-api = "1.17.6"
-solana-sdk = "1.17.6"
-spl-stake-pool = { version = "^1.0.0", features = ["no-entrypoint"] }
-spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
-spl-token-2022 = { version = "0.9", features = [ "no-entrypoint", "serde-traits" ] }
+num-derive = "0.4.2"
+num-traits = "0.2.19"
+solana-program = "2.2.1"
 thiserror = "2.0.12"
-tokio = { version = "1.0.1", features = ["full"] }
-tonic = "0.10.0"
-tracing = "0.1.41"
-tracing-appender = "0.2.3"
-tracing-subscriber = "0.3.19"
-yellowstone-grpc-client = "1.15.4"
-yellowstone-grpc-proto = { version = "1.14.2", default-features = false }
+yellowstone-vixen-core = "0.3.0"
