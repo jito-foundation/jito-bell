@@ -1,5 +1,5 @@
 [workspace]
-members = [ "examples/token-program",
+members = ["examples/token-program",
     "jito-bell",
     "stake-pool-parser"
 ]
