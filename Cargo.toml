@@ -26,11 +26,11 @@ reqwest = { version = "0.11.0", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
-solana-metrics = "2.1.0"
-solana-program = "2.1.0"
-solana-rpc-client = "2.1.0"
-solana-rpc-client-api = "2.1.0"
-solana-sdk = "2.1.0"
+solana-metrics = "2.1.16"
+solana-program = "2.1.16"
+solana-rpc-client = "2.1.16"
+solana-rpc-client-api = "2.1.16"
+solana-sdk = "2.1.16"
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
 spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
 spl-token-2022 = { version = "4.0.0", features = [ "no-entrypoint", "serde-traits" ] }
@@ -46,3 +46,4 @@ yellowstone-grpc-proto = { version = "2.0.0", default-features = false }
 yellowstone-vixen = "0.3.0"
 yellowstone-vixen-core = "0.3.0"
 yellowstone-vixen-parser = "0.3.0"
+
