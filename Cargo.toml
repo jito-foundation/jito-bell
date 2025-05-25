@@ -12,7 +12,7 @@ borsh1 = { package = "borsh", version = "1.5.3" }
 chrono = "0.4.26"
 clap = { version = "4.3.0", features = ["derive", "env"] }
 defillama-rs = "0.1.1"
-dotenv = "0.15.0"
+dotenvy = { version = "0.15.7" }
 env_logger = "0.11.3"
 futures = "0.3.24"
 jito-vault-client = "0.0.5"
