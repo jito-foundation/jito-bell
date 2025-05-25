@@ -82,7 +82,7 @@ jobs:
         id: extract_name
         run: |
           # Extract just the crate name from the path for use in tags and releases
-          CRATE_NAME="${{ inputs.package_path }}"
+          CRATE_NAME=$(basename "${{ inputs.package_path }}")
           VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -90,7 +90,7 @@ jobs:
 
       - name: Publish Crate
         id: publish
-      #   working-directory: ${{ inputs.package_path }}
+        working-directory: ${{ inputs.package_path }}
       #   # env:
       #     # CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
