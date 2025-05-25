@@ -1,5 +1,6 @@
 [workspace]
-members = ["examples/token-program",
+members = [
+    "examples/token-program",
     "jito-bell",
     "stake-pool-parser"
 ]
@@ -46,4 +47,3 @@ yellowstone-grpc-proto = { version = "2.0.0", default-features = false }
 yellowstone-vixen = "0.3.0"
 yellowstone-vixen-core = "0.3.0"
 yellowstone-vixen-parser = "0.3.0"
-
