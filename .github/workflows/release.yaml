@@ -83,7 +83,7 @@ jobs:
         run: |
           # Extract just the crate name from the path for use in tags and releases
           CRATE_NAME=$(basename "${{ inputs.package_path }}")
-          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
+          VERSION=$(grep -m1 'version =' ${{ inputs.package_path }}/Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building $CRATE_NAME version $VERSION for ${{ matrix.target }}"
