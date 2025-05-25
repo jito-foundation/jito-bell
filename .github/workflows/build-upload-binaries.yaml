@@ -65,7 +65,7 @@ jobs:
         id: crate_info
         shell: bash
         run: |
-          CRATE_NAME="${{ inputs.package_path }}"
+          CRATE_NAME=$(basename "${{ inputs.package_path }}")
           VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -95,9 +95,11 @@ jobs:
           cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       - name: Prepare binary
+        working-directory: ${{ inputs.package_path }}
         run: |
           CRATE_NAME="${{ steps.crate_info.outputs.crate_name }}"
-          VERSION="${{ steps.crate_info.outputs.version }}"
+          # VERSION="${{ steps.crate_info.outputs.version }}"
+          VERSION=$(grep -m1 'version =' Cargo.toml | cut -d '"' -f2)
           BINARY_NAME="${CRATE_NAME}-v${VERSION}-${{ matrix.target }}"
           
           echo "Building binary with new version: $VERSION"
