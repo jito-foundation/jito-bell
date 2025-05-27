@@ -35,6 +35,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             name: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: x86_64-pc-windows-msvc
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -94,7 +97,14 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
+      # Regular build for Windows
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+      
       - name: Prepare binary
+        shell: bash
         run: |
           CRATE_NAME="${{ steps.crate_info.outputs.crate_name }}"
           VERSION=$(grep -m1 'version =' ${{ inputs.package_path }}/Cargo.toml | cut -d '"' -f2)
@@ -106,6 +116,10 @@ jobs:
           if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]; then
             # For Linux MUSL (built with Docker), find the binary
             BINARY_PATH=$(find ./target -name "$CRATE_NAME" -type f -executable | grep -v debug | head -n 1)
+          elif [ "${{ matrix.target }}" == "x86_64-pc-windows-msvc" ]; then
+            # For Windows, add .exe extension
+            BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}.exe"
+            BINARY_NAME="${BINARY_NAME}.exe"
           else
             # For Linux GNU and macOS, use the standard path
             BINARY_PATH="./target/${{ matrix.target }}/release/${CRATE_NAME}"
@@ -117,15 +131,19 @@ jobs:
           cp "$BINARY_PATH" "${BINARY_NAME}"
           
           # Create checksum
-          shasum -a 256 "${BINARY_NAME}" > "${BINARY_NAME}.sha256"
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "${BINARY_NAME}" > "${BINARY_NAME}.sha256"
+          else
+            # Use PowerShell on Windows if shasum is not available
+            powershell -Command "Get-FileHash -Algorithm SHA256 '${BINARY_NAME}' | ForEach-Object { \$_.Hash.ToLower() + '  ${BINARY_NAME}' }" > "${BINARY_NAME}.sha256"
+          fi
       
       - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: |
-            ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}
-            ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}.sha256
+            ${{ steps.crate_info.outputs.crate_name }}-v${{ steps.crate_info.outputs.version }}-${{ matrix.target }}*
           retention-days: 7
 
   publish-release:
@@ -170,6 +188,12 @@ jobs:
           name: x86_64-apple-darwin
           path: release-binaries
       
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: x86_64-pc-windows-msvc
+          path: release-binaries
+      
       - name: Generate release notes
         id: release_notes
         run: |
@@ -177,6 +201,7 @@ jobs:
           echo "- Linux musl (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
           echo "- Linux GNU (x86_64-unknown-linux-gnu)" >> RELEASE_NOTES.md
           echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
+          echo "- Windows (x86_64-pc-windows-msvc)" >> RELEASE_NOTES.md
           
           if [ -f "CHANGELOG.md" ]; then
             echo "" >> RELEASE_NOTES.md
