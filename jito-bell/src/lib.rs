@@ -49,6 +49,8 @@ pub mod program;
 pub mod subscribe_option;
 pub mod threshold_config;
 
+pub const DEFAULT_VRT_SYMBOL: &str = "VRT";
+
 pub struct JitoBellHandler {
     /// Configuration for Notification
     pub config: JitoBellConfig,
@@ -107,6 +109,27 @@ impl JitoBellHandler {
         };
 
         10_f64.powi(decimals as i32)
+    }
+
+    /// Get VRT Symbol
+    ///
+    /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
+    pub async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
+        let meta_pubkey =
+            jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
+        let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
+            Ok(meta_acc) => {
+                match jito_vault_client::log::metadata::Metadata::deserialize(
+                    &mut meta_acc.data.as_slice(),
+                ) {
+                    Ok(meta) => meta.symbol,
+                    Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
+                }
+            }
+            Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
+        };
+
+        symbol
     }
 
     /// Start heart beating
@@ -565,21 +588,7 @@ impl JitoBellHandler {
 
                 if vrt_mint_info.pubkey.eq(&vrt) {
                     let divisor = self.divisor(&vrt).await;
-
-                    let meta_pubkey =
-                        jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(&vrt)
-                            .0;
-                    let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
-                        Ok(meta_acc) => {
-                            match jito_vault_client::log::metadata::Metadata::deserialize(
-                                &mut meta_acc.data.as_slice(),
-                            ) {
-                                Ok(meta) => meta.symbol,
-                                Err(_e) => "VRT".to_string(),
-                            }
-                        }
-                        Err(_e) => "VRT".to_string(),
-                    };
+                    let symbol = self.vrt_symbol(&vrt).await;
 
                     for threshold in self.sorted_thresholds(instruction).iter() {
                         let min_amount_out = *min_amount_out as f64 / divisor;
@@ -612,6 +621,7 @@ impl JitoBellHandler {
                 // VRT amount
                 if vault.vrt_mint.eq(&vrt) {
                     let divisor = self.divisor(&vrt).await;
+                    let symbol = self.vrt_symbol(&vrt).await;
 
                     for threshold in self.sorted_thresholds(instruction).iter() {
                         let amount = *amount as f64 / divisor;
@@ -620,7 +630,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 amount,
-                                "VRT",
+                                &symbol,
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -629,32 +639,34 @@ impl JitoBellHandler {
                     }
 
                     // USD amount
-                    let client = DefiLlamaClient::new();
-                    let vrt = Token::new(Chain::Solana, vrt.to_string());
-                    let prices = client.get_price(&vrt).await?;
+                    if !instruction.usd_thresholds.is_empty() {
+                        let client = DefiLlamaClient::new();
+                        let vrt = Token::new(Chain::Solana, vrt.to_string());
+                        let prices = client.get_price(&vrt).await?;
 
-                    if let Some(usd_price) = prices.coins.values().last() {
-                        let mut sorted_usd_thresholds = instruction.usd_thresholds.clone();
-                        sorted_usd_thresholds.sort_by(|a, b| {
-                            b.value
-                                .partial_cmp(&a.value)
-                                .unwrap_or(std::cmp::Ordering::Equal)
-                        });
+                        if let Some(usd_price) = prices.coins.values().last() {
+                            let mut sorted_usd_thresholds = instruction.usd_thresholds.clone();
+                            sorted_usd_thresholds.sort_by(|a, b| {
+                                b.value
+                                    .partial_cmp(&a.value)
+                                    .unwrap_or(std::cmp::Ordering::Equal)
+                            });
 
-                        for usd_threshold in sorted_usd_thresholds.iter() {
-                            let amount = *amount as f64 / 1_000_000_000_f64;
-                            let amount = (amount * usd_price.price) as u64;
+                            for usd_threshold in sorted_usd_thresholds.iter() {
+                                let amount = *amount as f64 / 1_000_000_000_f64;
+                                let amount = (amount * usd_price.price) as u64;
 
-                            if amount >= usd_threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &usd_threshold.notification.destinations,
-                                    &usd_threshold.notification.description,
-                                    amount as f64,
-                                    "USD",
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
+                                if amount >= usd_threshold.value {
+                                    self.dispatch_platform_notifications(
+                                        &usd_threshold.notification.destinations,
+                                        &usd_threshold.notification.description,
+                                        amount as f64,
+                                        "USD",
+                                        &parser.transaction_signature,
+                                    )
+                                    .await?;
+                                    break;
+                                }
                             }
                         }
                     }
