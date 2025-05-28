@@ -49,6 +49,8 @@ pub mod program;
 pub mod subscribe_option;
 pub mod threshold_config;
 
+pub const DEFAULT_VRT_SYMBOL: &str = "VRT";
+
 pub struct JitoBellHandler {
     /// Configuration for Notification
     pub config: JitoBellConfig,
@@ -109,6 +111,9 @@ impl JitoBellHandler {
         10_f64.powi(decimals as i32)
     }
 
+    /// Get VRT Symbol
+    ///
+    /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
     pub async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
         let meta_pubkey =
             jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
@@ -118,10 +123,10 @@ impl JitoBellHandler {
                     &mut meta_acc.data.as_slice(),
                 ) {
                     Ok(meta) => meta.symbol,
-                    Err(_e) => "VRT".to_string(),
+                    Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
                 }
             }
-            Err(_e) => "VRT".to_string(),
+            Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
         };
 
         symbol
