@@ -120,7 +120,43 @@ programs:
     program_id: "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
     instructions:
       mint_to:
-        vrt: "kySo1nETpsZE2NWe5vj2C64mPSciH1SppmHb4XieQ7B"
+        vrt: "kySo1nETpsZE2NWe5vj2C64mPSciH1SppmHb4XieQ7B" #kySOL
+        thresholds:
+          - value: 0.1  # VRT
+            notification:
+              description: "Mint detected"
+              destinations: ["telegram"]
+          - value: 1000.0  # VRT
+            notification:
+              description: "Large Mint detected"
+              destinations: ["telegram"]
+          - value: 5000.0  # VRT
+            notification:
+              description: "Very large Mint detected"
+              destinations: ["telegram", "slack"]
+          - value: 10000.0  # VRT
+            notification:
+              description: "Whale Mint detected"
+              destinations: ["telegram", "slack", "discord"]
+        vrt: "ezSoL6fY1PVdJcJsUpe5CM3xkfmy3zoVCABybm5WtiC" #ezSOL
+        thresholds:
+          - value: 0.1  # VRT
+            notification:
+              description: "Mint detected"
+              destinations: ["telegram"]
+          - value: 1000.0  # VRT
+            notification:
+              description: "Large Mint detected"
+              destinations: ["telegram"]
+          - value: 5000.0  # VRT
+            notification:
+              description: "Very large Mint detected"
+              destinations: ["telegram", "slack"]
+          - value: 10000.0  # VRT
+            notification:
+              description: "Whale Mint detected"
+              destinations: ["telegram", "slack", "discord"]
+        vrt: "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg" #fragSOL
         thresholds:
           - value: 0.1  # VRT
             notification:
