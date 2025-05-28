@@ -35,9 +35,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             name: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            name: x86_64-pc-windows-msvc
+          # - os: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   name: x86_64-pc-windows-msvc
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -98,17 +98,17 @@ jobs:
           cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       # Install Protocol Buffers compiler for all platforms
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "25.x"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Install protoc
+      #   uses: arduino/setup-protoc@v3
+      #   with:
+      #     version: "25.x"
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
       
       # Regular build for Windows
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
+      # - name: Build (Windows)
+      #   if: matrix.os == 'windows-latest'
+      #   run: |
+      #     cargo build --release --target ${{ matrix.target }} --package ${{ inputs.package_path }}
       
       - name: Prepare binary
         shell: bash
@@ -195,11 +195,11 @@ jobs:
           name: x86_64-apple-darwin
           path: release-binaries
       
-      - name: Download Windows binary
-        uses: actions/download-artifact@v4
-        with:
-          name: x86_64-pc-windows-msvc
-          path: release-binaries
+      # - name: Download Windows binary
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: x86_64-pc-windows-msvc
+      #     path: release-binaries
       
       - name: Generate release notes
         id: release_notes
@@ -208,7 +208,7 @@ jobs:
           echo "- Linux musl (x86_64-unknown-linux-musl)" >> RELEASE_NOTES.md
           echo "- Linux GNU (x86_64-unknown-linux-gnu)" >> RELEASE_NOTES.md
           echo "- macOS (x86_64-apple-darwin)" >> RELEASE_NOTES.md
-          echo "- Windows (x86_64-pc-windows-msvc)" >> RELEASE_NOTES.md
+          # echo "- Windows (x86_64-pc-windows-msvc)" >> RELEASE_NOTES.md
           
           if [ -f "CHANGELOG.md" ]; then
             echo "" >> RELEASE_NOTES.md
