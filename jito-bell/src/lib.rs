@@ -111,7 +111,7 @@ impl JitoBellHandler {
 
     pub async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
         let meta_pubkey =
-            jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(&vrt).0;
+            jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
         let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
             Ok(meta_acc) => {
                 match jito_vault_client::log::metadata::Metadata::deserialize(
