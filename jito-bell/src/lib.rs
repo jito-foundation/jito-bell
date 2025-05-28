@@ -566,6 +566,21 @@ impl JitoBellHandler {
                 if vrt_mint_info.pubkey.eq(&vrt) {
                     let divisor = self.divisor(&vrt).await;
 
+                    let meta_pubkey =
+                        jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(&vrt)
+                            .0;
+                    let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
+                        Ok(meta_acc) => {
+                            match jito_vault_client::log::metadata::Metadata::deserialize(
+                                &mut meta_acc.data.as_slice(),
+                            ) {
+                                Ok(meta) => meta.symbol,
+                                Err(_e) => "VRT".to_string(),
+                            }
+                        }
+                        Err(_e) => "VRT".to_string(),
+                    };
+
                     for threshold in self.sorted_thresholds(instruction).iter() {
                         let min_amount_out = *min_amount_out as f64 / divisor;
                         if min_amount_out >= threshold.value {
@@ -573,7 +588,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 min_amount_out,
-                                "SOL",
+                                &symbol,
                                 &parser.transaction_signature,
                             )
                             .await?;
@@ -605,7 +620,7 @@ impl JitoBellHandler {
                                 &threshold.notification.destinations,
                                 &threshold.notification.description,
                                 amount,
-                                "SOL",
+                                "VRT",
                                 &parser.transaction_signature,
                             )
                             .await?;
