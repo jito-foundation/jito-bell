@@ -30,22 +30,22 @@ impl std::fmt::Display for JitoBellConfig {
                 writeln!(f, "    Instruction: {}", key)?;
 
                 if let Some(lsts) = &instruction.lsts {
-                    for (lst_address, _alert_thresholds) in lsts.iter() {
+                    for (lst_address, alert_config) in lsts.iter() {
                         writeln!(f, "        Pool Mint: {}", lst_address)?;
 
                         writeln!(f, "        Thresholds")?;
-                        // for threshold in alert_thresholds.iter() {
-                        //     writeln!(f, "           Threshold Value: {}", threshold.value)?;
-                        //     writeln!(f, "           Notification")?;
-                        //     writeln!(
-                        //         f,
-                        //         "               Description: {}",
-                        //         threshold.notification.description
-                        //     )?;
+                        for threshold in alert_config.thresholds.iter() {
+                            writeln!(f, "           Threshold Value: {}", threshold.value)?;
+                            writeln!(f, "           Notification")?;
+                            writeln!(
+                                f,
+                                "               Description: {}",
+                                threshold.notification.description
+                            )?;
 
-                        //     let destinations = threshold.notification.destinations.join(",");
-                        //     writeln!(f, "               Destinations: {}", destinations)?;
-                        // }
+                            let destinations = threshold.notification.destinations.join(",");
+                            writeln!(f, "               Destinations: {}", destinations)?;
+                        }
                     }
                 }
 

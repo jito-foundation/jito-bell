@@ -25,7 +25,6 @@ use solana_sdk::{
 use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
-// use tonic::transport::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
@@ -88,14 +87,11 @@ impl JitoBellHandler {
     ///
     /// - Sort high value to low value
     pub fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
-        // let mut sorted_thresholds = instruction.thresholds.clone();
         thresholds.sort_by(|a, b| {
             b.value
                 .partial_cmp(&a.value)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-
-        // sorted_thresholds
     }
 
     /// Get divisor
@@ -290,14 +286,6 @@ impl JitoBellHandler {
 
         match spl_stake_program {
             SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
-                // let stake_pool = if let Some(address) = &instruction.stake_pool {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -317,7 +305,6 @@ impl JitoBellHandler {
                     if let Some(alert_config) =
                         stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
                     {
-                        // if stake_pool_info.pubkey.eq(&stake_pool) {
                         self.sort_thresholds(alert_config.thresholds.as_mut());
                         for threshold in alert_config.thresholds.iter() {
                             if *amount > threshold.value {
@@ -336,14 +323,6 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DepositStake { ix } => {
-                // let pool_mint = if let Some(address) = &instruction.pool_mint {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _stake_deposit_authority_info = &ix.accounts[2];
@@ -358,7 +337,6 @@ impl JitoBellHandler {
 
                 if let Some(mut lsts) = instruction.lsts.clone() {
                     if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        // if pool_mint_info.pubkey.eq(&pool_mint) {
                         for program in &parser.programs {
                             if let JitoBellProgram::SplToken2022(program) = program {
                                 match program {
@@ -401,14 +379,6 @@ impl JitoBellHandler {
                 ix,
                 minimum_lamports_out,
             } => {
-                // let pool_mint = if let Some(address) = &instruction.pool_mint {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -422,7 +392,6 @@ impl JitoBellHandler {
 
                 if let Some(mut lsts) = instruction.lsts.clone() {
                     if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        // if pool_mint_info.pubkey.eq(&pool_mint) {
                         self.sort_thresholds(alert_config.thresholds.as_mut());
                         for threshold in alert_config.thresholds.iter() {
                             if *minimum_lamports_out >= threshold.value {
@@ -441,14 +410,6 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DepositSol { ix, amount } => {
-                // let pool_mint = if let Some(address) = &instruction.pool_mint {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _reserve_stake_account_info = &ix.accounts[2];
@@ -460,7 +421,6 @@ impl JitoBellHandler {
 
                 if let Some(mut lsts) = instruction.lsts.clone() {
                     if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        // if pool_mint_info.pubkey.eq(&pool_mint) {
                         self.sort_thresholds(alert_config.thresholds.as_mut());
                         for threshold in alert_config.thresholds.iter() {
                             if *amount >= threshold.value {
@@ -479,14 +439,6 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::WithdrawSol { ix, amount } => {
-                // let pool_mint = if let Some(address) = &instruction.pool_mint {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _user_transfer_authority_info = &ix.accounts[2];
@@ -498,7 +450,6 @@ impl JitoBellHandler {
 
                 if let Some(mut lsts) = instruction.lsts.clone() {
                     if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        // if pool_mint_info.pubkey.eq(&pool_mint) {
                         self.sort_thresholds(alert_config.thresholds.as_mut());
                         for threshold in alert_config.thresholds.iter() {
                             if *amount >= threshold.value {
@@ -517,14 +468,6 @@ impl JitoBellHandler {
                 }
             }
             SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix, amount } => {
-                // let stake_pool = if let Some(address) = &instruction.stake_pool {
-                //     Pubkey::from_str(address).unwrap()
-                // } else {
-                //     return Err(JitoBellError::Config(
-                //         "Specify Pool Mint Address".to_string(),
-                //     ));
-                // };
-
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _stake_pool_withdraw_authority_info = &ix.accounts[2];
@@ -541,9 +484,7 @@ impl JitoBellHandler {
                     if let Some(alert_config) =
                         stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
                     {
-                        // if stake_pool_info.pubkey.eq(&stake_pool) {
                         self.sort_thresholds(alert_config.thresholds.as_mut());
-                        // if stake_pool_info.pubkey.eq(&stake_pool) {
                         for threshold in alert_config.thresholds.iter() {
                             if *amount > threshold.value {
                                 self.dispatch_platform_notifications(
@@ -599,14 +540,6 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("Jito Vault Program: {}", jito_vault_program);
 
-        // let vrts: Vec<Pubkey> = if let Some(vrt) = &instruction.vrts {
-        //     vrt.keys()
-        //         .map(|address| Pubkey::from_str(address).unwrap())
-        //         .collect()
-        // } else {
-        //     return Err(JitoBellError::Config("Specify VRT Address".to_string()));
-        // };
-
         match jito_vault_program {
             JitoVaultProgram::MintTo { ix, min_amount_out } => {
                 let _config_info = &ix.accounts[0];
@@ -658,7 +591,6 @@ impl JitoBellHandler {
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 // VRT amount
-
                 if let Some(ref vrts) = instruction.vrts {
                     if let Some((address, vrt_config)) =
                         vrts.get_key_value(&vault.vrt_mint.to_string())
