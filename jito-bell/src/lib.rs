@@ -83,9 +83,9 @@ impl JitoBellHandler {
         })
     }
 
-    /// Sorted thresholds
+    /// Sort thresholds
     ///
-    /// - Sort high value to low value
+    /// - Sort values from high to low
     pub fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
         thresholds.sort_by(|a, b| {
             b.value

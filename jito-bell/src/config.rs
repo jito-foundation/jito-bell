@@ -54,15 +54,11 @@ impl std::fmt::Display for JitoBellConfig {
                         writeln!(f, "        VRT: {}", vrt_address)?;
 
                         for threshold in config.thresholds.iter() {
-                            writeln!(f, "           VRT Threshold Value: {:?}", threshold.value)?;
+                            writeln!(f, "           VRT Threshold Value: {}", threshold.value)?;
                         }
 
                         for threshold in config.usd_thresholds.iter() {
-                            writeln!(
-                                f,
-                                "           VRT USD Threshold Value: {:?}",
-                                threshold.value
-                            )?;
+                            writeln!(f, "           VRT USD Threshold Value: {}", threshold.value)?;
                         }
                     }
                 }
