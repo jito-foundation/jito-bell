@@ -6045,6 +6045,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "twitterust"
+version = "0.0.1"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "dotenvy",
+ "hmac 0.12.1",
+ "percent-encoding",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "sha1",
+ "thiserror 2.0.12",
+ "tokio",
+]
+
+[[package]]
 name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

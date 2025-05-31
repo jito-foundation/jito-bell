@@ -3,20 +3,23 @@ members = [
     "examples/token-program",
     "examples/twitter",
     "jito-bell",
-    "stake-pool-parser"
+    "stake-pool-parser",
+    "twitterust"
 ]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.62"
+base64 = "0.21"
 borsh = "0.10.0"
 borsh1 = { package = "borsh", version = "1.5.3" }
-chrono = "0.4.26"
+chrono = { version = "0.4.26", features = ["serde"] }
 clap = { version = "4.3.0", features = ["derive", "env"] }
 defillama-rs = "0.1.1"
 dotenvy = { version = "0.15.7" }
 env_logger = "0.11.3"
 futures = "0.3.24"
+hmac = "0.12"
 jito-vault-client = "0.0.5"
 jito-vault-sdk = "0.0.5"
 log = "0.4.17"
@@ -24,10 +27,13 @@ maplit = "1.0.2"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
 openssl = { version = "0.10.72", features = ["vendored"] }
+percent-encoding = "2.3"
+rand = "0.8"
 reqwest = { version = "0.11.0", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
+sha1 = "0.10"
 solana-metrics = "2.1.16"
 solana-program = "2.1.16"
 solana-rpc-client = "2.1.16"
@@ -43,6 +49,7 @@ tonic = { version = "0.13.1" }
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-subscriber = "0.3.19"
+twitterust = { path = "./twitterust" }
 yellowstone-grpc-client = "2.0.0"
 yellowstone-grpc-proto = { version = "2.0.0", default-features = false }
 yellowstone-vixen = "0.3.0"
