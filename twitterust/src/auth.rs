@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine};
 use hmac::{Hmac, Mac};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
@@ -135,7 +136,7 @@ impl<'a> OAuthSigner<'a> {
         // Generate signature
         let mut mac = HmacSha1::new_from_slice(signing_key.as_bytes()).unwrap();
         mac.update(base_string.as_bytes());
-        let signature = base64::encode(mac.finalize().into_bytes());
+        let signature = general_purpose::STANDARD.encode(mac.finalize().into_bytes());
 
         // Build authorization header
         format!(

@@ -112,47 +112,6 @@ impl TwitterClient {
         }
     }
 
-    /// Search for recent tweets
-    // pub async fn search_recent_tweets(
-    //     &self,
-    //     query: impl Into<String>,
-    //     max_results: Option<u32>,
-    // ) -> Result<Vec<Tweet>> {
-    //     let mut url = format!(
-    //         "{}/tweets/search/recent?query={}",
-    //         self.base_url,
-    //         urlencoding::encode(&query.into())
-    //     );
-
-    //     if let Some(max) = max_results {
-    //         url.push_str(&format!("&max_results={}", max.min(100)));
-    //     }
-
-    //     let signer = OAuthSigner::new(&self.credentials);
-    //     let auth_header = signer.generate_auth_header("GET", &url);
-
-    //     let response = self
-    //         .client
-    //         .get(&url)
-    //         .header("Authorization", auth_header)
-    //         .header("Accept", "application/json")
-    //         .header("User-Agent", "TwitterApiRs/0.1.0")
-    //         .send()
-    //         .await?;
-
-    //     let status = response.status();
-    //     if status.is_success() {
-    //         let search_response: TweetSearchResponse = response.json().await?;
-    //         Ok(search_response.data.unwrap_or_default())
-    //     } else {
-    //         let error_body = response.text().await.unwrap_or_default();
-    //         Err(TwitterError::from_status_and_body(
-    //             status.as_u16(),
-    //             &error_body,
-    //         ))
-    //     }
-    // }
-
     /// Get mentions of the authenticated user
     pub async fn get_mentions(&self, since_id: Option<&str>) -> Result<Vec<Tweet>> {
         let mut url = format!("{}/users/me/mentions", self.base_url);

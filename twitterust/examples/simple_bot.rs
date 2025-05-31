@@ -10,7 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Simple tweet
     let tweet = client
-        .tweet("🦀 Hello from the Twitterust library!")
+        .tweet("🦀 Hello from the Twitterust library?")
         .await?;
     println!("Posted tweet: {}", tweet.id);
 
