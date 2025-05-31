@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap; // Use BTreeMap for consistent ordering
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -66,63 +66,60 @@ impl TwitterBot {
         })
     }
 
-    // Generate OAuth 1.0a signature for authenticated requests
-    fn generate_oauth_header(
-        &self,
-        method: &str,
-        url: &str,
-        body_params: &HashMap<String, String>,
-    ) -> String {
+    // Generate OAuth 1.0a signature - Based on working JavaScript implementation
+    fn generate_oauth_header(&self, method: &str, url: &str) -> String {
         use hmac::{Hmac, Mac};
         use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
         use sha1::Sha1;
 
-        // Define proper percent encoding set for OAuth
-        const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
-        const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
-        const USERINFO: &AsciiSet = &PATH
+        // OAuth percent encoding (RFC 3986)
+        const OAUTH_ENCODE_SET: &AsciiSet = &CONTROLS
+            .add(b' ')
+            .add(b'"')
+            .add(b'#')
+            .add(b'%')
+            .add(b'&')
+            .add(b'+')
+            .add(b',')
             .add(b'/')
             .add(b':')
             .add(b';')
+            .add(b'<')
             .add(b'=')
+            .add(b'>')
+            .add(b'?')
             .add(b'@')
             .add(b'[')
             .add(b'\\')
             .add(b']')
             .add(b'^')
-            .add(b'|');
-        const OAUTH_ENCODE_SET: &AsciiSet = &USERINFO
+            .add(b'`')
+            .add(b'{')
+            .add(b'|')
+            .add(b'}')
+            .add(b'~')
             .add(b'!')
             .add(b'*')
             .add(b'\'')
             .add(b'(')
-            .add(b')')
-            .add(b'~');
+            .add(b')');
 
         type HmacSha1 = Hmac<Sha1>;
 
         let timestamp = chrono::Utc::now().timestamp().to_string();
-        let nonce = format!("{:x}", rand::random::<u64>());
+        let nonce = format!("{:x}{:x}", rand::random::<u64>(), rand::random::<u64>());
 
-        let mut oauth_params = HashMap::new();
-        oauth_params.insert("oauth_consumer_key", self.api_key.clone());
-        oauth_params.insert("oauth_nonce", nonce);
-        oauth_params.insert("oauth_signature_method", "HMAC-SHA1".to_string());
-        oauth_params.insert("oauth_timestamp", timestamp);
-        oauth_params.insert("oauth_token", self.access_token.clone());
-        oauth_params.insert("oauth_version", "1.0".to_string());
+        // Build OAuth parameters exactly like the JavaScript sample
+        let mut oauth_params = BTreeMap::new();
+        oauth_params.insert("oauth_consumer_key", self.api_key.as_str());
+        oauth_params.insert("oauth_nonce", nonce.as_str());
+        oauth_params.insert("oauth_signature_method", "HMAC-SHA1");
+        oauth_params.insert("oauth_timestamp", timestamp.as_str());
+        oauth_params.insert("oauth_token", self.access_token.as_str());
+        oauth_params.insert("oauth_version", "1.0");
 
-        // Combine OAuth params with any additional params (usually empty for POST with JSON body)
-        let mut all_params = oauth_params.clone();
-        for (k, v) in body_params {
-            all_params.insert(k, v.clone());
-        }
-
-        // Create parameter string
-        let mut param_pairs: Vec<_> = all_params.iter().collect();
-        param_pairs.sort_by_key(|(k, _)| *k);
-
-        let param_string = param_pairs
+        // Create parameter string (only OAuth params, no body params for JSON POST)
+        let param_string = oauth_params
             .iter()
             .map(|(k, v)| {
                 format!(
@@ -134,7 +131,7 @@ impl TwitterBot {
             .collect::<Vec<_>>()
             .join("&");
 
-        // Create signature base string
+        // Create signature base string exactly like JavaScript sample
         let base_string = format!(
             "{}&{}&{}",
             method.to_uppercase(),
@@ -151,44 +148,44 @@ impl TwitterBot {
             utf8_percent_encode(&self.access_token_secret, OAUTH_ENCODE_SET)
         );
 
-        // Generate signature
+        // Generate signature using HMAC-SHA1
         let mut mac = HmacSha1::new_from_slice(signing_key.as_bytes()).unwrap();
         mac.update(base_string.as_bytes());
         let signature = base64::encode(mac.finalize().into_bytes());
 
-        oauth_params.insert("oauth_signature", signature);
+        // Build authorization header like JavaScript sample
+        let auth_header = format!(
+            "OAuth oauth_consumer_key=\"{}\", oauth_nonce=\"{}\", oauth_signature=\"{}\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"{}\", oauth_token=\"{}\", oauth_version=\"1.0\"",
+            utf8_percent_encode(&self.api_key, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&nonce, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&signature, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&timestamp, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&self.access_token, OAUTH_ENCODE_SET)
+        );
 
-        // Build authorization header
-        let auth_header_params = oauth_params
-            .iter()
-            .map(|(k, v)| format!("{}=\"{}\"", k, utf8_percent_encode(v, OAUTH_ENCODE_SET)))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        let header = format!("OAuth {}", auth_header_params);
-        println!("🔍 Debug - OAuth header: {}", header);
-        header
+        println!("🔍 Debug - OAuth header: {}", auth_header);
+        auth_header
     }
 
-    // Post a tweet
+    // Post a tweet using OAuth 1.0a - matching JavaScript sample pattern
     pub async fn tweet(&self, text: &str) -> Result<(), Box<dyn std::error::Error>> {
+        println!("🚀 Attempting to post tweet: {}", text);
+
         let url = "https://api.twitter.com/2/tweets";
         let tweet_data = TweetRequest {
             text: text.to_string(),
         };
 
         let body = serde_json::to_string(&tweet_data)?;
-        let params = HashMap::new(); // Empty for JSON POST requests
-
-        let auth_header = self.generate_oauth_header("POST", url, &params);
-
-        println!("🚀 Attempting to post tweet: {}", text);
+        let auth_header = self.generate_oauth_header("POST", url);
 
         let response = self
             .client
             .post(url)
             .header("Authorization", auth_header)
             .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .header("User-Agent", "TwitterBotRust/1.0")
             .body(body)
             .send()
             .await?;
@@ -197,11 +194,20 @@ impl TwitterBot {
         let response_text = response.text().await?;
 
         if status.is_success() {
-            println!("✅ Tweet posted successfully: {}", text);
+            println!("✅ Tweet posted successfully!");
             println!("📝 Response: {}", response_text);
         } else {
             println!("❌ Failed to post tweet. Status: {}", status);
             println!("📝 Response: {}", response_text);
+
+            // More detailed error analysis
+            if status == 401 {
+                println!("💡 This is still a 401 error. Please ensure you've:");
+                println!("   1. Set app permissions to 'Read and Write' in Developer Portal");
+                println!("   2. REGENERATED your access tokens AFTER changing permissions");
+                println!("   3. Updated your .env file with the NEW tokens");
+            }
+
             return Err(format!("Tweet failed with status: {}", status).into());
         }
 
@@ -252,8 +258,8 @@ impl TwitterBot {
         });
 
         let body = serde_json::to_string(&tweet_data)?;
-        let params = HashMap::new();
-        let auth_header = self.generate_oauth_header("POST", url, &params);
+        // let params = HashMap::new();
+        let auth_header = self.generate_oauth_header("POST", url);
 
         let response = self
             .client
