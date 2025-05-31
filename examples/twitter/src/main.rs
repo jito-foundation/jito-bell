@@ -44,6 +44,17 @@ impl TwitterBot {
         let access_token = std::env::var("TWITTER_ACCESS_TOKEN")?;
         let access_token_secret = std::env::var("TWITTER_ACCESS_TOKEN_SECRET")?;
 
+        // Debug: Print (partial) credentials to verify they're loaded
+        println!(
+            "🔑 API Key: {}...",
+            &api_key[..std::cmp::min(8, api_key.len())]
+        );
+        println!(
+            "🔑 Access Token: {}...",
+            &access_token[..std::cmp::min(8, access_token.len())]
+        );
+        println!("🔑 Credentials loaded successfully");
+
         Ok(Self {
             client: Client::new(),
             bearer_token,
@@ -60,43 +71,64 @@ impl TwitterBot {
         &self,
         method: &str,
         url: &str,
-        params: &HashMap<String, String>,
+        body_params: &HashMap<String, String>,
     ) -> String {
         use hmac::{Hmac, Mac};
-        use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+        use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
         use sha1::Sha1;
+
+        // Define proper percent encoding set for OAuth
+        const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
+        const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
+        const USERINFO: &AsciiSet = &PATH
+            .add(b'/')
+            .add(b':')
+            .add(b';')
+            .add(b'=')
+            .add(b'@')
+            .add(b'[')
+            .add(b'\\')
+            .add(b']')
+            .add(b'^')
+            .add(b'|');
+        const OAUTH_ENCODE_SET: &AsciiSet = &USERINFO
+            .add(b'!')
+            .add(b'*')
+            .add(b'\'')
+            .add(b'(')
+            .add(b')')
+            .add(b'~');
 
         type HmacSha1 = Hmac<Sha1>;
 
         let timestamp = chrono::Utc::now().timestamp().to_string();
-        let nonce = uuid::Uuid::new_v4().to_string();
+        let nonce = format!("{:x}", rand::random::<u64>());
 
         let mut oauth_params = HashMap::new();
-        oauth_params.insert("oauth_consumer_key".to_string(), self.api_key.clone());
-        oauth_params.insert("oauth_nonce".to_string(), nonce);
-        oauth_params.insert(
-            "oauth_signature_method".to_string(),
-            "HMAC-SHA1".to_string(),
-        );
-        oauth_params.insert("oauth_timestamp".to_string(), timestamp);
-        oauth_params.insert("oauth_token".to_string(), self.access_token.clone());
-        oauth_params.insert("oauth_version".to_string(), "1.0".to_string());
+        oauth_params.insert("oauth_consumer_key", self.api_key.clone());
+        oauth_params.insert("oauth_nonce", nonce);
+        oauth_params.insert("oauth_signature_method", "HMAC-SHA1".to_string());
+        oauth_params.insert("oauth_timestamp", timestamp);
+        oauth_params.insert("oauth_token", self.access_token.clone());
+        oauth_params.insert("oauth_version", "1.0".to_string());
 
-        // Combine OAuth params with request params
+        // Combine OAuth params with any additional params (usually empty for POST with JSON body)
         let mut all_params = oauth_params.clone();
-        all_params.extend(params.clone());
+        for (k, v) in body_params {
+            all_params.insert(k, v.clone());
+        }
 
         // Create parameter string
         let mut param_pairs: Vec<_> = all_params.iter().collect();
-        param_pairs.sort_by_key(|&(k, _)| k);
+        param_pairs.sort_by_key(|(k, _)| *k);
 
         let param_string = param_pairs
             .iter()
             .map(|(k, v)| {
                 format!(
                     "{}={}",
-                    utf8_percent_encode(k, NON_ALPHANUMERIC),
-                    utf8_percent_encode(v, NON_ALPHANUMERIC)
+                    utf8_percent_encode(k, OAUTH_ENCODE_SET),
+                    utf8_percent_encode(v, OAUTH_ENCODE_SET)
                 )
             })
             .collect::<Vec<_>>()
@@ -105,16 +137,18 @@ impl TwitterBot {
         // Create signature base string
         let base_string = format!(
             "{}&{}&{}",
-            method,
-            utf8_percent_encode(url, NON_ALPHANUMERIC),
-            utf8_percent_encode(&param_string, NON_ALPHANUMERIC)
+            method.to_uppercase(),
+            utf8_percent_encode(url, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&param_string, OAUTH_ENCODE_SET)
         );
+
+        println!("🔍 Debug - Base string: {}", base_string);
 
         // Create signing key
         let signing_key = format!(
             "{}&{}",
-            utf8_percent_encode(&self.api_secret, NON_ALPHANUMERIC),
-            utf8_percent_encode(&self.access_token_secret, NON_ALPHANUMERIC)
+            utf8_percent_encode(&self.api_secret, OAUTH_ENCODE_SET),
+            utf8_percent_encode(&self.access_token_secret, OAUTH_ENCODE_SET)
         );
 
         // Generate signature
@@ -122,16 +156,18 @@ impl TwitterBot {
         mac.update(base_string.as_bytes());
         let signature = base64::encode(mac.finalize().into_bytes());
 
-        oauth_params.insert("oauth_signature".to_string(), signature);
+        oauth_params.insert("oauth_signature", signature);
 
         // Build authorization header
         let auth_header_params = oauth_params
             .iter()
-            .map(|(k, v)| format!("{}=\"{}\"", k, utf8_percent_encode(v, NON_ALPHANUMERIC)))
+            .map(|(k, v)| format!("{}=\"{}\"", k, utf8_percent_encode(v, OAUTH_ENCODE_SET)))
             .collect::<Vec<_>>()
             .join(", ");
 
-        format!("OAuth {}", auth_header_params)
+        let header = format!("OAuth {}", auth_header_params);
+        println!("🔍 Debug - OAuth header: {}", header);
+        header
     }
 
     // Post a tweet
@@ -142,9 +178,11 @@ impl TwitterBot {
         };
 
         let body = serde_json::to_string(&tweet_data)?;
-        let params = HashMap::new();
+        let params = HashMap::new(); // Empty for JSON POST requests
 
         let auth_header = self.generate_oauth_header("POST", url, &params);
+
+        println!("🚀 Attempting to post tweet: {}", text);
 
         let response = self
             .client
@@ -155,11 +193,16 @@ impl TwitterBot {
             .send()
             .await?;
 
-        if response.status().is_success() {
+        let status = response.status();
+        let response_text = response.text().await?;
+
+        if status.is_success() {
             println!("✅ Tweet posted successfully: {}", text);
+            println!("📝 Response: {}", response_text);
         } else {
-            let error_text = response.text().await?;
-            println!("❌ Failed to post tweet: {}", error_text);
+            println!("❌ Failed to post tweet. Status: {}", status);
+            println!("📝 Response: {}", response_text);
+            return Err(format!("Tweet failed with status: {}", status).into());
         }
 
         Ok(())
@@ -298,39 +341,38 @@ impl TwitterBot {
         // Post initial greeting
         self.tweet("🦀 Rust Twitter Bot is now online! Ready to share tips, quotes, and engage with the community! #RustLang #TwitterBot").await?;
 
-        // let mut quote_counter = 0;
-        // let mut tip_counter = 0;
+        let mut quote_counter = 0;
+        let mut tip_counter = 0;
 
-        // loop {
-        //     // Process mentions every iteration
-        //     if let Err(e) = self.process_mentions().await {
-        //         eprintln!("Error processing mentions: {}", e);
-        //     }
+        loop {
+            // Process mentions every iteration
+            if let Err(e) = self.process_mentions().await {
+                eprintln!("Error processing mentions: {}", e);
+            }
 
-        //     // Post content every 10 iterations (adjust timing as needed)
-        //     if quote_counter >= 20 {
-        //         // Post quote every ~20 minutes
-        //         if let Err(e) = self.post_random_quote().await {
-        //             eprintln!("Error posting quote: {}", e);
-        //         }
-        //         quote_counter = 0;
-        //     }
+            // Post content every 10 iterations (adjust timing as needed)
+            if quote_counter >= 20 {
+                // Post quote every ~20 minutes
+                if let Err(e) = self.post_random_quote().await {
+                    eprintln!("Error posting quote: {}", e);
+                }
+                quote_counter = 0;
+            }
 
-        //     if tip_counter >= 30 {
-        //         // Post tip every ~30 minutes
-        //         if let Err(e) = self.post_random_tip().await {
-        //             eprintln!("Error posting tip: {}", e);
-        //         }
-        //         tip_counter = 0;
-        //     }
+            if tip_counter >= 30 {
+                // Post tip every ~30 minutes
+                if let Err(e) = self.post_random_tip().await {
+                    eprintln!("Error posting tip: {}", e);
+                }
+                tip_counter = 0;
+            }
 
-        //     quote_counter += 1;
-        //     tip_counter += 1;
+            quote_counter += 1;
+            tip_counter += 1;
 
-        //     // Wait 1 minute before next iteration
-        //     sleep(Duration::from_secs(60)).await;
-        // }
-        Ok(())
+            // Wait 1 minute before next iteration
+            sleep(Duration::from_secs(60)).await;
+        }
     }
 }
 
