@@ -2348,6 +2348,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "twitterust",
  "yellowstone-grpc-client",
  "yellowstone-grpc-proto",
 ]
