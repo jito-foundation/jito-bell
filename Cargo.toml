@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "examples/token-program",
+    "examples/twitter",
     "jito-bell",
     "stake-pool-parser"
 ]
