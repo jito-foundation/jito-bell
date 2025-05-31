@@ -29,40 +29,38 @@ impl std::fmt::Display for JitoBellConfig {
             for (key, instruction) in program.instructions.iter() {
                 writeln!(f, "    Instruction: {}", key)?;
 
-                if let Some(pool_mint_address) = &instruction.pool_mint {
-                    writeln!(f, "        Pool Mint: {}", pool_mint_address)?;
+                if let Some(lsts) = &instruction.lsts {
+                    for (lst_address, alert_config) in lsts.iter() {
+                        writeln!(f, "        Pool Mint: {}", lst_address)?;
+
+                        writeln!(f, "        Thresholds")?;
+                        for threshold in alert_config.thresholds.iter() {
+                            writeln!(f, "           Threshold Value: {}", threshold.value)?;
+                            writeln!(f, "           Notification")?;
+                            writeln!(
+                                f,
+                                "               Description: {}",
+                                threshold.notification.description
+                            )?;
+
+                            let destinations = threshold.notification.destinations.join(",");
+                            writeln!(f, "               Destinations: {}", destinations)?;
+                        }
+                    }
                 }
 
-                if let Some(vrt_address) = &instruction.vrt {
-                    writeln!(f, "        VRT: {}", vrt_address)?;
-                }
+                if let Some(vrts) = &instruction.vrts {
+                    for (vrt_address, config) in vrts.iter() {
+                        writeln!(f, "        VRT: {}", vrt_address)?;
 
-                writeln!(f, "        Thresholds")?;
-                for threshold in instruction.thresholds.iter() {
-                    writeln!(f, "           Threshold Value: {}", threshold.value)?;
-                    writeln!(f, "           Notification")?;
-                    writeln!(
-                        f,
-                        "               Description: {}",
-                        threshold.notification.description
-                    )?;
+                        for threshold in config.thresholds.iter() {
+                            writeln!(f, "           VRT Threshold Value: {}", threshold.value)?;
+                        }
 
-                    let destinations = threshold.notification.destinations.join(",");
-                    writeln!(f, "               Destinations: {}", destinations)?;
-                }
-
-                writeln!(f, "        USD Thresholds")?;
-                for threshold in instruction.usd_thresholds.iter() {
-                    writeln!(f, "           USD Threshold Value: {}", threshold.value)?;
-                    writeln!(f, "           Notification")?;
-                    writeln!(
-                        f,
-                        "               Description: {}",
-                        threshold.notification.description
-                    )?;
-
-                    let destinations = threshold.notification.destinations.join(",");
-                    writeln!(f, "               Destinations: {}", destinations)?;
+                        for threshold in config.usd_thresholds.iter() {
+                            writeln!(f, "           VRT USD Threshold Value: {}", threshold.value)?;
+                        }
+                    }
                 }
             }
         }

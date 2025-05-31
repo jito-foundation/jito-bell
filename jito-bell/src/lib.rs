@@ -25,7 +25,6 @@ use solana_sdk::{
 use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
-// use tonic::transport::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
@@ -84,16 +83,15 @@ impl JitoBellHandler {
         })
     }
 
-    /// Return sorted thresholds
-    pub fn sorted_thresholds(&self, instruction: &Instruction) -> Vec<ThresholdConfig> {
-        let mut sorted_thresholds = instruction.thresholds.clone();
-        sorted_thresholds.sort_by(|a, b| {
+    /// Sort thresholds
+    ///
+    /// - Sort values from high to low
+    pub fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
+        thresholds.sort_by(|a, b| {
             b.value
                 .partial_cmp(&a.value)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-
-        sorted_thresholds
     }
 
     /// Get divisor
@@ -288,14 +286,6 @@ impl JitoBellHandler {
 
         match spl_stake_program {
             SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
-                let stake_pool = if let Some(address) = &instruction.stake_pool {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -311,31 +301,28 @@ impl JitoBellHandler {
                 let _system_program_info = &ix.accounts[12];
                 let _stake_program_info = &ix.accounts[13];
 
-                if stake_pool_info.pubkey.eq(&stake_pool) {
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        if *amount > threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                *amount,
-                                "SOL",
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                if let Some(mut stake_pools) = instruction.stake_pools.clone() {
+                    if let Some(alert_config) =
+                        stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
+                    {
+                        self.sort_thresholds(alert_config.thresholds.as_mut());
+                        for threshold in alert_config.thresholds.iter() {
+                            if *amount > threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    *amount,
+                                    "SOL",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
             }
             SplStakePoolProgram::DepositStake { ix } => {
-                let pool_mint = if let Some(address) = &instruction.pool_mint {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _stake_deposit_authority_info = &ix.accounts[2];
@@ -348,37 +335,39 @@ impl JitoBellHandler {
                 let _referrer_fee_info = &ix.accounts[9];
                 let pool_mint_info = &ix.accounts[10];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) {
-                    for program in &parser.programs {
-                        if let JitoBellProgram::SplToken2022(program) = program {
-                            match program {
-                                SplToken2022Program::MintTo { ix, amount } => {
-                                    let mint_info = &ix.accounts[0];
-                                    let destination_account_info = &ix.accounts[1];
-                                    let owner_info = &ix.accounts[2];
+                if let Some(mut lsts) = instruction.lsts.clone() {
+                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
+                        for program in &parser.programs {
+                            if let JitoBellProgram::SplToken2022(program) = program {
+                                match program {
+                                    SplToken2022Program::MintTo { ix, amount } => {
+                                        let mint_info = &ix.accounts[0];
+                                        let destination_account_info = &ix.accounts[1];
+                                        let owner_info = &ix.accounts[2];
 
-                                    if mint_info.pubkey.eq(&pool_mint_info.pubkey)
-                                        && destination_account_info
-                                            .pubkey
-                                            .eq(&dest_user_pool_info.pubkey)
-                                        && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
-                                    {
-                                        for threshold in self.sorted_thresholds(instruction).iter()
+                                        if mint_info.pubkey.eq(&pool_mint_info.pubkey)
+                                            && destination_account_info
+                                                .pubkey
+                                                .eq(&dest_user_pool_info.pubkey)
+                                            && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
                                         {
-                                            if *amount as f64 > threshold.value {
-                                                self.dispatch_platform_notifications(
-                                                    &threshold.notification.destinations,
-                                                    &threshold.notification.description,
-                                                    *amount as f64,
-                                                    "SOL",
-                                                    &parser.transaction_signature,
-                                                )
-                                                .await?;
-                                                break;
+                                            self.sort_thresholds(alert_config.thresholds.as_mut());
+                                            for threshold in alert_config.thresholds.iter() {
+                                                if *amount as f64 > threshold.value {
+                                                    self.dispatch_platform_notifications(
+                                                        &threshold.notification.destinations,
+                                                        &threshold.notification.description,
+                                                        *amount as f64,
+                                                        "SOL",
+                                                        &parser.transaction_signature,
+                                                    )
+                                                    .await?;
+                                                    break;
+                                                }
                                             }
-                                        }
 
-                                        break;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -390,14 +379,6 @@ impl JitoBellHandler {
                 ix,
                 minimum_lamports_out,
             } => {
-                let pool_mint = if let Some(address) = &instruction.pool_mint {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _validator_list_info = &ix.accounts[1];
                 let _withdraw_authority_info = &ix.accounts[2];
@@ -409,31 +390,26 @@ impl JitoBellHandler {
                 let _manager_fee_info = &ix.accounts[8];
                 let pool_mint_info = &ix.accounts[9];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) {
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        if *minimum_lamports_out >= threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                *minimum_lamports_out,
-                                "SOL",
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                if let Some(mut lsts) = instruction.lsts.clone() {
+                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
+                        self.sort_thresholds(alert_config.thresholds.as_mut());
+                        for threshold in alert_config.thresholds.iter() {
+                            if *minimum_lamports_out >= threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    *minimum_lamports_out,
+                                    "SOL",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
             }
             SplStakePoolProgram::DepositSol { ix, amount } => {
-                let pool_mint = if let Some(address) = &instruction.pool_mint {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _reserve_stake_account_info = &ix.accounts[2];
@@ -443,31 +419,26 @@ impl JitoBellHandler {
                 let _referrer_fee_info = &ix.accounts[6];
                 let pool_mint_info = &ix.accounts[7];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) {
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        if *amount >= threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                *amount,
-                                "SOL",
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                if let Some(mut lsts) = instruction.lsts.clone() {
+                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
+                        self.sort_thresholds(alert_config.thresholds.as_mut());
+                        for threshold in alert_config.thresholds.iter() {
+                            if *amount >= threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    *amount,
+                                    "SOL",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
             }
             SplStakePoolProgram::WithdrawSol { ix, amount } => {
-                let pool_mint = if let Some(address) = &instruction.pool_mint {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let _stake_pool_info = &ix.accounts[0];
                 let _withdraw_authority_info = &ix.accounts[1];
                 let _user_transfer_authority_info = &ix.accounts[2];
@@ -477,31 +448,26 @@ impl JitoBellHandler {
                 let _manager_fee_info = &ix.accounts[6];
                 let pool_mint_info = &ix.accounts[7];
 
-                if pool_mint_info.pubkey.eq(&pool_mint) {
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        if *amount >= threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                *amount,
-                                "SOL",
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                if let Some(mut lsts) = instruction.lsts.clone() {
+                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
+                        self.sort_thresholds(alert_config.thresholds.as_mut());
+                        for threshold in alert_config.thresholds.iter() {
+                            if *amount >= threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    *amount,
+                                    "SOL",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
             }
             SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix, amount } => {
-                let stake_pool = if let Some(address) = &instruction.stake_pool {
-                    Pubkey::from_str(address).unwrap()
-                } else {
-                    return Err(JitoBellError::Config(
-                        "Specify Pool Mint Address".to_string(),
-                    ));
-                };
-
                 let stake_pool_info = &ix.accounts[0];
                 let _staker_info = &ix.accounts[1];
                 let _stake_pool_withdraw_authority_info = &ix.accounts[2];
@@ -514,18 +480,23 @@ impl JitoBellHandler {
                 let _system_program_info = &ix.accounts[9];
                 let _stake_program_info = &ix.accounts[10];
 
-                if stake_pool_info.pubkey.eq(&stake_pool) {
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        if *amount > threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                *amount,
-                                "SOL",
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                if let Some(mut stake_pools) = instruction.stake_pools.clone() {
+                    if let Some(alert_config) =
+                        stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
+                    {
+                        self.sort_thresholds(alert_config.thresholds.as_mut());
+                        for threshold in alert_config.thresholds.iter() {
+                            if *amount > threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    *amount,
+                                    "SOL",
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
@@ -569,12 +540,6 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         debug!("Jito Vault Program: {}", jito_vault_program);
 
-        let vrt = if let Some(address) = &instruction.vrt {
-            Pubkey::from_str(address).unwrap()
-        } else {
-            return Err(JitoBellError::Config("Specify VRT Address".to_string()));
-        };
-
         match jito_vault_program {
             JitoVaultProgram::MintTo { ix, min_amount_out } => {
                 let _config_info = &ix.accounts[0];
@@ -586,22 +551,29 @@ impl JitoBellHandler {
                 let _depositor_vrt_token_account = &ix.accounts[6];
                 let _vault_fee_token_account = &ix.accounts[7];
 
-                if vrt_mint_info.pubkey.eq(&vrt) {
-                    let divisor = self.divisor(&vrt).await;
-                    let symbol = self.vrt_symbol(&vrt).await;
+                if let Some(vrts) = instruction.vrts.clone() {
+                    if let Some((address, vrt_config)) =
+                        vrts.get_key_value(&vrt_mint_info.pubkey.to_string())
+                    {
+                        let vrt = Pubkey::from_str(address).unwrap();
+                        let divisor = self.divisor(&vrt).await;
+                        let symbol = self.vrt_symbol(&vrt).await;
 
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        let min_amount_out = *min_amount_out as f64 / divisor;
-                        if min_amount_out >= threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                min_amount_out,
-                                &symbol,
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                        let mut thresholds = vrt_config.thresholds.clone();
+                        self.sort_thresholds(&mut thresholds);
+                        for threshold in vrt_config.thresholds.iter() {
+                            let min_amount_out = *min_amount_out as f64 / divisor;
+                            if min_amount_out >= threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    min_amount_out,
+                                    &symbol,
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
                     }
                 }
@@ -619,53 +591,60 @@ impl JitoBellHandler {
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 // VRT amount
-                if vault.vrt_mint.eq(&vrt) {
-                    let divisor = self.divisor(&vrt).await;
-                    let symbol = self.vrt_symbol(&vrt).await;
+                if let Some(ref vrts) = instruction.vrts {
+                    if let Some((address, vrt_config)) =
+                        vrts.get_key_value(&vault.vrt_mint.to_string())
+                    {
+                        let vrt = Pubkey::from_str(address).unwrap();
+                        let divisor = self.divisor(&vrt).await;
+                        let symbol = self.vrt_symbol(&vrt).await;
 
-                    for threshold in self.sorted_thresholds(instruction).iter() {
-                        let amount = *amount as f64 / divisor;
-                        if amount >= threshold.value {
-                            self.dispatch_platform_notifications(
-                                &threshold.notification.destinations,
-                                &threshold.notification.description,
-                                amount,
-                                &symbol,
-                                &parser.transaction_signature,
-                            )
-                            .await?;
-                            break;
+                        let mut thresholds = vrt_config.thresholds.clone();
+                        self.sort_thresholds(&mut thresholds);
+                        for threshold in vrt_config.thresholds.iter() {
+                            let amount = *amount as f64 / divisor;
+                            if amount >= threshold.value {
+                                self.dispatch_platform_notifications(
+                                    &threshold.notification.destinations,
+                                    &threshold.notification.description,
+                                    amount,
+                                    &symbol,
+                                    &parser.transaction_signature,
+                                )
+                                .await?;
+                                break;
+                            }
                         }
-                    }
 
-                    // USD amount
-                    if !instruction.usd_thresholds.is_empty() {
-                        let client = DefiLlamaClient::new();
-                        let vrt = Token::new(Chain::Solana, vrt.to_string());
-                        let prices = client.get_price(&vrt).await?;
+                        // USD amount
+                        if !vrt_config.usd_thresholds.is_empty() {
+                            let client = DefiLlamaClient::new();
+                            let vrt = Token::new(Chain::Solana, vrt.to_string());
+                            let prices = client.get_price(&vrt).await?;
 
-                        if let Some(usd_price) = prices.coins.values().last() {
-                            let mut sorted_usd_thresholds = instruction.usd_thresholds.clone();
-                            sorted_usd_thresholds.sort_by(|a, b| {
-                                b.value
-                                    .partial_cmp(&a.value)
-                                    .unwrap_or(std::cmp::Ordering::Equal)
-                            });
+                            if let Some(usd_price) = prices.coins.values().last() {
+                                let mut sorted_usd_thresholds = vrt_config.usd_thresholds.clone();
+                                sorted_usd_thresholds.sort_by(|a, b| {
+                                    b.value
+                                        .partial_cmp(&a.value)
+                                        .unwrap_or(std::cmp::Ordering::Equal)
+                                });
 
-                            for usd_threshold in sorted_usd_thresholds.iter() {
-                                let amount = *amount as f64 / 1_000_000_000_f64;
-                                let amount = (amount * usd_price.price) as u64;
+                                for usd_threshold in sorted_usd_thresholds.iter() {
+                                    let amount = *amount as f64 / 1_000_000_000_f64;
+                                    let amount = (amount * usd_price.price) as u64;
 
-                                if amount >= usd_threshold.value {
-                                    self.dispatch_platform_notifications(
-                                        &usd_threshold.notification.destinations,
-                                        &usd_threshold.notification.description,
-                                        amount as f64,
-                                        "USD",
-                                        &parser.transaction_signature,
-                                    )
-                                    .await?;
-                                    break;
+                                    if amount >= usd_threshold.value {
+                                        self.dispatch_platform_notifications(
+                                            &usd_threshold.notification.destinations,
+                                            &usd_threshold.notification.description,
+                                            amount as f64,
+                                            "USD",
+                                            &parser.transaction_signature,
+                                        )
+                                        .await?;
+                                        break;
+                                    }
                                 }
                             }
                         }
