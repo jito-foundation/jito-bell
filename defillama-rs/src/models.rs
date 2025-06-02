@@ -1,7 +1,8 @@
 //! Data models for the DefiLlama API responses
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 
 /// Response from the /prices/current endpoint
 #[derive(Debug, Clone, Deserialize, Serialize)]

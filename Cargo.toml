@@ -1,5 +1,6 @@
 [workspace]
-members = [ "defillama-rs",
+members = [
+    "defillama-rs",
     "examples/token-program",
     "jito-bell",
     "stake-pool-parser",

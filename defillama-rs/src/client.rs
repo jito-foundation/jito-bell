@@ -1,7 +1,8 @@
 //! Client implementation for the DefiLlama API
 
-use reqwest::Client as HttpClient;
 use std::time::Duration;
+
+use reqwest::Client as HttpClient;
 use url::Url;
 
 use crate::{
@@ -13,10 +14,13 @@ use crate::{
 pub struct ApiEndpoints {
     /// Base URL for the prices API
     pub prices: &'static str,
+
     /// Base URL for the TVL API
     pub tvl: &'static str,
+
     /// Base URL for the stablecoins API
     pub stablecoins: &'static str,
+
     /// Base URL for the yields API
     pub yields: &'static str,
 }
@@ -36,6 +40,7 @@ impl Default for ApiEndpoints {
 pub struct DefiLlamaClient {
     /// HTTP client for making API requests
     http_client: HttpClient,
+
     /// API endpoints to use
     endpoints: ApiEndpoints,
 }
