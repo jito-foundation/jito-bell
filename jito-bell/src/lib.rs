@@ -690,6 +690,8 @@ impl JitoBellHandler {
     }
 
     /// Dispatch platform notifications
+    ///
+    /// - Return error only if ALL platforms failed, or handle as needed
     async fn dispatch_platform_notifications(
         &mut self,
         destinations: &[String],
@@ -698,38 +700,51 @@ impl JitoBellHandler {
         unit: &str,
         transaction_signature: &str,
     ) -> Result<(), JitoBellError> {
+        let mut errors = Vec::new();
+
         for destination in destinations {
-            match destination.as_str() {
+            let result = match destination.as_str() {
                 "telegram" => {
                     debug!("Will Send Telegram Notification");
                     self.send_telegram_message(description, amount, unit, transaction_signature)
-                        .await?
+                        .await
                 }
                 "slack" => {
                     debug!("Will Send Slack Notification");
                     self.send_slack_message(description, amount, unit, transaction_signature)
-                        .await?
+                        .await
                 }
                 "discord" => {
                     debug!("Will Send Discord Notification");
                     self.send_discord_message(description, amount, unit, transaction_signature)
-                        .await?
+                        .await
                 }
                 "twitter" => {
                     debug!("Will Send Twitter Notification");
                     self.send_twitter_message(description, amount, unit, transaction_signature)
-                        .await?
+                        .await
                 }
                 destination => {
                     error!("Unknown notification type: {destination}");
-                    return Err(JitoBellError::Notification(format!(
+                    Err(JitoBellError::Notification(format!(
                         "Invalid Notification Type: {destination}"
-                    )));
+                    )))
                 }
+            };
+
+            if let Err(e) = result {
+                error!("Failed to send to {}: {:?}", destination, e);
+                errors.push((destination.clone(), e));
             }
         }
 
-        Ok(())
+        if errors.len() == destinations.len() {
+            Err(JitoBellError::Notification(
+                "All platforms failed".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     /// Send message to Telegram
