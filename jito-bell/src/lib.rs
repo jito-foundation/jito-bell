@@ -25,6 +25,7 @@ use solana_sdk::{
 use spl_token::state::Mint;
 use subscribe_option::SubscribeOption;
 use threshold_config::ThresholdConfig;
+use twitterust::{TwitterClient, TwitterCredentials};
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::SubscribeRequestFilterSlots,
@@ -714,6 +715,11 @@ impl JitoBellHandler {
                     self.send_discord_message(description, amount, unit, transaction_signature)
                         .await?
                 }
+                "twitter" => {
+                    debug!("Will Send Twitter Notification");
+                    self.send_twitter_message(description, amount, unit, transaction_signature)
+                        .await?
+                }
                 destination => {
                     error!("Unknown notification type: {destination}");
                     return Err(JitoBellError::Notification(format!(
@@ -919,6 +925,61 @@ impl JitoBellHandler {
                     self.epoch_metrics.increment_fail_notification_count();
                     return Err(JitoBellError::Notification(format!(
                         "Slack request error: {}",
+                        e
+                    )));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Send message to Twitter
+    async fn send_twitter_message(
+        &mut self,
+        description: &str,
+        amount: f64,
+        unit: &str,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
+        if let Some(twitter_config) = &self.config.notifications.twitter {
+            let credentials = TwitterCredentials::new(
+                twitter_config.twitter_api_key.clone(),
+                twitter_config.twitter_api_secret.clone(),
+                twitter_config.twitter_access_token.clone(),
+                twitter_config.twitter_access_token_secret.clone(),
+            );
+
+            let client = TwitterClient::new(credentials);
+
+            let mut tweet_text = format!(
+                "Jito Bell\n\n🚨 {}\n\n💰 Amount: {:.2} {}\n🔗 Transaction: {}/tx/{}\n\n",
+                description, amount, unit, self.config.explorer_url, sig,
+            );
+
+            // Check Twitter's 280 character limit
+            if tweet_text.len() > 280 {
+                // Create a shorter version
+                let short_text = format!(
+                    "Jito Bell\n\n🚨 {}\n💰 {:.2} {}\n🔗 {}/tx/{}\n",
+                    description,
+                    amount,
+                    unit,
+                    self.config.explorer_url,
+                    &sig[..8], // Truncate hash
+                );
+                tweet_text = short_text;
+            }
+
+            match client.tweet(tweet_text).await {
+                Ok(_res) => {
+                    self.epoch_metrics.increment_success_notification_count();
+                    return Ok(());
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    return Err(JitoBellError::Notification(format!(
+                        "Error sending Twitter message: {:?}",
                         e
                     )));
                 }

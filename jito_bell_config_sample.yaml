@@ -9,7 +9,7 @@ programs:
               - value: 0.1  # SOL
                 notification:
                   description: "Increase validator stake detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large Increase validator stake detected"
@@ -29,7 +29,7 @@ programs:
               - value: 0.1  # SOL
                 notification:
                   description: "JitoSOL stake deposit detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large JitoSOL stake deposit detected"
@@ -49,7 +49,7 @@ programs:
               - value: 0.1  # SOL
                 notification:
                   description: "JitoSOL stake withdrawal detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large JitoSOL stake withdrawal detected"
@@ -66,10 +66,10 @@ programs:
         lsts:
           "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn":
             thresholds:
-              - value: 2.0  # SOL
+              - value: 0.1  # SOL
                 notification:
                   description: "SOL deposit to JitoSOL detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large SOL deposit to JitoSOL detected"
@@ -89,7 +89,7 @@ programs:
               - value: 0.1  # SOL
                 notification:
                   description: "SOL withdrawal from JitoSOL detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large SOL withdrawal from JitoSOL detected"
@@ -109,7 +109,7 @@ programs:
               - value: 0.1  # SOL
                 notification:
                   description: "Decrease validator stake with reserve detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # SOL
                 notification:
                   description: "Large Decrease validator stake with reserve detected"
@@ -132,7 +132,7 @@ programs:
               - value: 0.1  # VRT
                 notification:
                   description: "Mint detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # VRT
                 notification:
                   description: "Large Mint detected"
@@ -150,7 +150,7 @@ programs:
               - value: 0.1  # VRT
                 notification:
                   description: "Mint detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # VRT
                 notification:
                   description: "Large Mint detected"
@@ -170,7 +170,7 @@ programs:
               - value: 0.1  # VRT
                 notification:
                   description: "Withdrawal detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # VRT
                 notification:
                   description: "Large Withdrawal detected"
@@ -188,7 +188,7 @@ programs:
               - value: 0.1  # VRT
                 notification:
                   description: "Withdrawal detected"
-                  destinations: ["slack"]
+                  destinations: ["slack", "twitter"]
               - value: 1000.0  # VRT
                 notification:
                   description: "Large Withdrawal detected"
@@ -226,6 +226,13 @@ notifications:
   telegram:
     bot_token: ""
     chat_id: ""
+
+  twitter:
+    twitter_bearer_token: ""
+    twitter_api_key: ""
+    twitter_api_secret: ""
+    twitter_access_token: ""
+    twitter_access_token_secret: ""
 
 explorer_url: "https://solscan.io"
 
