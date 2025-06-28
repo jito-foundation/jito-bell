@@ -3083,9 +3083,9 @@ dependencies = [
 
 [[package]]
 name = "prometheus"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d33c28a30771f7f96db69893f78b857f7450d7e0237e9c8fc6427a81bae7ed1"
+checksum = "3ca5326d8d0b950a9acd87e6a3f94745394f62e4dae1b1ee22b2bc0c394af43a"
 dependencies = [
  "cfg-if",
  "fnv",
@@ -3095,7 +3095,7 @@ dependencies = [
  "parking_lot 0.12.3",
  "protobuf",
  "reqwest 0.12.15",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3152,9 +3152,14 @@ dependencies = [
 
 [[package]]
 name = "protobuf"
-version = "2.28.0"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
+checksum = "d65a1d4ddae7d8b5de68153b48f6aa3bba8cb002b243dbdbc55a5afbc98f99f4"
+dependencies = [
+ "once_cell",
+ "protobuf-support",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "protobuf-src"
@@ -3163,6 +3168,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7ac8852baeb3cc6fb83b93646fb93c0ffe5d14bf138c945ceb4b9948ee0e3c1"
 dependencies = [
  "autotools",
+]
+
+[[package]]
+name = "protobuf-support"
+version = "3.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
+dependencies = [
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5399,6 +5413,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
+name = "stake-pool"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "toml 0.8.22",
+ "tracing",
+ "tracing-subscriber",
+ "yellowstone-vixen",
+ "yellowstone-vixen-parser",
+ "yellowstone-vixen-stake-pool-parser",
+]
+
+[[package]]
 name = "stake-pool-parser"
 version = "0.1.0"
 dependencies = [
@@ -6674,8 +6701,7 @@ dependencies = [
 [[package]]
 name = "yellowstone-vixen"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bb9af1154509750686dbece26e848eeb3af076a9064655de7909da09d060348"
+source = "git+https://github.com/aoikurokawa/yellowstone-vixen?branch=ak%2Fstake_pool#ad9a96105d82584a836c3145dccfdb17c70198e5"
 dependencies = [
  "clap",
  "futures-channel",
@@ -6695,8 +6721,7 @@ dependencies = [
 [[package]]
 name = "yellowstone-vixen-core"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c19a5633b21e49d9a857d44d63220e99cbb7d82aaa82bfcacd98fed806a95860"
+source = "git+https://github.com/aoikurokawa/yellowstone-vixen?branch=ak%2Fstake_pool#ad9a96105d82584a836c3145dccfdb17c70198e5"
 dependencies = [
  "bs58",
  "thiserror 1.0.69",
@@ -6706,13 +6731,26 @@ dependencies = [
 [[package]]
 name = "yellowstone-vixen-parser"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4e32025bdc32060ffa09d7f8992bf0ef519f447abe5fcabe42bb49e1331d6dd"
+source = "git+https://github.com/aoikurokawa/yellowstone-vixen?branch=ak%2Fstake_pool#ad9a96105d82584a836c3145dccfdb17c70198e5"
 dependencies = [
  "borsh 1.5.7",
  "bs58",
  "spl-pod 0.3.1",
  "spl-token 6.0.0",
+ "thiserror 1.0.69",
+ "yellowstone-grpc-proto",
+ "yellowstone-vixen-core",
+]
+
+[[package]]
+name = "yellowstone-vixen-stake-pool-parser"
+version = "0.1.0"
+source = "git+https://github.com/aoikurokawa/yellowstone-vixen?branch=ak%2Fstake_pool#ad9a96105d82584a836c3145dccfdb17c70198e5"
+dependencies = [
+ "borsh 1.5.7",
+ "bs58",
+ "spl-pod 0.3.1",
+ "spl-stake-pool",
  "thiserror 1.0.69",
  "yellowstone-grpc-proto",
  "yellowstone-vixen-core",
