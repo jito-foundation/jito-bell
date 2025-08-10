@@ -2,7 +2,6 @@
 members = [
     "examples/token-program",
     "jito-bell",
-    "stake-pool-parser",
     "twitterust"
 ]
 resolver = "2"
