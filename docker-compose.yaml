@@ -13,4 +13,4 @@ services:
       - CONFIG_FILE=${CONFIG_FILE}
     volumes:
       - ./jito_bell_config.yaml:/jito_bell_config.yaml
-    restart: on-failure:5
+    restart: unless-stopped
