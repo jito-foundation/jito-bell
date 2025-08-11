@@ -1,8 +1,9 @@
-use std::{env, io::Write, path::PathBuf};
+use std::{env, io::Write, path::PathBuf, process::Command};
 
 use clap::{Parser, ValueEnum};
 use jito_bell::{multi_writer::MultiWriter, subscribe_option::SubscribeOption, JitoBellHandler};
 use log::info;
+use solana_metrics::set_host_id;
 use solana_sdk::commitment_config::CommitmentConfig;
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
 
@@ -101,6 +102,16 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     info!("Starting Jito Bell with endpoint: {}", args.endpoint);
+
+    let hostname_cmd = Command::new("hostname")
+        .output()
+        .expect("Failed to execute hostname command");
+
+    let hostname = String::from_utf8_lossy(&hostname_cmd.stdout)
+        .trim()
+        .to_string();
+
+    set_host_id(format!("jito-bell_{hostname}"));
 
     let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
     let subscribe_option = SubscribeOption::new(
