@@ -25,10 +25,15 @@ docker-compose-up:
 docker-compose-down:
 	docker compose down
 
+# Docker start
+.PHONY: docker-start
+docker-start:
+	docker compose --env-file .env up -d --build jito-bell --remove-orphans
+
 # Docker Compose stop
 .PHONY: docker-stop
 docker-stop:
-	docker stop jito-bell
+	docker stop jito-bell; docker rm jito-bell;
 
 # Docker Compose Rebuild 
 .PHONY: docker-rebuild
