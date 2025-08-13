@@ -11,6 +11,7 @@ services:
       - X_TOKEN=${X_TOKEN}
       - ACCOUNT_INCLUDE=${ACCOUNT_INCLUDE}
       - CONFIG_FILE=${CONFIG_FILE}
+      - SOLANA_METRICS_CONFIG=${SOLANA_METRICS_CONFIG}
     volumes:
       - ./jito_bell_config.yaml:/jito_bell_config.yaml
     restart: unless-stopped
