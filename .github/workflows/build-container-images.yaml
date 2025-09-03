@@ -3,12 +3,8 @@ name: Build Container Images
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to build'
-        required: true
-        default: 'main'
       service_config:
-        description: 'Service configuration (e.g. keeper-regular, keeper-metrics-only)'
+        description: 'Service configuration'
         required: true
         default: 'default'
 
@@ -22,23 +18,12 @@ jobs:
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
-      branch: ${{ steps.branch.outputs.branch }}
-      service-config: ${{ github.event.inputs.service_config || 'default' }}
+      branch: ${{ github.ref_name }}
+      service-config: ${{ github.event.inputs.service_config }}
     
     steps:
-    - name: Determine branch
-      id: branch
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
-        else
-          echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-        fi
-
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        ref: ${{ steps.branch.outputs.branch }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -56,25 +41,23 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=raw,value=${{ steps.branch.outputs.branch }}-${{ github.event.inputs.service_config || 'default' }}-{{sha}}
-          type=raw,value=${{ steps.branch.outputs.branch }}-${{ github.event.inputs.service_config || 'default' }}-latest
-          type=ref,event=pr
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-{{sha}}
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-latest
 
-    - name: Build and push PUBLIC container (NO SECRETS)
+    - name: Build and push PUBLIC container
       id: build
       uses: docker/build-push-action@v5
       with:
         context: .
         platforms: linux/amd64,linux/arm64
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        # ONLY NON-SENSITIVE BUILD ARGS
         build-args: |
-          SERVICE_CONFIG=${{ github.event.inputs.service_config || 'default' }}
+          SERVICE_CONFIG=${{ github.event.inputs.service_config }}
           BUILD_DATE=${{ github.event.head_commit.timestamp }}
           VCS_REF=${{ github.sha }}
-          BRANCH=${{ steps.branch.outputs.branch }}
+          BRANCH=${{ github.ref_name }}
           VERSION=${{ steps.meta.outputs.version }}
