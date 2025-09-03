@@ -7,19 +7,19 @@ on:
         description: 'Service configuration'
         required: true
         default: 'default'
+        type: choice
+        options:
+          - default
+          - jito-bell-mainnet
+          - jito-bell-testnet
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-public-image:
+  build-container:
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-      branch: ${{ github.ref_name }}
-      service-config: ${{ github.event.inputs.service_config }}
     
     steps:
     - name: Checkout repository
@@ -44,20 +44,14 @@ jobs:
           type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-{{sha}}
           type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-latest
 
-    - name: Build and push PUBLIC container
-      id: build
+    - name: Build and push container
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        build-args: |
-          SERVICE_CONFIG=${{ github.event.inputs.service_config }}
-          BUILD_DATE=${{ github.event.head_commit.timestamp }}
-          VCS_REF=${{ github.sha }}
-          BRANCH=${{ github.ref_name }}
-          VERSION=${{ steps.meta.outputs.version }}
