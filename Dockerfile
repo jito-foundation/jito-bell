@@ -27,8 +27,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /usr/src/app/target/release/jito-bell /usr/local/bin/jito-bell
 
-COPY jito_bell_config.yaml /etc/jito-bell/jito_bell_config.yaml
-
 # Only one ENTRYPOINT line
 ENTRYPOINT ["jito-bell"]
 
