@@ -37,6 +37,7 @@ use yellowstone_grpc_proto::{
 
 use crate::config::JitoBellConfig;
 
+pub mod cli_args;
 pub mod config;
 mod error;
 pub mod instruction;

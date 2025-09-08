@@ -1,71 +1,13 @@
-use std::{env, io::Write, path::PathBuf, process::Command};
+use std::{env, io::Write, process::Command};
 
-use clap::{Parser, ValueEnum};
-use jito_bell::{multi_writer::MultiWriter, subscribe_option::SubscribeOption, JitoBellHandler};
+use clap::Parser;
+use jito_bell::{
+    cli_args::Args, multi_writer::MultiWriter, subscribe_option::SubscribeOption, JitoBellHandler,
+};
 use log::info;
 use solana_metrics::set_host_id;
 use solana_sdk::commitment_config::CommitmentConfig;
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
-
-#[derive(Debug, Clone, Parser)]
-#[clap(author, version, about)]
-struct Args {
-    #[clap(short, long, env = "ENDPOINT")]
-    /// Service endpoint
-    endpoint: String,
-
-    #[clap(long, env = "X_TOKEN")]
-    x_token: Option<String>,
-
-    /// Commitment level: processed, confirmed or finalized
-    #[clap(long, env)]
-    commitment: Option<ArgsCommitment>,
-
-    /// Filter vote transactions
-    #[clap(long, env)]
-    vote: Option<bool>,
-
-    /// Filter failed transactions
-    #[clap(long, env = "FAILED")]
-    failed: Option<bool>,
-
-    /// Filter by transaction signature
-    #[clap(long, env)]
-    signature: Option<String>,
-
-    /// Filter included account in transactions
-    #[clap(long, env = "ACCOUNT_INCLUDE", value_delimiter = ',')]
-    account_include: Vec<String>,
-
-    /// Filter excluded account in transactions
-    #[clap(long, env)]
-    account_exclude: Vec<String>,
-
-    /// Filter required account in transactions
-    #[clap(long, env)]
-    account_required: Vec<String>,
-
-    #[clap(long, env = "CONFIG_FILE")]
-    config_file: PathBuf,
-}
-
-#[derive(Debug, Clone, Copy, Default, ValueEnum)]
-enum ArgsCommitment {
-    #[default]
-    Processed,
-    Confirmed,
-    Finalized,
-}
-
-impl From<ArgsCommitment> for CommitmentLevel {
-    fn from(commitment: ArgsCommitment) -> Self {
-        match commitment {
-            ArgsCommitment::Processed => CommitmentLevel::Processed,
-            ArgsCommitment::Confirmed => CommitmentLevel::Confirmed,
-            ArgsCommitment::Finalized => CommitmentLevel::Finalized,
-        }
-    }
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -114,17 +56,7 @@ async fn main() -> anyhow::Result<()> {
     set_host_id(format!("jito-bell_{hostname}"));
 
     let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
-    let subscribe_option = SubscribeOption::new(
-        args.endpoint.clone(),
-        args.x_token,
-        commitment,
-        args.vote,
-        args.failed,
-        args.signature,
-        args.account_include,
-        args.account_exclude,
-        args.account_required,
-    );
+    let subscribe_option = SubscribeOption::new(args.clone(), commitment);
 
     info!("Subscription configuration:\n{}", subscribe_option);
 

@@ -1,5 +1,7 @@
 use yellowstone_grpc_proto::geyser::CommitmentLevel;
 
+use crate::cli_args::Args;
+
 pub struct SubscribeOption {
     /// Endpoint
     pub endpoint: String,
@@ -27,31 +29,60 @@ pub struct SubscribeOption {
 
     /// Account required
     pub account_required: Vec<String>,
+
+    /// Slack webhook url
+    pub slack_webhook_url: Option<String>,
+
+    /// Slack channel
+    pub slack_channel: Option<String>,
+
+    /// Discord webhook url
+    pub discord_webhook_url: Option<String>,
+
+    /// Telegram bot token
+    pub telegram_bot_token: Option<String>,
+
+    /// Telegram chat id
+    pub telegram_chat_id: Option<String>,
+
+    /// Twitter bearer token
+    pub twitter_bearer_token: Option<String>,
+
+    /// Twitter api key
+    pub twitter_api_key: Option<String>,
+
+    /// Twitter api secret
+    pub twitter_api_secret: Option<String>,
+
+    /// Twitter access token
+    pub twitter_access_token: Option<String>,
+
+    /// Twitter access token secret
+    pub twitter_access_token_secret: Option<String>,
 }
 
 impl SubscribeOption {
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(
-        endpoint: String,
-        x_token: Option<String>,
-        commitment: CommitmentLevel,
-        vote: Option<bool>,
-        failed: Option<bool>,
-        signature: Option<String>,
-        account_include: Vec<String>,
-        account_exclude: Vec<String>,
-        account_required: Vec<String>,
-    ) -> Self {
+    pub fn new(arg: Args, commitment: CommitmentLevel) -> Self {
         Self {
-            endpoint,
-            x_token,
+            endpoint: arg.endpoint,
+            x_token: arg.x_token,
             commitment,
-            vote,
-            failed,
-            signature,
-            account_include,
-            account_exclude,
-            account_required,
+            vote: arg.vote,
+            failed: arg.failed,
+            signature: arg.signature,
+            account_include: arg.account_include,
+            account_exclude: arg.account_exclude,
+            account_required: arg.account_required,
+            slack_webhook_url: arg.slack_webhook_url,
+            slack_channel: arg.slack_channel,
+            discord_webhook_url: arg.discord_webhook_url,
+            telegram_bot_token: arg.telegram_bot_token,
+            telegram_chat_id: arg.telegram_chat_id,
+            twitter_bearer_token: arg.twitter_bearer_token,
+            twitter_api_key: arg.twitter_api_key,
+            twitter_api_secret: arg.twitter_api_secret,
+            twitter_access_token: arg.twitter_access_token,
+            twitter_access_token_secret: arg.twitter_access_token_secret,
         }
     }
 }
