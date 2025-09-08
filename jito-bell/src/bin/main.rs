@@ -61,13 +61,18 @@ async fn main() -> anyhow::Result<()> {
     info!("Subscription configuration:\n{}", subscribe_option);
 
     let commitment = CommitmentConfig::confirmed();
-    let mut handler =
-        JitoBellHandler::new(args.endpoint.clone(), commitment, args.config_file).await?;
+    let mut handler = JitoBellHandler::new(
+        args.endpoint.clone(),
+        commitment,
+        args.config_file,
+        subscribe_option,
+    )
+    .await?;
 
     info!("Jito Bell Config:\n{}", handler.config);
 
     info!("Starting heartbeat...");
-    handler.heart_beat(&subscribe_option).await?;
+    handler.heart_beat().await?;
 
     Ok(())
 }
