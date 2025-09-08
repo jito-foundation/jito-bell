@@ -771,9 +771,6 @@ impl JitoBellHandler {
                     .replace("{{currency_unit}}", unit)
                     .replace("{{tx_hash}}", sig);
 
-                // let bot_token = &telegram_config.bot_token;
-                // let chat_id = &telegram_config.chat_id;
-
                 let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
 
                 let client = reqwest::Client::new();
@@ -819,8 +816,6 @@ impl JitoBellHandler {
         sig: &str,
     ) -> Result<(), JitoBellError> {
         if let Some(webhook_url) = &self.subscribe_option.discord_webhook_url {
-            // let webhook_url = &discord_config.webhook_url;
-
             let payload = serde_json::json!({
                 "embeds": [{
                     "title": "New Transaction Detected",
@@ -885,7 +880,6 @@ impl JitoBellHandler {
         sig: &str,
     ) -> Result<(), JitoBellError> {
         if let Some(webhook_url) = &self.subscribe_option.slack_webhook_url {
-            // let webhook_url = &slack_config.webhook_url;
             // Build a Slack message with blocks for better formatting
             let payload = serde_json::json!({
                 "blocks": [
@@ -961,58 +955,54 @@ impl JitoBellHandler {
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(api_key) = &self.subscribe_option.twitter_api_key {
-            if let Some(api_secret) = &self.subscribe_option.twitter_api_secret {
-                if let Some(access_token) = &self.subscribe_option.twitter_access_token {
-                    if let Some(access_token_secret) =
-                        &self.subscribe_option.twitter_access_token_secret
-                    {
-                        let credentials = TwitterCredentials::new(
-                            api_key,
-                            api_secret,
-                            access_token,
-                            access_token_secret,
-                        );
-
-                        let client = TwitterClient::new(credentials);
-
-                        let mut tweet_text = format!(
-                        "Jito Bell\n\n🚨 {}\n\n💰 Amount: {:.2} {}\n🔗 Transaction: {}/tx/{}\n\n",
-                        description, amount, unit, self.config.explorer_url, sig,
-                    );
-
-                        // Check Twitter's 280 character limit
-                        if tweet_text.len() > 280 {
-                            // Create a shorter version
-                            let short_text = format!(
-                                "Jito Bell\n\n🚨 {}\n💰 {:.2} {}\n🔗 {}/tx/{}\n",
-                                description,
-                                amount,
-                                unit,
-                                self.config.explorer_url,
-                                &sig[..8], // Truncate hash
-                            );
-                            tweet_text = short_text;
-                        }
-
-                        match client.tweet(tweet_text).await {
-                            Ok(_res) => {
-                                self.epoch_metrics.increment_success_notification_count();
-                                return Ok(());
-                            }
-                            Err(e) => {
-                                self.epoch_metrics.increment_fail_notification_count();
-                                return Err(JitoBellError::Notification(format!(
-                                    "Error sending Twitter message: {:?}",
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                }
+        let (api_key, api_secret, access_token, access_token_secret) = match (
+            &self.subscribe_option.twitter_api_key,
+            &self.subscribe_option.twitter_api_secret,
+            &self.subscribe_option.twitter_access_token,
+            &self.subscribe_option.twitter_access_token_secret,
+        ) {
+            (Some(key), Some(secret), Some(token), Some(token_secret)) => {
+                (key, secret, token, token_secret)
             }
+            _ => return Ok(()),
+        };
+
+        let credentials =
+            TwitterCredentials::new(api_key, api_secret, access_token, access_token_secret);
+
+        let client = TwitterClient::new(credentials);
+
+        let mut tweet_text = format!(
+            "Jito Bell\n\n🚨 {}\n\n💰 Amount: {:.2} {}\n🔗 Transaction: {}/tx/{}\n\n",
+            description, amount, unit, self.config.explorer_url, sig,
+        );
+
+        // Check Twitter's 280 character limit
+        if tweet_text.len() > 280 {
+            // Create a shorter version
+            let short_text = format!(
+                "Jito Bell\n\n🚨 {}\n💰 {:.2} {}\n🔗 {}/tx/{}\n",
+                description,
+                amount,
+                unit,
+                self.config.explorer_url,
+                &sig[..8], // Truncate hash
+            );
+            tweet_text = short_text;
         }
 
-        Ok(())
+        match client.tweet(tweet_text).await {
+            Ok(_res) => {
+                self.epoch_metrics.increment_success_notification_count();
+                return Ok(());
+            }
+            Err(e) => {
+                self.epoch_metrics.increment_fail_notification_count();
+                return Err(JitoBellError::Notification(format!(
+                    "Error sending Twitter message: {:?}",
+                    e
+                )));
+            }
+        }
     }
 }
