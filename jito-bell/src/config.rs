@@ -9,8 +9,6 @@ pub struct JitoBellConfig {
     /// Programs Configuration
     pub programs: HashMap<String, Program>,
 
-    // Notifications Configuration
-    // pub notifications: NotificationConfig,
     /// Block explorer url
     pub explorer_url: String,
 
