@@ -118,4 +118,4 @@ docker run jito-bell \
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE.txt) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENCE.txt) file for details.
