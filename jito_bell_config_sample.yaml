@@ -215,24 +215,24 @@ programs:
         #       description: "Very large Withdrawal worth $100,000+ detected"
         #       destinations: ["telegram", "slack", "discord"]
   
-notifications:
-  slack:
-    webhook_url: ""
-    channel: ""
-  
-  discord:
-    webhook_url: ""
-  
-  telegram:
-    bot_token: ""
-    chat_id: ""
-
-  twitter:
-    twitter_bearer_token: ""
-    twitter_api_key: ""
-    twitter_api_secret: ""
-    twitter_access_token: ""
-    twitter_access_token_secret: ""
+# notifications:
+#   slack:
+#     webhook_url: ""
+#     channel: ""
+#   
+#   discord:
+#     webhook_url: ""
+#   
+#   telegram:
+#     bot_token: ""
+#     chat_id: ""
+# 
+#   twitter:
+#     twitter_bearer_token: ""
+#     twitter_api_key: ""
+#     twitter_api_secret: ""
+#     twitter_access_token: ""
+#     twitter_access_token_secret: ""
 
 explorer_url: "https://solscan.io"
 
