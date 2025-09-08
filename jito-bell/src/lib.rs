@@ -994,14 +994,14 @@ impl JitoBellHandler {
         match client.tweet(tweet_text).await {
             Ok(_res) => {
                 self.epoch_metrics.increment_success_notification_count();
-                return Ok(());
+                Ok(())
             }
             Err(e) => {
                 self.epoch_metrics.increment_fail_notification_count();
-                return Err(JitoBellError::Notification(format!(
+                Err(JitoBellError::Notification(format!(
                     "Error sending Twitter message: {:?}",
                     e
-                )));
+                )))
             }
         }
     }
