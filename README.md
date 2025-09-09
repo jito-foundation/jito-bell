@@ -1,6 +1,7 @@
 # Jito Bell
 
 [![Build Status](https://github.com/jito-foundation/jito-bell/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/jito-foundation/jito-bell/actions)
+[![Release](https://img.shields.io/github/v/release/jito-foundation/jito-bell)](https://github.com/jito-foundation/jito-bell/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
