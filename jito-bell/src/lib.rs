@@ -37,6 +37,7 @@ use yellowstone_grpc_proto::{
 
 use crate::config::JitoBellConfig;
 
+pub mod cli_args;
 pub mod config;
 mod error;
 pub mod instruction;
@@ -60,6 +61,8 @@ pub struct JitoBellHandler {
 
     /// Epoch Metrics
     epoch_metrics: EpochMetrics,
+
+    subscribe_option: SubscribeOption,
 }
 
 impl JitoBellHandler {
@@ -68,6 +71,7 @@ impl JitoBellHandler {
         endpoint: String,
         commitment: CommitmentConfig,
         config_path: PathBuf,
+        subscribe_option: SubscribeOption,
     ) -> Result<Self, JitoBellError> {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
@@ -81,6 +85,7 @@ impl JitoBellHandler {
             config,
             rpc_client,
             epoch_metrics,
+            subscribe_option,
         })
     }
 
@@ -132,15 +137,13 @@ impl JitoBellHandler {
     }
 
     /// Start heart beating
-    pub async fn heart_beat(
-        &mut self,
-        subscribe_option: &SubscribeOption,
-    ) -> Result<(), JitoBellError> {
-        let mut client = GeyserGrpcClient::build_from_shared(subscribe_option.endpoint.clone())?
-            .x_token(subscribe_option.x_token.clone())?
-            .tls_config(ClientTlsConfig::new().with_native_roots())?
-            .connect()
-            .await?;
+    pub async fn heart_beat(&mut self) -> Result<(), JitoBellError> {
+        let mut client =
+            GeyserGrpcClient::build_from_shared(self.subscribe_option.endpoint.clone())?
+                .x_token(self.subscribe_option.x_token.clone())?
+                .tls_config(ClientTlsConfig::new().with_native_roots())?
+                .connect()
+                .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
 
         let subscribe_request = SubscribeRequest {
@@ -149,18 +152,18 @@ impl JitoBellHandler {
             } },
             accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
-                vote: subscribe_option.vote,
-                failed: subscribe_option.failed,
-                signature: subscribe_option.signature.clone(),
-                account_include: subscribe_option.account_include.clone(),
-                account_exclude: subscribe_option.account_exclude.clone(),
-                account_required: subscribe_option.account_required.clone(),
+                vote: self.subscribe_option.vote,
+                failed: self.subscribe_option.failed,
+                signature: self.subscribe_option.signature.clone(),
+                account_include: self.subscribe_option.account_include.clone(),
+                account_exclude: self.subscribe_option.account_exclude.clone(),
+                account_required: self.subscribe_option.account_required.clone(),
             } },
             transactions_status: HashMap::new(),
             entry: HashMap::new(),
             blocks: HashMap::new(),
             blocks_meta: HashMap::new(),
-            commitment: Some(subscribe_option.commitment as i32),
+            commitment: Some(self.subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
         };
@@ -755,49 +758,48 @@ impl JitoBellHandler {
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(telegram_config) = &self.config.notifications.telegram {
-            let template = self
-                .config
-                .message_templates
-                .get("telegram")
-                .unwrap_or(self.config.message_templates.get("default").unwrap());
-            let message = template
-                .replace("{{description}}", description)
-                .replace("{{amount}}", &format!("{:.2}", amount))
-                .replace("{{currency_unit}}", unit)
-                .replace("{{tx_hash}}", sig);
+        if let Some(bot_token) = &self.subscribe_option.telegram_bot_token {
+            if let Some(chat_id) = &self.subscribe_option.telegram_chat_id {
+                let template = self
+                    .config
+                    .message_templates
+                    .get("telegram")
+                    .unwrap_or(self.config.message_templates.get("default").unwrap());
+                let message = template
+                    .replace("{{description}}", description)
+                    .replace("{{amount}}", &format!("{:.2}", amount))
+                    .replace("{{currency_unit}}", unit)
+                    .replace("{{tx_hash}}", sig);
 
-            let bot_token = &telegram_config.bot_token;
-            let chat_id = &telegram_config.chat_id;
+                let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
 
-            let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
+                let client = reqwest::Client::new();
+                let response = client
+                    .post(&url)
+                    .form(&[("chat_id", chat_id), ("text", &message)])
+                    .send()
+                    .await;
 
-            let client = reqwest::Client::new();
-            let response = client
-                .post(&url)
-                .form(&[("chat_id", chat_id), ("text", &message)])
-                .send()
-                .await;
-
-            match response {
-                Ok(res) => {
-                    if res.status().is_success() {
-                        self.epoch_metrics.increment_success_notification_count();
-                        return Ok(());
-                    } else {
+                match response {
+                    Ok(res) => {
+                        if res.status().is_success() {
+                            self.epoch_metrics.increment_success_notification_count();
+                            return Ok(());
+                        } else {
+                            self.epoch_metrics.increment_fail_notification_count();
+                            return Err(JitoBellError::Notification(format!(
+                                "Failed to send Telegram message: {}",
+                                res.status(),
+                            )));
+                        }
+                    }
+                    Err(e) => {
                         self.epoch_metrics.increment_fail_notification_count();
                         return Err(JitoBellError::Notification(format!(
                             "Failed to send Telegram message: {}",
-                            res.status(),
+                            e
                         )));
                     }
-                }
-                Err(e) => {
-                    self.epoch_metrics.increment_fail_notification_count();
-                    return Err(JitoBellError::Notification(format!(
-                        "Failed to send Telegram message: {}",
-                        e
-                    )));
                 }
             }
         }
@@ -813,9 +815,7 @@ impl JitoBellHandler {
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(discord_config) = &self.config.notifications.discord {
-            let webhook_url = &discord_config.webhook_url;
-
+        if let Some(webhook_url) = &self.subscribe_option.discord_webhook_url {
             let payload = serde_json::json!({
                 "embeds": [{
                     "title": "New Transaction Detected",
@@ -879,9 +879,7 @@ impl JitoBellHandler {
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(slack_config) = &self.config.notifications.slack {
-            let webhook_url = &slack_config.webhook_url;
-
+        if let Some(webhook_url) = &self.subscribe_option.slack_webhook_url {
             // Build a Slack message with blocks for better formatting
             let payload = serde_json::json!({
                 "blocks": [
@@ -957,50 +955,54 @@ impl JitoBellHandler {
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(twitter_config) = &self.config.notifications.twitter {
-            let credentials = TwitterCredentials::new(
-                twitter_config.twitter_api_key.clone(),
-                twitter_config.twitter_api_secret.clone(),
-                twitter_config.twitter_access_token.clone(),
-                twitter_config.twitter_access_token_secret.clone(),
-            );
-
-            let client = TwitterClient::new(credentials);
-
-            let mut tweet_text = format!(
-                "Jito Bell\n\n🚨 {}\n\n💰 Amount: {:.2} {}\n🔗 Transaction: {}/tx/{}\n\n",
-                description, amount, unit, self.config.explorer_url, sig,
-            );
-
-            // Check Twitter's 280 character limit
-            if tweet_text.len() > 280 {
-                // Create a shorter version
-                let short_text = format!(
-                    "Jito Bell\n\n🚨 {}\n💰 {:.2} {}\n🔗 {}/tx/{}\n",
-                    description,
-                    amount,
-                    unit,
-                    self.config.explorer_url,
-                    &sig[..8], // Truncate hash
-                );
-                tweet_text = short_text;
+        let (api_key, api_secret, access_token, access_token_secret) = match (
+            &self.subscribe_option.twitter_api_key,
+            &self.subscribe_option.twitter_api_secret,
+            &self.subscribe_option.twitter_access_token,
+            &self.subscribe_option.twitter_access_token_secret,
+        ) {
+            (Some(key), Some(secret), Some(token), Some(token_secret)) => {
+                (key, secret, token, token_secret)
             }
+            _ => return Ok(()),
+        };
 
-            match client.tweet(tweet_text).await {
-                Ok(_res) => {
-                    self.epoch_metrics.increment_success_notification_count();
-                    return Ok(());
-                }
-                Err(e) => {
-                    self.epoch_metrics.increment_fail_notification_count();
-                    return Err(JitoBellError::Notification(format!(
-                        "Error sending Twitter message: {:?}",
-                        e
-                    )));
-                }
-            }
+        let credentials =
+            TwitterCredentials::new(api_key, api_secret, access_token, access_token_secret);
+
+        let client = TwitterClient::new(credentials);
+
+        let mut tweet_text = format!(
+            "Jito Bell\n\n🚨 {}\n\n💰 Amount: {:.2} {}\n🔗 Transaction: {}/tx/{}\n\n",
+            description, amount, unit, self.config.explorer_url, sig,
+        );
+
+        // Check Twitter's 280 character limit
+        if tweet_text.len() > 280 {
+            // Create a shorter version
+            let short_text = format!(
+                "Jito Bell\n\n🚨 {}\n💰 {:.2} {}\n🔗 {}/tx/{}\n",
+                description,
+                amount,
+                unit,
+                self.config.explorer_url,
+                &sig[..8], // Truncate hash
+            );
+            tweet_text = short_text;
         }
 
-        Ok(())
+        match client.tweet(tweet_text).await {
+            Ok(_res) => {
+                self.epoch_metrics.increment_success_notification_count();
+                Ok(())
+            }
+            Err(e) => {
+                self.epoch_metrics.increment_fail_notification_count();
+                Err(JitoBellError::Notification(format!(
+                    "Error sending Twitter message: {:?}",
+                    e
+                )))
+            }
+        }
     }
 }
