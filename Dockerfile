@@ -23,6 +23,7 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl1.1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/app/target/release/jito-bell /usr/local/bin/jito-bell
