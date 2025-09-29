@@ -2,6 +2,14 @@ name: Build Container Images
 
 on:
   workflow_dispatch:
+    inputs:
+    service_config:
+      description: 'Service configuration'
+      required: true
+      default: 'jito-bell'
+      type: choice
+      options:
+        - jito-bell
 
 env:
   REGISTRY: ghcr.io
@@ -31,8 +39,8 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=raw,value=${{ github.ref_name }}-{{sha}}
-          type=raw,value=${{ github.ref_name }}-latest
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-{{sha}}
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-latest
 
     - name: Build and push container
       uses: docker/build-push-action@v5
