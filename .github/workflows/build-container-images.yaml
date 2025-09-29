@@ -3,15 +3,13 @@ name: Build Container Images
 on:
   workflow_dispatch:
     inputs:
-      service_config:
-        description: 'Service configuration'
-        required: true
-        default: 'default'
-        type: choice
-        options:
-          - default
-          - jito-bell-mainnet
-          - jito-bell-testnet
+    service_config:
+      description: 'Service configuration'
+      required: true
+      default: 'jito-bell'
+      type: choice
+      options:
+        - jito-bell
 
 env:
   REGISTRY: ghcr.io
