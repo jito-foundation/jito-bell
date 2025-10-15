@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "examples/token-program",
-    "jito-bell",
-    "twitterust"
-]
+members = ["examples/token-program", "jito-bell", "twitterust"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -41,8 +37,8 @@ spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
 spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
 spl-token-2022 = { version = "4.0.0", features = [ "no-entrypoint", "serde-traits" ] }
 thiserror = "2.0.12"
-toml = "0.8.22"
 tokio = { version = "1.0.1", features = ["full"] }
+toml = "0.8.22"
 tonic = { version = "0.13.1" }
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
