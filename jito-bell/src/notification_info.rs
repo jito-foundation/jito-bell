@@ -1,13 +1,20 @@
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum Destination {
+    #[serde(rename = "telegram")]
     Telegram,
+
+    #[serde(rename = "discord")]
     Discord,
+
+    #[serde(rename = "twitter")]
     Twitter,
+
     #[serde(rename = "slack")]
     JitoBellSlack,
+
+    #[serde(rename = "stake_pool_alerts_slack")]
     StakePoolAlertsSlack,
 }
 
