@@ -24,7 +24,7 @@ impl std::fmt::Display for InstructionParser {
             InstructionParser::SplToken2022(_) => write!(f, "spl-token-2022"),
             InstructionParser::SplStakePool(_) => write!(f, "spl_stake_pool"),
             InstructionParser::JitoVault(_) => write!(f, "jito_vault"),
-            InstructionParser::JitoSteward { .. } => write!(f, "jito_steward"),
+            InstructionParser::JitoSteward(_) => write!(f, "jito_steward"),
         }
     }
 }

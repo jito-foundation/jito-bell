@@ -30,7 +30,7 @@ impl std::fmt::Display for JitoStewardEvent {
         match self {
             JitoStewardEvent::AutoRemoveValidator(_) => write!(f, "auto_remove_validator"),
             JitoStewardEvent::AutoAddValidator(_) => write!(f, "auto_add_validator"),
-            JitoStewardEvent::EpochMaintenance(_) => write!(f, "epoch_maintainance"),
+            JitoStewardEvent::EpochMaintenance(_) => write!(f, "epoch_maintenance"),
             JitoStewardEvent::StateTransition(_) => write!(f, "state_transition"),
             JitoStewardEvent::Rebalance(_) => write!(f, "rebalance"),
             JitoStewardEvent::DecreaseComponents(_) => write!(f, "decrease_components"),
@@ -41,7 +41,7 @@ impl std::fmt::Display for JitoStewardEvent {
 }
 
 impl JitoStewardEvent {
-    /// Retrieve Program ID of SPL Stake Pool Program
+    /// Retrieve Program ID of Jito Steward Program
     pub fn program_id() -> Pubkey {
         Pubkey::from_str("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8").unwrap()
     }

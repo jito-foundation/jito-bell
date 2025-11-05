@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use solana_sdk::pubkey::Pubkey;
 
-/// SPL Stake Pool Program
+/// Jito Steward Instructions
 #[derive(Debug, PartialEq)]
 pub enum JitoStewardInstruction {
     InitializeSteward,
@@ -20,7 +20,7 @@ pub enum JitoStewardInstruction {
     PauseSteward,
     ResumeSteward,
     AddValidatorsToBlacklist,
-    RemoveValidatosFromBlacklist,
+    RemoveValidatorsFromBlacklist,
     UpdateParameters,
     ResetStewardState,
     AdminMarkForRemoval,
@@ -41,16 +41,16 @@ pub enum JitoStewardInstruction {
 impl std::fmt::Display for JitoStewardInstruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            JitoStewardInstruction::InitializeSteward => write!(f, "initiallize_steward"),
+            JitoStewardInstruction::InitializeSteward => write!(f, "initialize_steward"),
             JitoStewardInstruction::ReallocState => write!(f, "realloc_state"),
             JitoStewardInstruction::AutoAddValidatorToPool => write!(f, "auto_add_validator_pool"),
             JitoStewardInstruction::AutoRemoveValidatorFromPool => {
                 write!(f, "auto_remove_validator_from_pool")
             }
             JitoStewardInstruction::InstantRemoveValidator => write!(f, "instant_remove_validator"),
-            JitoStewardInstruction::EpochMaintainance => write!(f, "epoch_maintainance"),
+            JitoStewardInstruction::EpochMaintainance => write!(f, "epoch_maintenance"),
             JitoStewardInstruction::ComputeScore => write!(f, "compute_score"),
-            JitoStewardInstruction::ComputeDelegations => write!(f, "coompute_delegations"),
+            JitoStewardInstruction::ComputeDelegations => write!(f, "compute_delegations"),
             JitoStewardInstruction::Idle => write!(f, "idle"),
             JitoStewardInstruction::ComputeInstantUnstake => write!(f, "compute_instant_unstake"),
             JitoStewardInstruction::Rebalance => write!(f, "rebalance"),
@@ -60,7 +60,7 @@ impl std::fmt::Display for JitoStewardInstruction {
             JitoStewardInstruction::AddValidatorsToBlacklist => {
                 write!(f, "add_validators_to_blacklist")
             }
-            JitoStewardInstruction::RemoveValidatosFromBlacklist => {
+            JitoStewardInstruction::RemoveValidatorsFromBlacklist => {
                 write!(f, "remove_validators_from_blacklist")
             }
             JitoStewardInstruction::UpdateParameters => write!(f, "update_parameters"),
@@ -93,7 +93,7 @@ impl std::fmt::Display for JitoStewardInstruction {
 }
 
 impl JitoStewardInstruction {
-    /// Retrieve Program ID of SPL Stake Pool Program
+    /// Retrieve Program ID of Jito Steward Program
     pub fn program_id() -> Pubkey {
         Pubkey::from_str("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8").unwrap()
     }

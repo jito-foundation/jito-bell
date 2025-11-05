@@ -1035,7 +1035,7 @@ impl JitoBellHandler {
 
         Ok(())
     }
-    /// Send message to Slack to Jito Bell Channel
+    /// Send message to Slack to Stake Pool Alerts Channel
     async fn send_slack_message_to_stake_pool_alerts(
         &mut self,
         description: &str,
