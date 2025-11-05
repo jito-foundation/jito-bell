@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use solana_sdk::pubkey::Pubkey;
+use solana_pubkey::Pubkey;
 
 /// Jito Steward Instructions
 #[derive(Debug, PartialEq)]
@@ -10,7 +10,7 @@ pub enum JitoStewardInstruction {
     AutoAddValidatorToPool,
     AutoRemoveValidatorFromPool,
     InstantRemoveValidator,
-    EpochMaintainance,
+    EpochMaintenance,
     ComputeScore,
     ComputeDelegations,
     Idle,
@@ -48,7 +48,7 @@ impl std::fmt::Display for JitoStewardInstruction {
                 write!(f, "auto_remove_validator_from_pool")
             }
             JitoStewardInstruction::InstantRemoveValidator => write!(f, "instant_remove_validator"),
-            JitoStewardInstruction::EpochMaintainance => write!(f, "epoch_maintenance"),
+            JitoStewardInstruction::EpochMaintenance => write!(f, "epoch_maintenance"),
             JitoStewardInstruction::ComputeScore => write!(f, "compute_score"),
             JitoStewardInstruction::ComputeDelegations => write!(f, "compute_delegations"),
             JitoStewardInstruction::Idle => write!(f, "idle"),

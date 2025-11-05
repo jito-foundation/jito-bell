@@ -25,7 +25,7 @@ pub struct Program {
     #[serde(default)]
     pub instructions: HashMap<String, Instruction>,
 
-    /// Instructions configurations
+    /// Events configurations
     #[serde(default)]
     pub events: HashMap<String, EventConfig>,
 }
