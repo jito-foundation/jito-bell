@@ -1,4 +1,26 @@
 programs:
+  jito_steward:
+    program_id: "Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8"
+    events:
+      auto_remove_validator:
+        destinations: ["stake_pool_alerts_slack"]
+        description: "Validator automatically removed from pool"
+
+      auto_add_validator:
+        destinations: ["stake_pool_alerts_slack"]
+        description: "Validator automatically added to pool"
+
+      state_transition:
+        destinations: ["stake_pool_alerts_slack"]
+        description: "Steward state transition occurred"
+
+      rebalance:
+        destinations: ["stake_pool_alerts_slack"]
+        description: "Validator rebalance event"
+
+      epoch_maintenance:
+        destinations: ["stake_pool_alerts_slack"]
+        description: "Epoch maintenance completed"
   spl_stake_pool:
     program_id: "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
     instructions:
@@ -6,19 +28,19 @@ programs:
         stake_pools:
           "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "Increase validator stake detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large Increase validator stake detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large Increase validator stake detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale Increase validator stake detected"
                   destinations: ["slack"]
@@ -26,19 +48,19 @@ programs:
         lsts:
           "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "JitoSOL stake deposit detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large JitoSOL stake deposit detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large JitoSOL stake deposit detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale JitoSOL stake deposit detected"
                   destinations: ["slack"]
@@ -46,19 +68,19 @@ programs:
         lsts:
           "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "JitoSOL stake withdrawal detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large JitoSOL stake withdrawal detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large JitoSOL stake withdrawal detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale JitoSOL stake withdrawal detected"
                   destinations: ["slack"]
@@ -66,19 +88,19 @@ programs:
         lsts:
           "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "SOL deposit to JitoSOL detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
@@ -86,19 +108,19 @@ programs:
         lsts:
           "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "SOL withdrawal from JitoSOL detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
@@ -106,19 +128,19 @@ programs:
         stake_pools:
           "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb":
             thresholds:
-              - value: 0.1  # SOL
+              - value: 0.1 # SOL
                 notification:
                   description: "Decrease validator stake with reserve detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # SOL
+              - value: 1000.0 # SOL
                 notification:
                   description: "Large Decrease validator stake with reserve detected"
                   destinations: ["slack"]
-              - value: 5000.0  # SOL
+              - value: 5000.0 # SOL
                 notification:
                   description: "Very large Decrease validator stake with reserve detected"
                   destinations: ["slack"]
-              - value: 10000.0  # SOL
+              - value: 10000.0 # SOL
                 notification:
                   description: "Whale Decrease validator stake with reserve detected"
                   destinations: ["slack"]
@@ -129,75 +151,75 @@ programs:
         vrts:
           "CXSLcb8gFEw2zhFwaQEZ2xCRpoN2dxafMNm7HuciDfDq":
             thresholds:
-              - value: 0.1  # VRT
+              - value: 0.1 # VRT
                 notification:
                   description: "Mint detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # VRT
+              - value: 1000.0 # VRT
                 notification:
                   description: "Large Mint detected"
                   destinations: ["telegram"]
-              - value: 5000.0  # VRT
+              - value: 5000.0 # VRT
                 notification:
                   description: "Very large Mint detected"
                   destinations: ["telegram", "slack"]
-              - value: 10000.0  # VRT
+              - value: 10000.0 # VRT
                 notification:
                   description: "Whale Mint detected"
                   destinations: ["telegram", "slack", "discord"]
           "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg":
             thresholds:
-              - value: 0.1  # VRT
+              - value: 0.1 # VRT
                 notification:
                   description: "Mint detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # VRT
+              - value: 1000.0 # VRT
                 notification:
                   description: "Large Mint detected"
                   destinations: ["telegram"]
-              - value: 5000.0  # VRT
+              - value: 5000.0 # VRT
                 notification:
                   description: "Very large Mint detected"
                   destinations: ["telegram", "slack"]
-              - value: 10000.0  # VRT
+              - value: 10000.0 # VRT
                 notification:
                   description: "Whale Mint detected"
                   destinations: ["telegram", "slack", "discord"]
       enqueue_withdrawal:
-        vrts: 
+        vrts:
           "CXSLcb8gFEw2zhFwaQEZ2xCRpoN2dxafMNm7HuciDfDq":
             thresholds:
-              - value: 0.1  # VRT
+              - value: 0.1 # VRT
                 notification:
                   description: "Withdrawal detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # VRT
+              - value: 1000.0 # VRT
                 notification:
                   description: "Large Withdrawal detected"
                   destinations: ["telegram"]
-              - value: 5000.0  # VRT
+              - value: 5000.0 # VRT
                 notification:
                   description: "Very large Withdrawal detected"
                   destinations: ["telegram", "slack"]
-              - value: 10000.0  # VRT
+              - value: 10000.0 # VRT
                 notification:
                   description: "Whale Withdrawal detected"
                   destinations: ["telegram", "slack", "discord"]
           "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg":
             thresholds:
-              - value: 0.1  # VRT
+              - value: 0.1 # VRT
                 notification:
                   description: "Withdrawal detected"
                   destinations: ["slack", "twitter"]
-              - value: 1000.0  # VRT
+              - value: 1000.0 # VRT
                 notification:
                   description: "Large Withdrawal detected"
                   destinations: ["telegram"]
-              - value: 5000.0  # VRT
+              - value: 5000.0 # VRT
                 notification:
                   description: "Very large Withdrawal detected"
                   destinations: ["telegram", "slack"]
-              - value: 10000.0  # VRT
+              - value: 10000.0 # VRT
                 notification:
                   description: "Whale Withdrawal detected"
                   destinations: ["telegram", "slack", "discord"]
@@ -214,7 +236,7 @@ programs:
         #     notification:
         #       description: "Very large Withdrawal worth $100,000+ detected"
         #       destinations: ["telegram", "slack", "discord"]
-  
+
 explorer_url: "https://solscan.io"
 
 message_templates:

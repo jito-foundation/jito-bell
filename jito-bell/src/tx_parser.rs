@@ -1,30 +1,14 @@
-use solana_sdk::{pubkey::Pubkey, signature::Signature};
-use stake_pool::SplStakePoolProgram;
-use token_2022::SplToken2022Program;
-use vault::JitoVaultProgram;
+use solana_pubkey::Pubkey;
+use solana_sdk::signature::Signature;
 use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
 
-pub mod instruction;
-pub mod stake_pool;
-pub mod token_2022;
-pub mod vault;
-
-#[derive(Debug)]
-pub enum JitoBellProgram {
-    SplToken2022(SplToken2022Program),
-    SplStakePool(SplStakePoolProgram),
-    JitoVault(JitoVaultProgram),
-}
-
-impl std::fmt::Display for JitoBellProgram {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            JitoBellProgram::SplToken2022(_) => write!(f, "spl-token-2022"),
-            JitoBellProgram::SplStakePool(_) => write!(f, "spl_stake_pool"),
-            JitoBellProgram::JitoVault(_) => write!(f, "jito_vault"),
-        }
-    }
-}
+use crate::{
+    event_parser::{jito_steward::JitoStewardEvent, EventParser},
+    ix_parser::{
+        jito_steward::JitoStewardInstruction, stake_pool::SplStakePoolProgram,
+        token_2022::SplToken2022Program, vault::JitoVaultProgram, InstructionParser,
+    },
+};
 
 /// Parse Transaction
 #[derive(Debug)]
@@ -32,15 +16,19 @@ pub struct JitoTransactionParser {
     /// Transaction signature
     pub transaction_signature: String,
 
-    /// The array of programs related to Jito Network
-    pub programs: Vec<JitoBellProgram>,
+    /// The array of instructions related to Jito Network
+    pub instructions: Vec<InstructionParser>,
+
+    /// Events emitted by programs, grouped by program
+    pub events: Vec<EventParser>,
 }
 
 impl JitoTransactionParser {
     /// Initialize new parser
     pub fn new(transaction: SubscribeUpdateTransaction) -> Self {
         let mut transaction_signature = String::new();
-        let mut programs = Vec::new();
+        let mut parsed_instructions = Vec::new();
+        let mut parsed_events = Vec::new();
         let mut pubkeys: Vec<Pubkey> = Vec::new();
 
         if let Some(tx) = transaction.transaction {
@@ -79,8 +67,8 @@ impl JitoTransactionParser {
                                                     &pubkeys,
                                                 )
                                             {
-                                                programs
-                                                    .push(JitoBellProgram::SplToken2022(ix_info));
+                                                parsed_instructions
+                                                    .push(InstructionParser::SplToken2022(ix_info));
                                             }
                                         }
                                         program_id
@@ -93,8 +81,8 @@ impl JitoTransactionParser {
                                                     &pubkeys,
                                                 )
                                             {
-                                                programs
-                                                    .push(JitoBellProgram::SplStakePool(ix_info));
+                                                parsed_instructions
+                                                    .push(InstructionParser::SplStakePool(ix_info));
                                             }
                                         }
                                         program_id
@@ -106,7 +94,21 @@ impl JitoTransactionParser {
                                                     &pubkeys,
                                                 )
                                             {
-                                                programs.push(JitoBellProgram::JitoVault(ix_info));
+                                                parsed_instructions
+                                                    .push(InstructionParser::JitoVault(ix_info));
+                                            }
+                                        }
+                                        program_id
+                                            if program_id
+                                                .eq(&JitoStewardInstruction::program_id()) =>
+                                        {
+                                            for log in &meta.log_messages {
+                                                if let Some(event) =
+                                                    JitoStewardEvent::parse_log(log)
+                                                {
+                                                    parsed_events
+                                                        .push(EventParser::JitoSteward(event));
+                                                }
                                             }
                                         }
                                         _ => continue,
@@ -132,7 +134,8 @@ impl JitoTransactionParser {
                                             &pubkeys,
                                         )
                                     {
-                                        programs.push(JitoBellProgram::SplToken2022(ix_info));
+                                        parsed_instructions
+                                            .push(InstructionParser::SplToken2022(ix_info));
                                     }
                                 }
                                 program_id if program_id.eq(&SplStakePoolProgram::program_id()) => {
@@ -142,7 +145,8 @@ impl JitoTransactionParser {
                                             &pubkeys,
                                         )
                                     {
-                                        programs.push(JitoBellProgram::SplStakePool(ix_info));
+                                        parsed_instructions
+                                            .push(InstructionParser::SplStakePool(ix_info));
                                     }
                                 }
                                 program_id if program_id.eq(&JitoVaultProgram::program_id()) => {
@@ -152,7 +156,8 @@ impl JitoTransactionParser {
                                             &pubkeys,
                                         )
                                     {
-                                        programs.push(JitoBellProgram::JitoVault(ix_info));
+                                        parsed_instructions
+                                            .push(InstructionParser::JitoVault(ix_info));
                                     }
                                 }
                                 _ => continue,
@@ -165,7 +170,8 @@ impl JitoTransactionParser {
 
         Self {
             transaction_signature,
-            programs,
+            instructions: parsed_instructions,
+            events: parsed_events,
         }
     }
 }

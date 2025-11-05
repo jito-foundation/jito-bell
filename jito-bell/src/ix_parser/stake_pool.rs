@@ -517,7 +517,7 @@ mod tests {
     };
     use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
-    use crate::parser::stake_pool::SplStakePoolProgram;
+    use crate::ix_parser::stake_pool::SplStakePoolProgram;
 
     fn create_test_pubkeys(count: usize) -> Vec<Pubkey> {
         (0..count).map(|_| Keypair::new().pubkey()).collect()

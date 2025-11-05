@@ -45,7 +45,7 @@ pub struct TwitterConfig {
 #[derive(Debug, Deserialize)]
 pub struct NotificationConfig {
     /// Slack notification configuration
-    pub slack: Option<SlackConfig>,
+    pub slack: Option<Vec<SlackConfig>>,
 
     /// Discord notification configuration
     pub discord: Option<DiscordConfig>,

@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::program::Program;
+use crate::program::{Program, ProgramName};
 
 #[derive(Deserialize)]
 pub struct JitoBellConfig {
     /// Programs Configuration
-    pub programs: HashMap<String, Program>,
+    pub programs: HashMap<ProgramName, Program>,
 
     /// Block explorer url
     pub explorer_url: String,
@@ -40,7 +40,13 @@ impl std::fmt::Display for JitoBellConfig {
                                 threshold.notification.description
                             )?;
 
-                            let destinations = threshold.notification.destinations.join(",");
+                            let destinations = threshold
+                                .notification
+                                .destinations
+                                .iter()
+                                .map(|d| d.to_string())
+                                .collect::<Vec<String>>()
+                                .join(",");
                             writeln!(f, "               Destinations: {}", destinations)?;
                         }
                     }
