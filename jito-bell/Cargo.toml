@@ -32,10 +32,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 solana-metrics = { workspace = true }
+solana-pubkey = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-rpc-client-api = { workspace = true }
 solana-sdk = { workspace = true }
-solana-pubkey = { workspace = true }
 spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
 spl-token-2022 = { workspace = true }
