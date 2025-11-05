@@ -1030,7 +1030,7 @@ impl JitoBellHandler {
         sig: &str,
     ) -> Result<(), JitoBellError> {
         // Build a Slack message with blocks for better formatting
-        if let Some(webhook_url) = &self.subscribe_option.jito_bell_slack_webhook_url {
+        if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
             let payload = serde_json::json!({
                 "blocks": [
                     {
