@@ -7,15 +7,13 @@ use defillama_rs::{
 };
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
-use instruction::Instruction;
+use ix_parser::{
+    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
+};
 use jito_vault_client::accounts::Vault;
 use log::{debug, error};
 use maplit::hashmap;
 use metrics::EpochMetrics;
-use parser::{
-    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
-    JitoBellProgram, JitoTransactionParser,
-};
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -35,20 +33,28 @@ use yellowstone_grpc_proto::{
     tonic::transport::ClientTlsConfig,
 };
 
-use crate::config::JitoBellConfig;
+use crate::{
+    config::JitoBellConfig,
+    event_parser::{jito_steward::JitoStewardEvent, EventParser},
+    ix_parser::InstructionParser,
+    notification_info::Destination,
+    program::{EventConfig, Instruction, ProgramName},
+    tx_parser::JitoTransactionParser,
+};
 
 pub mod cli_args;
 pub mod config;
 mod error;
-pub mod instruction;
+pub mod event_parser;
+pub mod events;
+pub mod ix_parser;
 mod metrics;
 pub mod multi_writer;
-pub mod notification_config;
 pub mod notification_info;
-pub mod parser;
 pub mod program;
 pub mod subscribe_option;
 pub mod threshold_config;
+pub mod tx_parser;
 
 pub const DEFAULT_VRT_SYMBOL: &str = "VRT";
 
@@ -202,7 +208,7 @@ impl JitoBellHandler {
                         let parser = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
 
-                        debug!("Instruction: {:?}", parser.programs);
+                        debug!("Instruction: {:?}", parser.instructions);
 
                         if let Err(e) = self.send_notification(&parser).await {
                             error!("Error: {e}");
@@ -225,49 +231,79 @@ impl JitoBellHandler {
         &mut self,
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
-        for program in &parser.programs {
-            let program_str = program.to_string();
-
+        for program in &parser.instructions {
             match program {
-                JitoBellProgram::SplToken2022(_) => {
+                InstructionParser::SplToken2022(_) => {
                     debug!("Token 2022");
                 }
-                JitoBellProgram::SplStakePool(spl_stake_program) => {
+                InstructionParser::SplStakePool(spl_stake_program) => {
                     debug!("SPL Stake Pool");
 
                     let spl_program_str = spl_stake_program.to_string();
 
-                    let instruction_opt =
-                        self.config
-                            .programs
-                            .get(&program_str)
-                            .and_then(|program_config| {
-                                program_config.instructions.get(&spl_program_str).cloned()
-                            });
+                    let instruction_opt = self
+                        .config
+                        .programs
+                        .get(&ProgramName::SplStakePool)
+                        .and_then(|program_config| {
+                            program_config.instructions.get(&spl_program_str).cloned()
+                        });
 
                     if let Some(instruction) = instruction_opt {
                         self.handle_spl_stake_pool_program(parser, spl_stake_program, &instruction)
                             .await?;
                     }
                 }
-                JitoBellProgram::JitoVault(jito_vault_program) => {
+                InstructionParser::JitoVault(jito_vault_program) => {
                     debug!("Jito Vault");
 
                     let jito_vault_program_str = jito_vault_program.to_string();
 
                     let instruction_opt =
-                        self.config
-                            .programs
-                            .get(&program_str)
-                            .and_then(|program_config| {
+                        self.config.programs.get(&ProgramName::JitoVault).and_then(
+                            |program_config| {
                                 program_config
                                     .instructions
                                     .get(&jito_vault_program_str)
                                     .cloned()
-                            });
+                            },
+                        );
 
                     if let Some(instruction) = instruction_opt {
                         self.handle_jito_vault_program(parser, jito_vault_program, &instruction)
+                            .await?;
+                    }
+                }
+                InstructionParser::JitoSteward(_) => {}
+            }
+        }
+
+        for event in &parser.events {
+            match event {
+                EventParser::JitoSteward(jito_steward_event) => {
+                    let jito_steward_event_str = jito_steward_event.to_string();
+
+                    let event_opt = self
+                        .config
+                        .programs
+                        .get(&ProgramName::JitoSteward)
+                        .and_then(|program_config| {
+                            program_config.events.get(&jito_steward_event_str).cloned()
+                        });
+
+                    if let Some(event) = event_opt {
+                        let description =
+                            if let JitoStewardEvent::StateTransition(state_transition) =
+                                jito_steward_event
+                            {
+                                format!(
+                                    "Steward state transition occurred {} -> {}",
+                                    state_transition.previous_state, state_transition.new_state
+                                )
+                            } else {
+                                String::new()
+                            };
+                        self.handle_jito_steward_events(parser, &event, &description)
                             .await?;
                     }
                 }
@@ -315,8 +351,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    *amount,
-                                    "SOL",
+                                    Some(*amount),
+                                    Some("SOL"),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -341,8 +377,8 @@ impl JitoBellHandler {
 
                 if let Some(mut lsts) = instruction.lsts.clone() {
                     if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        for program in &parser.programs {
-                            if let JitoBellProgram::SplToken2022(program) = program {
+                        for program in &parser.instructions {
+                            if let InstructionParser::SplToken2022(program) = program {
                                 match program {
                                     SplToken2022Program::MintTo { ix, amount } => {
                                         let mint_info = &ix.accounts[0];
@@ -361,8 +397,8 @@ impl JitoBellHandler {
                                                     self.dispatch_platform_notifications(
                                                         &threshold.notification.destinations,
                                                         &threshold.notification.description,
-                                                        *amount as f64,
-                                                        "SOL",
+                                                        Some(*amount as f64),
+                                                        Some("SOL"),
                                                         &parser.transaction_signature,
                                                     )
                                                     .await?;
@@ -402,8 +438,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    *minimum_lamports_out,
-                                    "SOL",
+                                    Some(*minimum_lamports_out),
+                                    Some("SOL"),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -431,8 +467,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    *amount,
-                                    "SOL",
+                                    Some(*amount),
+                                    Some("SOL"),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -460,8 +496,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    *amount,
-                                    "SOL",
+                                    Some(*amount),
+                                    Some("SOL"),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -494,8 +530,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    *amount,
-                                    "SOL",
+                                    Some(*amount),
+                                    Some("SOL"),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -571,8 +607,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    min_amount_out,
-                                    &symbol,
+                                    Some(min_amount_out),
+                                    Some(&symbol),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -611,8 +647,8 @@ impl JitoBellHandler {
                                 self.dispatch_platform_notifications(
                                     &threshold.notification.destinations,
                                     &threshold.notification.description,
-                                    amount,
-                                    &symbol,
+                                    Some(amount),
+                                    Some(&symbol),
                                     &parser.transaction_signature,
                                 )
                                 .await?;
@@ -642,8 +678,8 @@ impl JitoBellHandler {
                                         self.dispatch_platform_notifications(
                                             &usd_threshold.notification.destinations,
                                             &usd_threshold.notification.description,
-                                            amount as f64,
-                                            "USD",
+                                            Some(amount as f64),
+                                            Some("USD"),
                                             &parser.transaction_signature,
                                         )
                                         .await?;
@@ -692,46 +728,99 @@ impl JitoBellHandler {
         Ok(())
     }
 
+    /// Handle Jito Steward Program
+    async fn handle_jito_steward_events(
+        &mut self,
+        parser: &JitoTransactionParser,
+        event_config: &EventConfig,
+        description: &str,
+    ) -> Result<(), JitoBellError> {
+        self.dispatch_platform_notifications(
+            &event_config.destinations,
+            description,
+            None,
+            None,
+            &parser.transaction_signature,
+        )
+        .await
+    }
+
     /// Dispatch platform notifications
     ///
     /// - Return error only if ALL platforms failed, or handle as needed
     async fn dispatch_platform_notifications(
         &mut self,
-        destinations: &[String],
+        destinations: &[Destination],
         description: &str,
-        amount: f64,
-        unit: &str,
+        amount: Option<f64>,
+        unit: Option<&str>,
         transaction_signature: &str,
     ) -> Result<(), JitoBellError> {
         let mut errors = Vec::new();
 
         for destination in destinations {
-            let result = match destination.as_str() {
-                "telegram" => {
+            let result = match destination {
+                Destination::Telegram => {
                     debug!("Will Send Telegram Notification");
-                    self.send_telegram_message(description, amount, unit, transaction_signature)
+                    match (amount, unit) {
+                        (Some(amt), Some(u)) => {
+                            self.send_telegram_message(description, amt, u, transaction_signature)
+                                .await
+                        }
+                        _ => {
+                            debug!("Skipping Telegram - missing amount or unit");
+                            continue;
+                        }
+                    }
+                }
+                Destination::JitoBellSlack => {
+                    debug!("Will Send Slack Notification to Jito Bell");
+                    match (amount, unit) {
+                        (Some(amt), Some(u)) => {
+                            self.send_slack_message_to_jito_bell(
+                                description,
+                                amt,
+                                u,
+                                transaction_signature,
+                            )
+                            .await
+                        }
+                        _ => {
+                            debug!("Skipping JitoBellSlack - missing amount or unit");
+                            continue;
+                        }
+                    }
+                }
+                Destination::StakePoolAlertsSlack => {
+                    debug!("Will Send Slack Notification to Stake Pool Alerts");
+                    self.send_slack_message_to_stake_pool_alerts(description, transaction_signature)
                         .await
                 }
-                "slack" => {
-                    debug!("Will Send Slack Notification");
-                    self.send_slack_message(description, amount, unit, transaction_signature)
-                        .await
-                }
-                "discord" => {
+                Destination::Discord => {
                     debug!("Will Send Discord Notification");
-                    self.send_discord_message(description, amount, unit, transaction_signature)
-                        .await
+                    match (amount, unit) {
+                        (Some(amt), Some(u)) => {
+                            self.send_discord_message(description, amt, u, transaction_signature)
+                                .await
+                        }
+                        _ => {
+                            debug!("Skipping Discord - missing amount or unit");
+                            continue;
+                        }
+                    }
                 }
-                "twitter" => {
+                Destination::Twitter => {
                     debug!("Will Send Twitter Notification");
-                    self.send_twitter_message(description, amount, unit, transaction_signature)
-                        .await
-                }
-                destination => {
-                    error!("Unknown notification type: {destination}");
-                    Err(JitoBellError::Notification(format!(
-                        "Invalid Notification Type: {destination}"
-                    )))
+                    match (amount, unit) {
+                        (Some(amt), Some(u)) => {
+                            self.send_twitter_message(description, amt, u, transaction_signature)
+                                .await
+                        }
+                        _ => {
+                            debug!("Skipping Twitter - missing amount or unit");
+                            continue;
+                        }
+                    }
                 }
             };
 
@@ -741,7 +830,7 @@ impl JitoBellHandler {
             }
         }
 
-        if errors.len() == destinations.len() {
+        if !errors.is_empty() && errors.len() == destinations.len() {
             Err(JitoBellError::Notification(
                 "All platforms failed".to_string(),
             ))
@@ -871,16 +960,16 @@ impl JitoBellHandler {
         Ok(())
     }
 
-    /// Send message to Slack
-    async fn send_slack_message(
+    /// Send message to Slack to Jito Bell Channel
+    async fn send_slack_message_to_jito_bell(
         &mut self,
         description: &str,
         amount: f64,
         unit: &str,
         sig: &str,
     ) -> Result<(), JitoBellError> {
-        if let Some(webhook_url) = &self.subscribe_option.slack_webhook_url {
-            // Build a Slack message with blocks for better formatting
+        // Build a Slack message with blocks for better formatting
+        if let Some(webhook_url) = &self.subscribe_option.jito_bell_slack_webhook_url {
             let payload = serde_json::json!({
                 "blocks": [
                     {
@@ -904,6 +993,75 @@ impl JitoBellHandler {
                                 "type": "mrkdwn",
                                 "text": format!("*Amount:* {:.2} {unit}", amount)
                             },
+                            {
+                                "type": "mrkdwn",
+                                "text": format!("*Transaction:* <{}/tx/{}|View on Explorer>", self.config.explorer_url, sig)
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .await;
+
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        self.epoch_metrics.increment_success_notification_count();
+                        return Ok(());
+                    } else {
+                        self.epoch_metrics.increment_fail_notification_count();
+                        return Err(JitoBellError::Notification(format!(
+                            "Failed to send Slack message: Status {}",
+                            res.status()
+                        )));
+                    }
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    return Err(JitoBellError::Notification(format!(
+                        "Slack request error: {}",
+                        e
+                    )));
+                }
+            }
+        }
+
+        Ok(())
+    }
+    /// Send message to Slack to Stake Pool Alerts Channel
+    async fn send_slack_message_to_stake_pool_alerts(
+        &mut self,
+        description: &str,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
+        // Build a Slack message with blocks for better formatting
+        if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
+            let payload = serde_json::json!({
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "New Transaction Detected"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": format!("*Description:* {}", description)
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
                             {
                                 "type": "mrkdwn",
                                 "text": format!("*Transaction:* <{}/tx/{}|View on Explorer>", self.config.explorer_url, sig)

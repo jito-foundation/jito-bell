@@ -41,13 +41,13 @@ pub struct Args {
     #[clap(long, env)]
     pub account_required: Vec<String>,
 
-    /// Slack webhook URL
+    /// Slack webhook URL for Jito Bell
     #[clap(long, env)]
     pub slack_webhook_url: Option<String>,
 
-    /// Slack channel
+    /// Slack webhook URL for Stake Pool Alerts
     #[clap(long, env)]
-    pub slack_channel: Option<String>,
+    pub stake_pool_alerts_slack_webhook_url: Option<String>,
 
     /// Discord webhook URL
     #[clap(long, env)]

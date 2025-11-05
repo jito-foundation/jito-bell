@@ -95,7 +95,7 @@ mod tests {
     use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
     use yellowstone_grpc_proto::prelude::CompiledInstruction;
 
-    use crate::parser::token_2022::SplToken2022Program;
+    use crate::ix_parser::token_2022::SplToken2022Program;
 
     fn create_test_pubkeys(count: usize) -> Vec<Pubkey> {
         (0..count).map(|_| Keypair::new().pubkey()).collect()

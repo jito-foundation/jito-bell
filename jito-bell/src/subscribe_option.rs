@@ -30,11 +30,11 @@ pub struct SubscribeOption {
     /// Account required
     pub account_required: Vec<String>,
 
-    /// Slack webhook url
-    pub slack_webhook_url: Option<String>,
+    /// Slack webhook url for Jito Bell
+    pub jito_bell_slack_webhook_url: Option<String>,
 
-    /// Slack channel
-    pub slack_channel: Option<String>,
+    /// Slack webhook url for Stake Pool Alerts
+    pub stake_pool_alerts_slack_webhook_url: Option<String>,
 
     /// Discord webhook url
     pub discord_webhook_url: Option<String>,
@@ -73,8 +73,8 @@ impl SubscribeOption {
             account_include: arg.account_include,
             account_exclude: arg.account_exclude,
             account_required: arg.account_required,
-            slack_webhook_url: arg.slack_webhook_url,
-            slack_channel: arg.slack_channel,
+            jito_bell_slack_webhook_url: arg.slack_webhook_url,
+            stake_pool_alerts_slack_webhook_url: arg.stake_pool_alerts_slack_webhook_url,
             discord_webhook_url: arg.discord_webhook_url,
             telegram_bot_token: arg.telegram_bot_token,
             telegram_chat_id: arg.telegram_chat_id,

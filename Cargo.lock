@@ -2315,9 +2315,10 @@ dependencies = [
 
 [[package]]
 name = "jito-bell"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "borsh 0.10.4",
  "borsh 1.5.7",
  "chrono",
@@ -2336,12 +2337,13 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "solana-metrics",
+ "solana-pubkey",
  "solana-rpc-client",
  "solana-rpc-client-api",
  "solana-sdk",
  "spl-stake-pool",
  "spl-token 4.0.2",
- "spl-token-2022 4.0.1",
+ "spl-token-2022 4.0.0",
  "thiserror 2.0.12",
  "tokio",
  "tonic 0.13.1",
@@ -5054,7 +5056,7 @@ dependencies = [
  "solana-program",
  "solana-security-txt",
  "spl-pod 0.3.1",
- "spl-token-2022 4.0.1",
+ "spl-token-2022 4.0.0",
  "thiserror 2.0.12",
 ]
 
@@ -5141,9 +5143,9 @@ dependencies = [
 
 [[package]]
 name = "spl-token-2022"
-version = "4.0.1"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33afcf7a47274725990c783a6e86330883cae26655ad6e2d910f765e530d2cef"
+checksum = "d9c10f3483e48679619c76598d4e4aebb955bc49b0a5cc63323afbf44135c9bf"
 dependencies = [
  "arrayref",
  "base64 0.22.1",
