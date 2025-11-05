@@ -323,40 +323,41 @@ impl JitoBellHandler {
 
                                 (desc, Some(amount_sol), Some("SOL"))
                             }
-                            _ => ("".to_string(), None, None),
+                            _ => {
+                                debug!("Unhandled event type: {:?}", jito_steward_event);
+                                ("Unknown event".to_string(), None, None)
+                            }
                         };
                         match event_config {
                             EventConfig::WithThresholds { thresholds } => {
-                                // Only rebalance and decrease_components should use thresholds
                                 if let Some(amt) = amount {
-                                    let mut sorted_thresholds = thresholds.clone();
-                                    self.sort_thresholds(&mut sorted_thresholds);
+                                    let matching_threshold = thresholds
+                                        .iter()
+                                        .filter(|t| amt >= t.value)
+                                        .max_by(|a, b| {
+                                            a.value
+                                                .partial_cmp(&b.value)
+                                                .unwrap_or(std::cmp::Ordering::Equal)
+                                        });
 
-                                    for threshold in sorted_thresholds.iter() {
-                                        if amt >= threshold.value {
-                                            // Use threshold description if provided, otherwise use generated description
-                                            let final_desc =
-                                                if threshold.notification.description.is_empty() {
-                                                    description.clone()
-                                                } else {
-                                                    format!(
-                                                        "{}\n\n{}",
-                                                        threshold.notification.description,
-                                                        description
-                                                    )
-                                                };
-
-                                            self.dispatch_platform_notifications(
-                                                &threshold.notification.destinations,
-                                                &final_desc,
-                                                Some(amt),
-                                                unit,
-                                                &parser.transaction_signature,
-                                            )
-                                            .await?;
-
-                                            break; // Only notify once for first matching threshold
-                                        }
+                                    if let Some(threshold) = matching_threshold {
+                                        let final_desc =
+                                            if threshold.notification.description.is_empty() {
+                                                description.clone()
+                                            } else {
+                                                format!(
+                                                    "{}\n\n{}",
+                                                    threshold.notification.description, description
+                                                )
+                                            };
+                                        self.dispatch_platform_notifications(
+                                            &threshold.notification.destinations,
+                                            &final_desc,
+                                            Some(amt),
+                                            unit,
+                                            &parser.transaction_signature,
+                                        )
+                                        .await?;
                                     }
                                 }
                             }
