@@ -155,6 +155,7 @@ impl JitoBellHandler {
         let subscribe_request = SubscribeRequest {
             slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
                 filter_by_commitment: Some(true),
+                interslot_updates: None,
             } },
             accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
@@ -172,6 +173,7 @@ impl JitoBellHandler {
             commitment: Some(self.subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
+            from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
