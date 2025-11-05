@@ -35,7 +35,7 @@ use yellowstone_grpc_proto::{
 
 use crate::{
     config::JitoBellConfig,
-    event_parser::EventParser,
+    event_parser::{jito_steward::JitoStewardEvent, EventParser},
     ix_parser::InstructionParser,
     notification_info::Destination,
     program::{EventConfig, Instruction, ProgramName},
@@ -293,7 +293,19 @@ impl JitoBellHandler {
                         });
 
                     if let Some(event) = event_opt {
-                        self.handle_jito_steward_events(parser, &event).await?;
+                        let description =
+                            if let JitoStewardEvent::StateTransition(state_transition) =
+                                jito_steward_event
+                            {
+                                format!(
+                                    "Steward state transition occurred {} -> {}",
+                                    state_transition.previous_state, state_transition.new_state
+                                )
+                            } else {
+                                String::new()
+                            };
+                        self.handle_jito_steward_events(parser, &event, &description)
+                            .await?;
                     }
                 }
             }
@@ -722,10 +734,11 @@ impl JitoBellHandler {
         &mut self,
         parser: &JitoTransactionParser,
         event_config: &EventConfig,
+        description: &str,
     ) -> Result<(), JitoBellError> {
         self.dispatch_platform_notifications(
             &event_config.destinations,
-            &event_config.description,
+            description,
             None,
             None,
             &parser.transaction_signature,
