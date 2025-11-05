@@ -3,7 +3,6 @@ members = ["examples/token-program", "jito-bell", "twitterust"]
 resolver = "2"
 
 [workspace.dependencies]
-anchor-client = "0.31.1"
 anyhow = "1.0.62"
 base64 = "0.21"
 borsh = "0.10.0"

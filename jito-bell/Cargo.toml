@@ -1,6 +1,6 @@
 [package]
 name = "jito-bell"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Jito Network Maintainers <support@jito.network>"]
 repository = "https://github.com/jito-foundation/jito-bell"
 edition = "2021"
@@ -12,7 +12,6 @@ name = "jito-bell"
 path = "src/bin/main.rs"
 
 [dependencies]
-anchor-client = { workspace = true }
 anyhow = { workspace = true }
 base64 = { workspace = true }
 borsh = { workspace = true }

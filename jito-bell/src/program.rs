@@ -8,6 +8,7 @@ use crate::{
 };
 
 #[derive(Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum ProgramName {
     JitoSteward,
     SplToken2022,
