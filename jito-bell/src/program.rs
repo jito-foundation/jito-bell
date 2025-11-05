@@ -53,12 +53,17 @@ pub struct Instruction {
     pub vrts: Option<HashMap<String, AlertConfig>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct EventConfig {
-    /// Notification destinations
-    pub destinations: Vec<Destination>,
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum EventConfig {
+    // Events with thresholds (like rebalance)
+    WithThresholds {
+        thresholds: Vec<ThresholdConfig>,
+    },
 
-    /// Optional custom description
-    #[serde(default)]
-    pub description: String,
+    // Simple events without thresholds
+    Simple {
+        destinations: Vec<Destination>,
+        description: String,
+    },
 }

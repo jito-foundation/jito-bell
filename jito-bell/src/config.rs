@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::program::{Program, ProgramName};
+use crate::program::{EventConfig, Program, ProgramName};
 
 #[derive(Deserialize)]
 pub struct JitoBellConfig {
@@ -92,16 +92,44 @@ impl std::fmt::Display for JitoBellConfig {
 
             if !program.events.is_empty() {
                 writeln!(f, "  Events:")?;
-                for (key, event) in program.events.iter() {
+                for (key, event_config) in program.events.iter() {
                     writeln!(f, "    Event: {}", key)?;
-                    writeln!(f, "      Description: {}", event.description)?;
-                    let destinations = event
-                        .destinations
-                        .iter()
-                        .map(|d| d.to_string())
-                        .collect::<Vec<String>>()
-                        .join(", ");
-                    writeln!(f, "      Destinations: {}", destinations)?;
+
+                    match event_config {
+                        EventConfig::WithThresholds { thresholds } => {
+                            writeln!(f, "      Type: Threshold-based")?;
+                            writeln!(f, "      Thresholds:")?;
+                            for (idx, threshold) in thresholds.iter().enumerate() {
+                                writeln!(f, "        [{}] Value: {}", idx + 1, threshold.value)?;
+                                writeln!(
+                                    f,
+                                    "            Description: {}",
+                                    threshold.notification.description
+                                )?;
+                                let destinations = threshold
+                                    .notification
+                                    .destinations
+                                    .iter()
+                                    .map(|d| d.to_string())
+                                    .collect::<Vec<String>>()
+                                    .join(", ");
+                                writeln!(f, "            Destinations: {}", destinations)?;
+                            }
+                        }
+                        EventConfig::Simple {
+                            destinations,
+                            description,
+                        } => {
+                            writeln!(f, "      Type: Simple")?;
+                            writeln!(f, "      Description: {}", description)?;
+                            let dests = destinations
+                                .iter()
+                                .map(|d| d.to_string())
+                                .collect::<Vec<String>>()
+                                .join(", ");
+                            writeln!(f, "      Destinations: {}", dests)?;
+                        }
+                    }
                 }
             }
         }
