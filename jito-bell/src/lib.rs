@@ -155,7 +155,6 @@ impl JitoBellHandler {
         let subscribe_request = SubscribeRequest {
             slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
                 filter_by_commitment: Some(true),
-                interslot_updates: None,
             } },
             accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
