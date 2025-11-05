@@ -84,7 +84,7 @@ impl JitoBellHandler {
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
-        let epoch = rpc_client.get_epoch_info().await.map_err(|e| Box::new(e))?;
+        let epoch = rpc_client.get_epoch_info().await.map_err(Box::new)?;
         let epoch_metrics = EpochMetrics::new(epoch.epoch);
 
         Ok(Self {
@@ -710,7 +710,7 @@ impl JitoBellHandler {
                     .rpc_client
                     .get_account(&vault_info.pubkey)
                     .await
-                    .map_err(|e| Box::new(e))?;
+                    .map_err(Box::new)?;
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 // VRT amount
