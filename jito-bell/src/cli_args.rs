@@ -45,17 +45,9 @@ pub struct Args {
     #[clap(long, env)]
     pub slack_webhook_url: Option<String>,
 
-    /// Slack channel for Jito Bell
-    #[clap(long, env)]
-    pub slack_channel: Option<String>,
-
     /// Slack webhook URL for Stake Pool Alerts
     #[clap(long, env)]
     pub stake_pool_alerts_slack_webhook_url: Option<String>,
-
-    /// Slack channel for Stake Pool Alerts
-    #[clap(long, env)]
-    pub stake_pool_alerts_slack_channel: Option<String>,
 
     /// Discord webhook URL
     #[clap(long, env)]
