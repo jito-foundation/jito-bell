@@ -50,7 +50,6 @@ pub mod events;
 pub mod ix_parser;
 mod metrics;
 pub mod multi_writer;
-pub mod notification_config;
 pub mod notification_info;
 pub mod program;
 pub mod subscribe_option;
