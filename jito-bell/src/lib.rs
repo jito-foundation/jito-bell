@@ -95,10 +95,23 @@ impl JitoBellHandler {
         })
     }
 
+    /// Safely shorten a pubkey string for display
+    fn shorten_pubkey(&self, pubkey: &str, head: usize, tail: usize) -> String {
+        let chars: Vec<char> = pubkey.chars().collect();
+
+        if chars.len() < head + tail + 3 {
+            return pubkey.to_string();
+        }
+
+        let prefix: String = chars.iter().take(head).collect();
+        let suffix: String = chars.iter().skip(chars.len() - tail).collect();
+        format!("{}...{}", prefix, suffix)
+    }
+
     /// Sort thresholds
     ///
     /// - Sort values from high to low
-    pub fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
+    fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
         thresholds.sort_by(|a, b| {
             b.value
                 .partial_cmp(&a.value)
@@ -109,7 +122,7 @@ impl JitoBellHandler {
     /// Get divisor
     ///
     /// - Fetch Mint account to get decimals value, if fails return default 9
-    pub async fn divisor(&self, vrt: &Pubkey) -> f64 {
+    async fn divisor(&self, vrt: &Pubkey) -> f64 {
         let decimals = match self.rpc_client.get_account(vrt).await {
             Ok(mint_acc) => match Mint::unpack(&mint_acc.data) {
                 Ok(acc) => acc.decimals,
@@ -124,7 +137,7 @@ impl JitoBellHandler {
     /// Get VRT Symbol
     ///
     /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
-    pub async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
+    async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
         let meta_pubkey =
             jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
         let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
@@ -312,11 +325,24 @@ impl JitoBellHandler {
                                     };
 
                                 let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
+                                let type_emoji = if rebalance.increase_lamports > 0 {
+                                    "📈"
+                                } else {
+                                    "📉"
+                                };
+
+                                let validator_short =
+                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
 
                                 let desc = format!(
-                                    "Rebalance detected: {} on validator {}\nEpoch: {}\nType: {:?}",
+                                    "{} *{}* | {:.2} SOL\n\
+                                    \n\
+                                    Validator: `{}`\n\
+                                    Epoch: {} | Type: {:?}",
+                                    type_emoji,
                                     change_type,
-                                    rebalance.vote_account,
+                                    amount_sol,
+                                    validator_short,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
