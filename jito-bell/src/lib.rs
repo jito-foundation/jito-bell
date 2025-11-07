@@ -95,10 +95,22 @@ impl JitoBellHandler {
         })
     }
 
+    /// Safely shorten a pubkey string for display
+    fn shorten_pubkey(&self, pubkey: &str, head: usize, tail: usize) -> String {
+        let chars: Vec<char> = pubkey.chars().collect();
+        if chars.len() <= head + tail {
+            return pubkey.to_string();
+        }
+
+        let prefix: String = chars.iter().take(head).collect();
+        let suffix: String = chars.iter().skip(chars.len() - tail).collect();
+        format!("{}...{}", prefix, suffix)
+    }
+
     /// Sort thresholds
     ///
     /// - Sort values from high to low
-    pub fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
+    fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
         thresholds.sort_by(|a, b| {
             b.value
                 .partial_cmp(&a.value)
@@ -109,7 +121,7 @@ impl JitoBellHandler {
     /// Get divisor
     ///
     /// - Fetch Mint account to get decimals value, if fails return default 9
-    pub async fn divisor(&self, vrt: &Pubkey) -> f64 {
+    async fn divisor(&self, vrt: &Pubkey) -> f64 {
         let decimals = match self.rpc_client.get_account(vrt).await {
             Ok(mint_acc) => match Mint::unpack(&mint_acc.data) {
                 Ok(acc) => acc.decimals,
@@ -124,7 +136,7 @@ impl JitoBellHandler {
     /// Get VRT Symbol
     ///
     /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
-    pub async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
+    async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
         let meta_pubkey =
             jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
         let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
@@ -318,16 +330,8 @@ impl JitoBellHandler {
                                     "📉"
                                 };
 
-                                let validator_str = rebalance.vote_account.to_string();
-                                let validator_short = if validator_str.len() > 12 {
-                                    format!(
-                                        "{}...{}",
-                                        &validator_str[..6],
-                                        &validator_str[validator_str.len() - 6..]
-                                    )
-                                } else {
-                                    validator_str
-                                };
+                                let validator_short =
+                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 6, 6);
 
                                 let desc = format!(
                                     "{} *{}*\n\
