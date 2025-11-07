@@ -98,7 +98,8 @@ impl JitoBellHandler {
     /// Safely shorten a pubkey string for display
     fn shorten_pubkey(&self, pubkey: &str, head: usize, tail: usize) -> String {
         let chars: Vec<char> = pubkey.chars().collect();
-        if chars.len() <= head + tail {
+
+        if chars.len() < head + tail + 3 {
             return pubkey.to_string();
         }
 
@@ -331,11 +332,10 @@ impl JitoBellHandler {
                                 };
 
                                 let validator_short =
-                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 6, 6);
+                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
 
                                 let desc = format!(
-                                    "{} *{}*\n\
-                                    Amount: *{:.2} SOL*\n\
+                                    "{} *{}* | {:.2} SOL\n\
                                     \n\
                                     Validator: `{}`\n\
                                     Epoch: {} | Type: {:?}",
