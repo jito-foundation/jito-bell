@@ -312,11 +312,33 @@ impl JitoBellHandler {
                                     };
 
                                 let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
+                                let type_emoji = if rebalance.increase_lamports > 0 {
+                                    "📈"
+                                } else {
+                                    "📉"
+                                };
+
+                                let validator_str = rebalance.vote_account.to_string();
+                                let validator_short = if validator_str.len() > 12 {
+                                    format!(
+                                        "{}...{}",
+                                        &validator_str[..6],
+                                        &validator_str[validator_str.len() - 6..]
+                                    )
+                                } else {
+                                    validator_str
+                                };
 
                                 let desc = format!(
-                                    "Rebalance detected: {} on validator {}\nEpoch: {}\nType: {:?}",
+                                    "{} *{}*\n\
+                                    Amount: *{:.2} SOL*\n\
+                                    \n\
+                                    Validator: `{}`\n\
+                                    Epoch: {} | Type: {:?}",
+                                    type_emoji,
                                     change_type,
-                                    rebalance.vote_account,
+                                    amount_sol,
+                                    validator_short,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
