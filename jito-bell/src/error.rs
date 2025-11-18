@@ -32,7 +32,7 @@ pub enum JitoBellError {
     SolanaProgram(#[from] solana_program::program_error::ProgramError),
 
     #[error("Solana RPC Client error: {0}")]
-    SolanaRpcClient(#[from] solana_rpc_client_api::client_error::Error),
+    SolanaRpcClient(#[from] Box<solana_rpc_client_api::client_error::Error>),
 
     #[error("Defillama error: {0}")]
     DefiLlama(#[from] defillama_rs::DefillamaError),
