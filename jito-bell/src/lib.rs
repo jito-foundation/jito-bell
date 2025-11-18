@@ -349,6 +349,42 @@ impl JitoBellHandler {
 
                                 (desc, Some(amount_sol), Some("SOL"))
                             }
+                            JitoStewardEvent::RebalanceDirected(rebalance) => {
+                                let (change_type, amount_lamports) =
+                                    if rebalance.increase_lamports > 0 {
+                                        ("Stake Increase", rebalance.increase_lamports)
+                                    } else {
+                                        (
+                                            "Stake Decrease",
+                                            rebalance.decrease_components.total_unstake_lamports,
+                                        )
+                                    };
+
+                                let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
+                                let type_emoji = if rebalance.increase_lamports > 0 {
+                                    "📈"
+                                } else {
+                                    "📉"
+                                };
+
+                                let validator_short =
+                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
+
+                                let desc = format!(
+                                    "{} *{}* | {:.2} SOL\n\
+                                    \n\
+                                    Validator: `{}`\n\
+                                    Epoch: {} | Type: {:?}",
+                                    type_emoji,
+                                    change_type,
+                                    amount_sol,
+                                    validator_short,
+                                    rebalance.epoch,
+                                    rebalance.rebalance_type_tag
+                                );
+
+                                (desc, Some(amount_sol), Some("SOL"))
+                            }
                             _ => {
                                 debug!("Unhandled event type: {:?}", jito_steward_event);
                                 ("Unknown event".to_string(), None, None)
