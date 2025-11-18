@@ -33,6 +33,25 @@ programs:
               description: "Whale rebalance detected"
               destinations: ["stake_pool_alerts_slack"]
 
+      rebalance_directed:
+        thresholds:
+          - value: 1.0 # SOL (minimum to notify)
+            notification:
+              description: "Small rebalance detected"
+              destinations: ["stake_pool_alerts_slack"]
+          - value: 100.0 # SOL
+            notification:
+              description: "Medium rebalance detected"
+              destinations: ["stake_pool_alerts_slack"]
+          - value: 1000.0 # SOL
+            notification:
+              description: "Large rebalance detected"
+              destinations: ["stake_pool_alerts_slack"]
+          - value: 10000.0 # SOL
+            notification:
+              description: "Whale rebalance detected"
+              destinations: ["stake_pool_alerts_slack"]
+
       epoch_maintenance:
         destinations: ["stake_pool_alerts_slack"]
         description: "Epoch maintenance completed"
