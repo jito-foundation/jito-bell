@@ -354,10 +354,7 @@ impl JitoBellHandler {
                                     if rebalance.increase_lamports > 0 {
                                         ("Stake Increase", rebalance.increase_lamports)
                                     } else {
-                                        (
-                                            "Stake Decrease",
-                                            rebalance.decrease_components.total_unstake_lamports,
-                                        )
+                                        ("Stake Decrease", rebalance.decrease_lamports)
                                     };
 
                                 let amount_sol = amount_lamports as f64 / 1_000_000_000.0;

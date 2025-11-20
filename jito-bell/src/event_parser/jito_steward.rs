@@ -6,8 +6,8 @@ use log::debug;
 use solana_pubkey::Pubkey;
 
 use crate::events::jito_steward::{
-    AutoAddValidatorEvent, AutoRemoveValidatorEvent, DecreaseComponents, EpochMaintenanceEvent,
-    InstantUnstakeComponents, RebalanceDirectedEvent, RebalanceEvent, ScoreComponents,
+    AutoAddValidatorEvent, AutoRemoveValidatorEvent, DecreaseComponents, DirectedRebalanceEvent,
+    EpochMaintenanceEvent, InstantUnstakeComponents, RebalanceEvent, ScoreComponents,
     StateTransition,
 };
 
@@ -21,7 +21,7 @@ pub enum JitoStewardEvent {
     EpochMaintenance(EpochMaintenanceEvent),
     StateTransition(StateTransition),
     Rebalance(RebalanceEvent),
-    RebalanceDirected(RebalanceDirectedEvent),
+    RebalanceDirected(DirectedRebalanceEvent),
     DecreaseComponents(DecreaseComponents),
     ScoreComponents(ScoreComponents),
     InstantUnstake(InstantUnstakeComponents),
@@ -116,8 +116,8 @@ impl JitoStewardEvent {
         }
 
         // RebalanceDirectedEvent
-        if discriminator == RebalanceDirectedEvent::DISCRIMINATOR {
-            match RebalanceDirectedEvent::try_from_slice(event_data) {
+        if discriminator == DirectedRebalanceEvent::DISCRIMINATOR {
+            match DirectedRebalanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::RebalanceDirected(event)),
                 Err(e) => debug!("Failed to deserialize RebalanceDirectedEvent: {e}"),
             }
