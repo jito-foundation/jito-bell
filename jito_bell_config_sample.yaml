@@ -33,7 +33,7 @@ programs:
               description: "Whale rebalance detected"
               destinations: ["stake_pool_alerts_slack"]
 
-      rebalance_directed:
+      directed_rebalance:
         thresholds:
           - value: 1.0 # SOL (minimum to notify)
             notification:

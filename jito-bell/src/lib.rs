@@ -349,7 +349,7 @@ impl JitoBellHandler {
 
                                 (desc, Some(amount_sol), Some("SOL"))
                             }
-                            JitoStewardEvent::RebalanceDirected(rebalance) => {
+                            JitoStewardEvent::DirectedRebalance(rebalance) => {
                                 let (change_type, amount_lamports) =
                                     if rebalance.increase_lamports > 0 {
                                         ("Stake Increase", rebalance.increase_lamports)

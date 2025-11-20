@@ -21,7 +21,7 @@ pub enum JitoStewardEvent {
     EpochMaintenance(EpochMaintenanceEvent),
     StateTransition(StateTransition),
     Rebalance(RebalanceEvent),
-    RebalanceDirected(DirectedRebalanceEvent),
+    DirectedRebalance(DirectedRebalanceEvent),
     DecreaseComponents(DecreaseComponents),
     ScoreComponents(ScoreComponents),
     InstantUnstake(InstantUnstakeComponents),
@@ -35,7 +35,7 @@ impl std::fmt::Display for JitoStewardEvent {
             JitoStewardEvent::EpochMaintenance(_) => write!(f, "epoch_maintenance"),
             JitoStewardEvent::StateTransition(_) => write!(f, "state_transition"),
             JitoStewardEvent::Rebalance(_) => write!(f, "rebalance"),
-            JitoStewardEvent::RebalanceDirected(_) => write!(f, "rebalance_directed"),
+            JitoStewardEvent::DirectedRebalance(_) => write!(f, "directed_rebalance"),
             JitoStewardEvent::DecreaseComponents(_) => write!(f, "decrease_components"),
             JitoStewardEvent::ScoreComponents(_) => write!(f, "score_components"),
             JitoStewardEvent::InstantUnstake(_) => write!(f, "instant_unstake"),
@@ -118,7 +118,7 @@ impl JitoStewardEvent {
         // RebalanceDirectedEvent
         if discriminator == DirectedRebalanceEvent::DISCRIMINATOR {
             match DirectedRebalanceEvent::try_from_slice(event_data) {
-                Ok(event) => return Some(JitoStewardEvent::RebalanceDirected(event)),
+                Ok(event) => return Some(JitoStewardEvent::DirectedRebalance(event)),
                 Err(e) => debug!("Failed to deserialize RebalanceDirectedEvent: {e}"),
             }
         }
