@@ -95,19 +95,6 @@ impl JitoBellHandler {
         })
     }
 
-    /// Safely shorten a pubkey string for display
-    fn shorten_pubkey(&self, pubkey: &str, head: usize, tail: usize) -> String {
-        let chars: Vec<char> = pubkey.chars().collect();
-
-        if chars.len() < head + tail + 3 {
-            return pubkey.to_string();
-        }
-
-        let prefix: String = chars.iter().take(head).collect();
-        let suffix: String = chars.iter().skip(chars.len() - tail).collect();
-        format!("{}...{}", prefix, suffix)
-    }
-
     /// Sort thresholds
     ///
     /// - Sort values from high to low
@@ -330,19 +317,21 @@ impl JitoBellHandler {
                                 } else {
                                     "📉"
                                 };
-
-                                let validator_short =
-                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
+                                let validator_full = rebalance.vote_account.to_string();
+                                let validator_url = format!(
+                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
+                                );
 
                                 let desc = format!(
                                     "{} *{}* | {:.2} SOL\n\
                                     \n\
-                                    Validator: `{}`\n\
+                                    Validator: [{}]({})\n\
                                     Epoch: {} | Type: {:?}",
                                     type_emoji,
                                     change_type,
                                     amount_sol,
-                                    validator_short,
+                                    validator_full,
+                                    validator_url,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
@@ -364,18 +353,22 @@ impl JitoBellHandler {
                                     "📉"
                                 };
 
-                                let validator_short =
-                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
+                                let validator_full = rebalance.vote_account.to_string();
+                                let validator_url = format!(
+                                    "https://www.jito.network/stakenet/steward/{}/",
+                                    validator_full
+                                );
 
                                 let desc = format!(
                                     "{} *{}* | {:.2} SOL\n\
                                     \n\
-                                    Validator: `{}`\n\
+                                    Validator: [{}]({})\n\
                                     Epoch: {} | Type: {:?}",
                                     type_emoji,
                                     change_type,
                                     amount_sol,
-                                    validator_short,
+                                    validator_full,
+                                    validator_url,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
