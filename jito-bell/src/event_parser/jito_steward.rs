@@ -6,8 +6,9 @@ use log::debug;
 use solana_pubkey::Pubkey;
 
 use crate::events::jito_steward::{
-    AutoAddValidatorEvent, AutoRemoveValidatorEvent, DecreaseComponents, EpochMaintenanceEvent,
-    InstantUnstakeComponents, RebalanceEvent, ScoreComponents, StateTransition,
+    AutoAddValidatorEvent, AutoRemoveValidatorEvent, DecreaseComponents, DirectedRebalanceEvent,
+    EpochMaintenanceEvent, InstantUnstakeComponents, RebalanceEvent, ScoreComponents,
+    StateTransition,
 };
 
 const PROGRAM_LOG: &str = "Program log: ";
@@ -20,6 +21,7 @@ pub enum JitoStewardEvent {
     EpochMaintenance(EpochMaintenanceEvent),
     StateTransition(StateTransition),
     Rebalance(RebalanceEvent),
+    DirectedRebalance(DirectedRebalanceEvent),
     DecreaseComponents(DecreaseComponents),
     ScoreComponents(ScoreComponents),
     InstantUnstake(InstantUnstakeComponents),
@@ -33,6 +35,7 @@ impl std::fmt::Display for JitoStewardEvent {
             JitoStewardEvent::EpochMaintenance(_) => write!(f, "epoch_maintenance"),
             JitoStewardEvent::StateTransition(_) => write!(f, "state_transition"),
             JitoStewardEvent::Rebalance(_) => write!(f, "rebalance"),
+            JitoStewardEvent::DirectedRebalance(_) => write!(f, "directed_rebalance"),
             JitoStewardEvent::DecreaseComponents(_) => write!(f, "decrease_components"),
             JitoStewardEvent::ScoreComponents(_) => write!(f, "score_components"),
             JitoStewardEvent::InstantUnstake(_) => write!(f, "instant_unstake"),
@@ -109,6 +112,14 @@ impl JitoStewardEvent {
             match RebalanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::Rebalance(event)),
                 Err(e) => debug!("Failed to deserialize RebalanceEvent: {}", e),
+            }
+        }
+
+        // RebalanceDirectedEvent
+        if discriminator == DirectedRebalanceEvent::DISCRIMINATOR {
+            match DirectedRebalanceEvent::try_from_slice(event_data) {
+                Ok(event) => return Some(JitoStewardEvent::DirectedRebalance(event)),
+                Err(e) => debug!("Failed to deserialize DirectedRebalanceEvent: {e}"),
             }
         }
 

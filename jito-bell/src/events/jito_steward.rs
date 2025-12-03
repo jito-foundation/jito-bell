@@ -82,6 +82,19 @@ pub enum RebalanceTypeTag {
     Decrease,
 }
 
+#[derive(Debug, Clone, BorshDeserialize)]
+pub struct DirectedRebalanceEvent {
+    pub vote_account: Pubkey,
+    pub epoch: u16,
+    pub rebalance_type_tag: RebalanceTypeTag,
+    pub increase_lamports: u64,
+    pub decrease_lamports: u64,
+}
+
+impl DirectedRebalanceEvent {
+    pub const DISCRIMINATOR: [u8; 8] = [187, 63, 59, 72, 191, 64, 113, 29];
+}
+
 /// Deprecated: This struct is no longer emitted but is kept to allow parsing of old events.
 /// Because the event discriminator is based on struct name, it's important to rename the struct if
 /// fields are changed.

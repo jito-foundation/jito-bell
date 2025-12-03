@@ -95,19 +95,6 @@ impl JitoBellHandler {
         })
     }
 
-    /// Safely shorten a pubkey string for display
-    fn shorten_pubkey(&self, pubkey: &str, head: usize, tail: usize) -> String {
-        let chars: Vec<char> = pubkey.chars().collect();
-
-        if chars.len() < head + tail + 3 {
-            return pubkey.to_string();
-        }
-
-        let prefix: String = chars.iter().take(head).collect();
-        let suffix: String = chars.iter().skip(chars.len() - tail).collect();
-        format!("{}...{}", prefix, suffix)
-    }
-
     /// Sort thresholds
     ///
     /// - Sort values from high to low
@@ -330,19 +317,57 @@ impl JitoBellHandler {
                                 } else {
                                     "📉"
                                 };
-
-                                let validator_short =
-                                    self.shorten_pubkey(&rebalance.vote_account.to_string(), 4, 4);
+                                let validator_full = rebalance.vote_account.to_string();
+                                let validator_url = format!(
+                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
+                                );
 
                                 let desc = format!(
                                     "{} *{}* | {:.2} SOL\n\
                                     \n\
-                                    Validator: `{}`\n\
+                                    Validator: [{}]({})\n\
                                     Epoch: {} | Type: {:?}",
                                     type_emoji,
                                     change_type,
                                     amount_sol,
-                                    validator_short,
+                                    validator_full,
+                                    validator_url,
+                                    rebalance.epoch,
+                                    rebalance.rebalance_type_tag
+                                );
+
+                                (desc, Some(amount_sol), Some("SOL"))
+                            }
+                            JitoStewardEvent::DirectedRebalance(rebalance) => {
+                                let (change_type, amount_lamports) =
+                                    if rebalance.increase_lamports > 0 {
+                                        ("Stake Increase", rebalance.increase_lamports)
+                                    } else {
+                                        ("Stake Decrease", rebalance.decrease_lamports)
+                                    };
+
+                                let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
+                                let type_emoji = if rebalance.increase_lamports > 0 {
+                                    "📈"
+                                } else {
+                                    "📉"
+                                };
+
+                                let validator_full = rebalance.vote_account.to_string();
+                                let validator_url = format!(
+                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
+                                );
+
+                                let desc = format!(
+                                    "{} *{}* | {:.2} SOL\n\
+                                    \n\
+                                    Validator: [{}]({})\n\
+                                    Epoch: {} | Type: {:?}",
+                                    type_emoji,
+                                    change_type,
+                                    amount_sol,
+                                    validator_full,
+                                    validator_url,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
