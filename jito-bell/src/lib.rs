@@ -355,8 +355,7 @@ impl JitoBellHandler {
 
                                 let validator_full = rebalance.vote_account.to_string();
                                 let validator_url = format!(
-                                    "https://www.jito.network/stakenet/steward/{}/",
-                                    validator_full
+                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
                                 );
 
                                 let desc = format!(

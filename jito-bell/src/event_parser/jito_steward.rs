@@ -119,7 +119,7 @@ impl JitoStewardEvent {
         if discriminator == DirectedRebalanceEvent::DISCRIMINATOR {
             match DirectedRebalanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::DirectedRebalance(event)),
-                Err(e) => debug!("Failed to deserialize RebalanceDirectedEvent: {e}"),
+                Err(e) => debug!("Failed to deserialize DirectedRebalanceEvent: {e}"),
             }
         }
 
