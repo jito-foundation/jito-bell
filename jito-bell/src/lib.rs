@@ -325,13 +325,13 @@ impl JitoBellHandler {
                                 let desc = format!(
                                     "{} *{}* | {:.2} SOL\n\
                                     \n\
-                                    Validator: [{}]({})\n\
+                                    Validator: <{}|{}>\n\
                                     Epoch: {} | Type: {:?}",
                                     type_emoji,
                                     change_type,
                                     amount_sol,
-                                    validator_full,
                                     validator_url,
+                                    validator_full,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
@@ -361,13 +361,13 @@ impl JitoBellHandler {
                                 let desc = format!(
                                     "{} *{}* | {:.2} SOL\n\
                                     \n\
-                                    Validator: [{}]({})\n\
+                                    Validator: <{}|{}>\n\
                                     Epoch: {} | Type: {:?}",
                                     type_emoji,
                                     change_type,
                                     amount_sol,
-                                    validator_full,
                                     validator_url,
+                                    validator_full,
                                     rebalance.epoch,
                                     rebalance.rebalance_type_tag
                                 );
