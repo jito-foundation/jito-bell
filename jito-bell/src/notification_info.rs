@@ -16,6 +16,9 @@ pub enum Destination {
 
     #[serde(rename = "stake_pool_alerts_slack")]
     StakePoolAlertsSlack,
+
+    #[serde(rename = "stakenet_event_alerts_slack")]
+    StakenetEventAlertsSlack,
 }
 
 impl std::fmt::Display for Destination {
@@ -26,6 +29,7 @@ impl std::fmt::Display for Destination {
             Self::Twitter => write!(f, "twitter"),
             Self::JitoBellSlack => write!(f, "slack"),
             Self::StakePoolAlertsSlack => write!(f, "stake_pool_alerts_slack"),
+            Self::StakenetEventAlertsSlack => write!(f, "stakenet_event_alerts_slack"),
         }
     }
 }
