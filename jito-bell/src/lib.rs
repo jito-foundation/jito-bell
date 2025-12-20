@@ -907,6 +907,14 @@ impl JitoBellHandler {
                     self.send_slack_message_to_stake_pool_alerts(description, transaction_signature)
                         .await
                 }
+                Destination::StakenetEventAlertsSlack => {
+                    debug!("Will Send Slack Notification to Stakenet Event Alerts");
+                    self.send_slack_message_to_stakenet_event_alerts(
+                        description,
+                        transaction_signature,
+                    )
+                    .await
+                }
                 Destination::Discord => {
                     debug!("Will Send Discord Notification");
                     match (amount, unit) {
@@ -1146,6 +1154,7 @@ impl JitoBellHandler {
 
         Ok(())
     }
+
     /// Send message to Slack to Stake Pool Alerts Channel
     async fn send_slack_message_to_stake_pool_alerts(
         &mut self,
@@ -1154,6 +1163,79 @@ impl JitoBellHandler {
     ) -> Result<(), JitoBellError> {
         // Build a Slack message with blocks for better formatting
         if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
+            let payload = serde_json::json!({
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "New Transaction Detected"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": format!("*Description:* {}", description)
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {
+                                "type": "mrkdwn",
+                                "text": format!("*Transaction:* <{}/tx/{}|View on Explorer>", self.config.explorer_url, sig)
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .await;
+
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        self.epoch_metrics.increment_success_notification_count();
+                        return Ok(());
+                    } else {
+                        self.epoch_metrics.increment_fail_notification_count();
+                        return Err(JitoBellError::Notification(format!(
+                            "Failed to send Slack message: Status {}",
+                            res.status()
+                        )));
+                    }
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    return Err(JitoBellError::Notification(format!(
+                        "Slack request error: {}",
+                        e
+                    )));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Send message to Slack to Stakenet Event Alerts Channel
+    async fn send_slack_message_to_stakenet_event_alerts(
+        &mut self,
+        description: &str,
+        sig: &str,
+    ) -> Result<(), JitoBellError> {
+        // Build a Slack message with blocks for better formatting
+        if let Some(webhook_url) = &self
+            .subscribe_option
+            .stakenet_event_alerts_slack_webhook_url
+        {
             let payload = serde_json::json!({
                 "blocks": [
                     {
