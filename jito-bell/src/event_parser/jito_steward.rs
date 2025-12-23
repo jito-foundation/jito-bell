@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use borsh::BorshDeserialize;
-use log::debug;
+use log::error;
 use solana_pubkey::Pubkey;
 
 use crate::events::jito_steward::{
@@ -60,7 +60,7 @@ impl JitoStewardEvent {
         let log_bytes = match STANDARD.decode(log_data) {
             Ok(bytes) => bytes,
             Err(e) => {
-                debug!("Could not base64 decode log: {} - error: {}", log, e);
+                error!("Could not base64 decode log: {log} - error: {e}");
                 return None;
             }
         };
@@ -79,7 +79,7 @@ impl JitoStewardEvent {
         if discriminator == AutoRemoveValidatorEvent::DISCRIMINATOR {
             match AutoRemoveValidatorEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::AutoRemoveValidator(event)),
-                Err(e) => debug!("Failed to deserialize AutoRemoveValidatorEvent: {}", e),
+                Err(e) => error!("Failed to deserialize AutoRemoveValidatorEvent: {e}"),
             }
         }
 
@@ -87,7 +87,7 @@ impl JitoStewardEvent {
         if discriminator == AutoAddValidatorEvent::DISCRIMINATOR {
             match AutoAddValidatorEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::AutoAddValidator(event)),
-                Err(e) => debug!("Failed to deserialize AutoAddValidatorEvent: {}", e),
+                Err(e) => error!("Failed to deserialize AutoAddValidatorEvent: {e}"),
             }
         }
 
@@ -95,7 +95,7 @@ impl JitoStewardEvent {
         if discriminator == EpochMaintenanceEvent::DISCRIMINATOR {
             match EpochMaintenanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::EpochMaintenance(event)),
-                Err(e) => debug!("Failed to deserialize EpochMaintenanceEvent: {}", e),
+                Err(e) => error!("Failed to deserialize EpochMaintenanceEvent: {e}"),
             }
         }
 
@@ -103,7 +103,7 @@ impl JitoStewardEvent {
         if discriminator == StateTransition::DISCRIMINATOR {
             match StateTransition::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::StateTransition(event)),
-                Err(e) => debug!("Failed to deserialize StateTransition: {}", e),
+                Err(e) => error!("Failed to deserialize StateTransition: {e}"),
             }
         }
 
@@ -111,7 +111,7 @@ impl JitoStewardEvent {
         if discriminator == RebalanceEvent::DISCRIMINATOR {
             match RebalanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::Rebalance(event)),
-                Err(e) => debug!("Failed to deserialize RebalanceEvent: {}", e),
+                Err(e) => error!("Failed to deserialize RebalanceEvent: {e}"),
             }
         }
 
@@ -119,7 +119,7 @@ impl JitoStewardEvent {
         if discriminator == DirectedRebalanceEvent::DISCRIMINATOR {
             match DirectedRebalanceEvent::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::DirectedRebalance(event)),
-                Err(e) => debug!("Failed to deserialize DirectedRebalanceEvent: {e}"),
+                Err(e) => error!("Failed to deserialize DirectedRebalanceEvent: {e}"),
             }
         }
 
@@ -127,7 +127,7 @@ impl JitoStewardEvent {
         if discriminator == DecreaseComponents::DISCRIMINATOR {
             match DecreaseComponents::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::DecreaseComponents(event)),
-                Err(e) => debug!("Failed to deserialize DecreaseComponents: {}", e),
+                Err(e) => error!("Failed to deserialize DecreaseComponents: {e}"),
             }
         }
 
@@ -135,7 +135,7 @@ impl JitoStewardEvent {
         if discriminator == ScoreComponents::DISCRIMINATOR {
             match ScoreComponents::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::ScoreComponents(event)),
-                Err(e) => debug!("Failed to deserialize ScoreComponents: {}", e),
+                Err(e) => error!("Failed to deserialize ScoreComponents: {e}"),
             }
         }
 
@@ -143,7 +143,7 @@ impl JitoStewardEvent {
         if discriminator == InstantUnstakeComponents::DISCRIMINATOR {
             match InstantUnstakeComponents::try_from_slice(event_data) {
                 Ok(event) => return Some(JitoStewardEvent::InstantUnstake(event)),
-                Err(e) => debug!("Failed to deserialize InstantUnstakeComponents: {}", e),
+                Err(e) => error!("Failed to deserialize InstantUnstakeComponents: {e}"),
             }
         }
 
