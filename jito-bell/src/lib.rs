@@ -84,7 +84,7 @@ impl JitoBellHandler {
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
-        let epoch = rpc_client.get_epoch_info().await?;
+        let epoch = rpc_client.get_epoch_info().await.map_err(Box::new)?;
         let epoch_metrics = EpochMetrics::new(epoch.epoch);
 
         Ok(Self {
@@ -172,6 +172,7 @@ impl JitoBellHandler {
             commitment: Some(self.subscribe_option.commitment as i32),
             accounts_data_slice: vec![],
             ping: None,
+            from_slot: None,
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
@@ -755,7 +756,11 @@ impl JitoBellHandler {
                 let _staker_vrt_token_account_info = &ix.accounts[5];
                 let _base_info = &ix.accounts[6];
 
-                let vault_acc = self.rpc_client.get_account(&vault_info.pubkey).await?;
+                let vault_acc = self
+                    .rpc_client
+                    .get_account(&vault_info.pubkey)
+                    .await
+                    .map_err(Box::new)?;
                 let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
 
                 // VRT amount
