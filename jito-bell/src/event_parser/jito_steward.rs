@@ -150,3 +150,56 @@ impl JitoStewardEvent {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_rebalance_event_log() {
+        let log = "Program data: eBt162gqhEtMsYgkyyouvKpCwIQK+PQ/fXApJFO4g1PcCGJg3zGq0YMDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+
+        let event = JitoStewardEvent::parse_log(log);
+        assert!(event.is_some());
+
+        let event = event.unwrap();
+        match event {
+            JitoStewardEvent::Rebalance(_) => {
+                println!("Successfully parsed RebalanceEvent");
+            }
+            _ => panic!("Expected RebalanceEvent, got {:?}", event),
+        }
+    }
+
+    #[test]
+    fn test_parse_state_transition_log() {
+        let log = "Program data: agl496lqzumDAwAAAAAAAFUiLBcAAAAACQAAAFJlYmFsYW5jZQQAAABJZGxl";
+
+        let event = JitoStewardEvent::parse_log(log);
+        assert!(event.is_some());
+
+        let event = event.unwrap();
+        match event {
+            JitoStewardEvent::StateTransition(st) => {
+                println!("Successfully parsed StateTransition: {:?}", st);
+            }
+            _ => panic!("Expected StateTransition, got {:?}", event),
+        }
+    }
+
+    #[test]
+    fn test_parse_directed_rebalance_log() {
+        let log = "Program data: uz87SL9AcR380T2ote3ZsSVQXwXdXsmLELwWrxqrmm7aHBZ2nE7pQoMDAAAAAAAAAAAAAAAAAAAAAAA=";
+
+        let event = JitoStewardEvent::parse_log(log);
+        assert!(event.is_some());
+
+        let event = event.unwrap();
+        match event {
+            JitoStewardEvent::DirectedRebalance(st) => {
+                println!("Successfully parsed DirectedRebalance: {:?}", st);
+            }
+            _ => panic!("Expected StateTransition, got {:?}", event),
+        }
+    }
+}
