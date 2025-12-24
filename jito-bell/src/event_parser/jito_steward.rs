@@ -167,7 +167,7 @@ mod tests {
             JitoStewardEvent::Rebalance(_) => {
                 println!("Successfully parsed RebalanceEvent");
             }
-            _ => panic!("Expected RebalanceEvent, got {:?}", event),
+            _ => panic!("Expected RebalanceEvent, got {event:?}"),
         }
     }
 
@@ -181,9 +181,9 @@ mod tests {
         let event = event.unwrap();
         match event {
             JitoStewardEvent::StateTransition(st) => {
-                println!("Successfully parsed StateTransition: {:?}", st);
+                println!("Successfully parsed StateTransition: {st:?}");
             }
-            _ => panic!("Expected StateTransition, got {:?}", event),
+            _ => panic!("Expected StateTransition, got {event:?}"),
         }
     }
 
@@ -197,9 +197,9 @@ mod tests {
         let event = event.unwrap();
         match event {
             JitoStewardEvent::DirectedRebalance(st) => {
-                println!("Successfully parsed DirectedRebalance: {:?}", st);
+                println!("Successfully parsed DirectedRebalance: {st:?}");
             }
-            _ => panic!("Expected StateTransition, got {:?}", event),
+            _ => panic!("Expected DirectedRebalance, got {event:?}"),
         }
     }
 }
