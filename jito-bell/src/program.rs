@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 use crate::{
-    notification_info::Destination,
+    notification_info::{Destination, NotificationInfo},
     threshold_config::{ThresholdConfig, UsdThresholdConfig},
 };
 
@@ -51,6 +51,9 @@ pub struct Instruction {
 
     /// Vault receipt token (VRT)
     pub vrts: Option<HashMap<String, AlertConfig>>,
+
+    /// Notification info
+    pub notification_info: Option<NotificationInfo>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
