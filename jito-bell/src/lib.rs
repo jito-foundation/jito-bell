@@ -880,9 +880,8 @@ impl JitoBellHandler {
         Ok(())
     }
 
-    /// Handle Jito Steward Instruction
-    ///
-    /// - Notify only once for the first matching threshold.
+    /// Sends a notification for each matching `CopyDirectedStakeTargets` instruction
+    /// that includes notification metadata.
     async fn handle_jito_steward_program(
         &mut self,
         parser: &JitoTransactionParser,

@@ -207,7 +207,7 @@ mod tests {
         let instruction = {
             let data =
              hex::decode(
-                 "8784097fbda10e050595ae71c4811b808d99e14b3997c386dfb609da3a788b49bba5093fd17040ae000000000000000037000000"
+                 "8784097fbda10e054613d432f5da8f600ac38dcd8f5c07df361f5b832400b012604624443b3f457000000000000000006e000000"
              ).unwrap();
             CompiledInstruction {
                 program_id_index: 0,
