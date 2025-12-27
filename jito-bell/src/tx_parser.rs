@@ -102,6 +102,13 @@ impl JitoTransactionParser {
                                             if program_id
                                                 .eq(&JitoStewardInstruction::program_id()) =>
                                         {
+                                            if let Some(ix_info) =
+                                                JitoStewardInstruction::parse(instruction, &pubkeys)
+                                            {
+                                                parsed_instructions
+                                                    .push(InstructionParser::JitoSteward(ix_info));
+                                            }
+
                                             for log in &meta.log_messages {
                                                 if let Some(event) =
                                                     JitoStewardEvent::parse_log(log)

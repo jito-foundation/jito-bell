@@ -36,7 +36,7 @@ use yellowstone_grpc_proto::{
 use crate::{
     config::JitoBellConfig,
     event_parser::{jito_steward::JitoStewardEvent, EventParser},
-    ix_parser::InstructionParser,
+    ix_parser::{jito_steward::JitoStewardInstruction, InstructionParser},
     notification_info::Destination,
     program::{EventConfig, Instruction, ProgramName},
     tx_parser::JitoTransactionParser,
@@ -274,7 +274,31 @@ impl JitoBellHandler {
                             .await?;
                     }
                 }
-                InstructionParser::JitoSteward(_) => {}
+                InstructionParser::JitoSteward(jito_steward_instruction) => {
+                    debug!("Jito Steward");
+
+                    let jito_steward_program_str = jito_steward_instruction.to_string();
+
+                    let instruction_opt = self
+                        .config
+                        .programs
+                        .get(&ProgramName::JitoSteward)
+                        .and_then(|program_config| {
+                            program_config
+                                .instructions
+                                .get(&jito_steward_program_str)
+                                .cloned()
+                        });
+
+                    if let Some(instruction) = instruction_opt {
+                        self.handle_jito_steward_program(
+                            parser,
+                            jito_steward_instruction,
+                            &instruction,
+                        )
+                        .await?;
+                    }
+                }
             }
         }
 
@@ -850,6 +874,38 @@ impl JitoBellHandler {
             | JitoVaultProgram::UpdateTokenMetadata
             | JitoVaultProgram::SetConfigAdmin => {
                 unreachable!()
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Sends a notification for each matching `CopyDirectedStakeTargets` instruction
+    /// that includes notification metadata.
+    async fn handle_jito_steward_program(
+        &mut self,
+        parser: &JitoTransactionParser,
+        jito_steward_instruction: &JitoStewardInstruction,
+        instruction: &Instruction,
+    ) -> Result<(), JitoBellError> {
+        debug!("Jito Steward Instruction: {jito_steward_instruction}");
+
+        if let JitoStewardInstruction::CopyDirectedStakeTargets {
+            ix: _,
+            vote_pubkey: _,
+            total_target_lamports,
+            validator_list_index: _,
+        } = jito_steward_instruction
+        {
+            if let Some(ref notification_info) = instruction.notification_info {
+                self.dispatch_platform_notifications(
+                    &notification_info.destinations,
+                    &notification_info.description,
+                    Some(*total_target_lamports as f64),
+                    Some("lamports"),
+                    &parser.transaction_signature,
+                )
+                .await?;
             }
         }
 
