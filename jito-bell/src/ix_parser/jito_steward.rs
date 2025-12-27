@@ -137,7 +137,7 @@ impl JitoStewardInstruction {
 
                 let validator_list_index = {
                     let mut slice = [0; 4];
-                    slice.copy_from_slice(&instruction_data[48..42]);
+                    slice.copy_from_slice(&instruction_data[48..52]);
                     u32::from_le_bytes(slice)
                 };
 
@@ -192,6 +192,42 @@ impl JitoStewardInstruction {
             vote_pubkey,
             total_target_lamports,
             validator_list_index,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use yellowstone_grpc_proto::prelude::CompiledInstruction;
+
+    use crate::ix_parser::jito_steward::JitoStewardInstruction;
+
+    #[test]
+    fn test_parse_copy_directed_stake_targets() {
+        let instruction = {
+            let data =
+             hex::decode(
+                 "8784097fbda10e050595ae71c4811b808d99e14b3997c386dfb609da3a788b49bba5093fd17040ae000000000000000037000000"
+             ).unwrap();
+            CompiledInstruction {
+                program_id_index: 0,
+                accounts: vec![0],
+                data,
+            }
+        };
+
+        let account_keys = vec![];
+        let jito_steward_instruction =
+            JitoStewardInstruction::parse(&instruction, &account_keys).unwrap();
+
+        match jito_steward_instruction {
+            JitoStewardInstruction::CopyDirectedStakeTargets {
+                ix: _,
+                vote_pubkey: _,
+                total_target_lamports: _,
+                validator_list_index: _,
+            } => {}
+            _ => panic!("Wrong instruction"),
         }
     }
 }

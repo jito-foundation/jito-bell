@@ -13,6 +13,7 @@ defillama-rs = "0.1.1"
 dotenvy = { version = "0.15.7" }
 env_logger = "0.11.3"
 futures = "0.3.24"
+hex = "0.4"
 hmac = "0.12"
 jito-vault-client = "0.0.5"
 jito-vault-sdk = "0.0.5"

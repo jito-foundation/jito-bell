@@ -2,9 +2,10 @@ programs:
   jito_steward:
     program_id: "Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8"
     instructions:
-      copy_directed_stake_targets:
-        description: "Copy directed stake targets detected"
-        destinations: ["stakenet_event_alerts_slack"]
+      notification_info:
+        copy_directed_stake_targets:
+          description: "Copy directed stake targets detected"
+          destinations: ["stakenet_event_alerts_slack"]
     events:
       auto_remove_validator:
         destinations: ["stake_pool_alerts_slack"]

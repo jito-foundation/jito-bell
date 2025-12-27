@@ -2327,6 +2327,7 @@ dependencies = [
  "dotenvy",
  "env_logger",
  "futures",
+ "hex",
  "jito-vault-client",
  "jito-vault-sdk",
  "log",

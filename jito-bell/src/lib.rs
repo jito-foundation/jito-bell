@@ -889,28 +889,27 @@ impl JitoBellHandler {
         jito_steward_instruction: &JitoStewardInstruction,
         instruction: &Instruction,
     ) -> Result<(), JitoBellError> {
-        debug!("Jito Steward Program: {jito_steward_instruction}");
+        debug!("Jito Steward Instruction: {jito_steward_instruction}");
 
-        match jito_steward_instruction {
-            JitoStewardInstruction::CopyDirectedStakeTargets {
-                ix: _,
-                vote_pubkey: _,
-                total_target_lamports,
-                validator_list_index: _,
-            } => {
-                if let Some(ref notification_info) = instruction.notification_info {
-                    self.dispatch_platform_notifications(
-                        &notification_info.destinations,
-                        &notification_info.description,
-                        Some(*total_target_lamports as f64),
-                        Some("SOL"),
-                        &parser.transaction_signature,
-                    )
-                    .await?;
-                }
+        if let JitoStewardInstruction::CopyDirectedStakeTargets {
+            ix: _,
+            vote_pubkey: _,
+            total_target_lamports,
+            validator_list_index: _,
+        } = jito_steward_instruction
+        {
+            if let Some(ref notification_info) = instruction.notification_info {
+                self.dispatch_platform_notifications(
+                    &notification_info.destinations,
+                    &notification_info.description,
+                    Some(*total_target_lamports as f64),
+                    Some("lamports"),
+                    &parser.transaction_signature,
+                )
+                .await?;
             }
-            _ => {}
         }
+
         Ok(())
     }
 
