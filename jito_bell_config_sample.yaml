@@ -129,19 +129,19 @@ programs:
             thresholds:
               - value: 0.1 # SOL
                 notification:
-                  description: "SOL deposit to JitoSOL detected"
+                  description: "📈 SOL deposit to JitoSOL detected"
                   destinations: ["slack", "twitter"]
               - value: 1000.0 # SOL
                 notification:
-                  description: "Large SOL deposit to JitoSOL detected"
+                  description: "📈 Large SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
               - value: 5000.0 # SOL
                 notification:
-                  description: "Very large SOL deposit to JitoSOL detected"
+                  description: "📈 Very large SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
               - value: 10000.0 # SOL
                 notification:
-                  description: "Whale SOL deposit to JitoSOL detected"
+                  description: "📈 Whale SOL deposit to JitoSOL detected"
                   destinations: ["slack"]
       withdraw_sol:
         lsts:
@@ -149,19 +149,19 @@ programs:
             thresholds:
               - value: 0.1 # SOL
                 notification:
-                  description: "SOL withdrawal from JitoSOL detected"
+                  description: "📉 SOL withdrawal from JitoSOL detected"
                   destinations: ["slack", "twitter"]
               - value: 1000.0 # SOL
                 notification:
-                  description: "Large SOL withdrawal from JitoSOL detected"
+                  description: "📉 Large SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
               - value: 5000.0 # SOL
                 notification:
-                  description: "Very large SOL withdrawal from JitoSOL detected"
+                  description: "📉 Very large SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
               - value: 10000.0 # SOL
                 notification:
-                  description: "Whale SOL withdrawal from JitoSOL detected"
+                  description: "📉 Whale SOL withdrawal from JitoSOL detected"
                   destinations: ["slack"]
       decrease_validator_stake_with_reserve:
         stake_pools:
