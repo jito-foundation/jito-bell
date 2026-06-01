@@ -12,7 +12,6 @@ use ix_parser::{
 };
 use jito_vault_client::accounts::Vault;
 use log::{debug, error};
-use maplit::hashmap;
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -26,10 +25,7 @@ use threshold_config::ThresholdConfig;
 use twitterust::{TwitterClient, TwitterCredentials};
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
-    geyser::SubscribeRequestFilterSlots,
-    prelude::{
-        subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
-    },
+    prelude::{subscribe_update::UpdateOneof, SubscribeRequest},
     tonic::transport::ClientTlsConfig,
 };
 
@@ -152,21 +148,7 @@ impl JitoBellHandler {
                 .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
 
-        let subscribe_request = SubscribeRequest {
-            slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
-                filter_by_commitment: Some(true),
-            } },
-            transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
-                vote: self.subscribe_option.vote,
-                failed: self.subscribe_option.failed,
-                signature: self.subscribe_option.signature.clone(),
-                account_include: self.subscribe_option.account_include.clone(),
-                account_exclude: self.subscribe_option.account_exclude.clone(),
-                account_required: self.subscribe_option.account_required.clone(),
-            } },
-            commitment: Some(self.subscribe_option.commitment as i32),
-            ..Default::default()
-        };
+        let subscribe_request = SubscribeRequest::from(&self.subscribe_option);
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
                 "Failed to send subscription request: {}",
