@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 
 use borsh::BorshDeserialize;
 use defillama_rs::{
@@ -156,7 +156,6 @@ impl JitoBellHandler {
             slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
                 filter_by_commitment: Some(true),
             } },
-            accounts: HashMap::new(),
             transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
                 vote: self.subscribe_option.vote,
                 failed: self.subscribe_option.failed,
@@ -165,13 +164,8 @@ impl JitoBellHandler {
                 account_exclude: self.subscribe_option.account_exclude.clone(),
                 account_required: self.subscribe_option.account_required.clone(),
             } },
-            transactions_status: HashMap::new(),
-            entry: HashMap::new(),
-            blocks: HashMap::new(),
-            blocks_meta: HashMap::new(),
             commitment: Some(self.subscribe_option.commitment as i32),
-            accounts_data_slice: vec![],
-            ping: None,
+            ..Default::default()
         };
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
