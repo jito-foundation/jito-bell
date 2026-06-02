@@ -50,9 +50,7 @@ impl JitoTransactionParser {
 
         let tx = tx_update.transaction?;
 
-        if let Some(transaction_signature) = parse_signature(&tx.signatures) {
-            parser.transaction_signature = transaction_signature;
-        }
+        parser.transaction_signature = parse_signature(&tx.signatures);
 
         let Some(message) = tx.message else {
             return Some(parser);
@@ -85,13 +83,11 @@ impl JitoTransactionParser {
     }
 }
 
-fn parse_signature(signatures: &[Vec<u8>]) -> Option<String> {
+fn parse_signature(signatures: &[Vec<u8>]) -> String {
     let signature_slice = &signatures[0];
     let mut slice = [0; 64];
     slice.copy_from_slice(&signature_slice[..64]);
-    let tx_signature = Signature::from(slice);
-
-    Some(tx_signature.to_string())
+    Signature::from(slice).to_string()
 }
 
 fn parse_account_keys(account_keys: &[Vec<u8>]) -> Vec<Pubkey> {
