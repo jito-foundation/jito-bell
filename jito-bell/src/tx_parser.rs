@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+type InstructionParserFn<T> = fn(&T, &[Pubkey]) -> Option<InstructionParser>;
+
 /// Parse Transaction
 #[derive(Debug)]
 pub struct JitoTransactionParser {
@@ -59,9 +61,10 @@ impl JitoTransactionParser {
         let account_keys = parse_account_keys(&message.account_keys);
 
         for instruction in &message.instructions {
-            if let Some(parsed_instruction) = parse_top_level_instruction(
+            if let Some(parsed_instruction) = parse_instruction(
                 instruction,
                 &account_keys,
+                InstructionScope::TopLevel,
                 &meta.log_messages,
                 &mut parser.events,
             ) {
@@ -71,9 +74,13 @@ impl JitoTransactionParser {
 
         for inner_instructions in meta.inner_instructions {
             for instruction in inner_instructions.instructions {
-                if let Some(parsed_instruction) =
-                    parse_inner_instruction(&instruction, &account_keys)
-                {
+                if let Some(parsed_instruction) = parse_instruction(
+                    &instruction,
+                    &account_keys,
+                    InstructionScope::Inner,
+                    &[],
+                    &mut parser.events,
+                ) {
                     parser.instructions.push(parsed_instruction);
                 }
             }
@@ -81,6 +88,12 @@ impl JitoTransactionParser {
 
         Some(parser)
     }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum InstructionScope {
+    TopLevel,
+    Inner,
 }
 
 fn parse_signature(signatures: &[Vec<u8>]) -> String {
@@ -101,15 +114,19 @@ fn parse_account_keys(account_keys: &[Vec<u8>]) -> Vec<Pubkey> {
         .collect()
 }
 
-fn parse_top_level_instruction<T: ParsableInstruction>(
+fn parse_instruction<T: ParsableInstruction>(
     instruction: &T,
     account_keys: &[Pubkey],
+    scope: InstructionScope,
     log_messages: &[String],
     parsed_events: &mut Vec<EventParser>,
 ) -> Option<InstructionParser> {
     let program_id = account_keys.get(instruction.program_id_index() as usize)?;
 
-    if program_id.eq(&JitoStewardInstruction::program_id()) {
+    if scope == InstructionScope::TopLevel && program_id.eq(&JitoStewardInstruction::program_id()) {
+        // This mirrors legacy behavior: Steward logs are transaction-level, but the
+        // old parser scanned them inside each top-level Steward instruction branch.
+        // Keep that here so multi-Steward transactions still emit repeated events.
         let parsed_instruction = JitoStewardInstruction::parse(instruction, account_keys)
             .map(InstructionParser::JitoSteward);
 
@@ -119,17 +136,10 @@ fn parse_top_level_instruction<T: ParsableInstruction>(
             }
         }
 
-        return parsed_instruction;
+        parsed_instruction
+    } else {
+        parse_known_instruction(instruction, account_keys)
     }
-
-    parse_known_instruction(instruction, account_keys)
-}
-
-fn parse_inner_instruction<T: ParsableInstruction>(
-    instruction: &T,
-    account_keys: &[Pubkey],
-) -> Option<InstructionParser> {
-    parse_known_instruction(instruction, account_keys)
 }
 
 fn parse_known_instruction<T: ParsableInstruction>(
@@ -137,21 +147,35 @@ fn parse_known_instruction<T: ParsableInstruction>(
     account_keys: &[Pubkey],
 ) -> Option<InstructionParser> {
     let program_id = account_keys.get(instruction.program_id_index() as usize)?;
+    let parsers: [(Pubkey, InstructionParserFn<T>); 3] = [
+        (
+            SplToken2022Program::program_id(),
+            |instruction, account_keys| {
+                SplToken2022Program::parse_spl_token_2022_program(instruction, account_keys)
+                    .map(InstructionParser::SplToken2022)
+            },
+        ),
+        (
+            SplStakePoolProgram::program_id(),
+            |instruction, account_keys| {
+                SplStakePoolProgram::parse_spl_stake_pool_program(instruction, account_keys)
+                    .map(InstructionParser::SplStakePool)
+            },
+        ),
+        (
+            JitoVaultProgram::program_id(),
+            |instruction, account_keys| {
+                JitoVaultProgram::parse_jito_vault_program(instruction, account_keys)
+                    .map(InstructionParser::JitoVault)
+            },
+        ),
+    ];
 
-    if program_id.eq(&SplToken2022Program::program_id()) {
-        return SplToken2022Program::parse_spl_token_2022_program(instruction, account_keys)
-            .map(InstructionParser::SplToken2022);
-    }
-
-    if program_id.eq(&SplStakePoolProgram::program_id()) {
-        return SplStakePoolProgram::parse_spl_stake_pool_program(instruction, account_keys)
-            .map(InstructionParser::SplStakePool);
-    }
-
-    if program_id.eq(&JitoVaultProgram::program_id()) {
-        return JitoVaultProgram::parse_jito_vault_program(instruction, account_keys)
-            .map(InstructionParser::JitoVault);
-    }
-
-    None
+    parsers.into_iter().find_map(|(known_program_id, parser)| {
+        if program_id.eq(&known_program_id) {
+            parser(instruction, account_keys)
+        } else {
+            None
+        }
+    })
 }
