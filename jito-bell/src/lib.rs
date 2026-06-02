@@ -76,8 +76,8 @@ impl JitoBellHandler {
         })
     }
 
-    /// Start heart beating
-    pub async fn heart_beat(&mut self) -> Result<(), JitoBellError> {
+    /// Workhorse / Entrypoint
+    pub async fn run(&mut self) -> Result<(), JitoBellError> {
         let mut client =
             GeyserGrpcClient::build_from_shared(self.subscribe_option.endpoint.clone())?
                 .x_token(self.subscribe_option.x_token.clone())?
@@ -101,11 +101,14 @@ impl JitoBellHandler {
                         self.handle_slot_update(update_slot.slot);
                     }
                     Some(UpdateOneof::Transaction(transaction)) => {
+                        // A parser is a list of instructions + events from the transaction that
+                        // are releveant to the notifier
                         let parser = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
 
                         debug!("Instruction: {:?}", parser.instructions);
 
+                        // This is where most of our work happens
                         if let Err(e) = self.send_notification(&parser).await {
                             error!("Error: {e}");
                         }
