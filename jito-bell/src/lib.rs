@@ -1,19 +1,13 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
-use borsh::BorshDeserialize;
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
 use log::{debug, error};
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{
-    clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig, program_pack::Pack,
-    pubkey::Pubkey,
-};
-use spl_token::state::Mint;
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig};
 use subscribe_option::SubscribeOption;
-use threshold_config::ThresholdConfig;
 use twitterust::{TwitterClient, TwitterCredentials};
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
@@ -22,7 +16,10 @@ use yellowstone_grpc_proto::{
 };
 
 use crate::{
-    config::JitoBellConfig, notification_info::Destination, tx_parser::JitoTransactionParser,
+    config::JitoBellConfig,
+    notification_info::Destination,
+    program::{EventConfig, Instruction, ProgramName},
+    tx_parser::JitoTransactionParser,
 };
 
 pub mod cli_args;
@@ -79,53 +76,6 @@ impl JitoBellHandler {
         })
     }
 
-    /// Sort thresholds
-    ///
-    /// - Sort values from high to low
-    pub(crate) fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
-        thresholds.sort_by(|a, b| {
-            b.value
-                .partial_cmp(&a.value)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-    }
-
-    /// Get divisor
-    ///
-    /// - Fetch Mint account to get decimals value, if fails return default 9
-    pub(crate) async fn divisor(&self, vrt: &Pubkey) -> f64 {
-        let decimals = match self.rpc_client.get_account(vrt).await {
-            Ok(mint_acc) => match Mint::unpack(&mint_acc.data) {
-                Ok(acc) => acc.decimals,
-                Err(_) => 9,
-            },
-            Err(_e) => 9,
-        };
-
-        10_f64.powi(decimals as i32)
-    }
-
-    /// Get VRT Symbol
-    ///
-    /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
-    pub(crate) async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
-        let meta_pubkey =
-            jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
-        let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
-            Ok(meta_acc) => {
-                match jito_vault_client::log::metadata::Metadata::deserialize(
-                    &mut meta_acc.data.as_slice(),
-                ) {
-                    Ok(meta) => meta.symbol,
-                    Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
-                }
-            }
-            Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
-        };
-
-        symbol
-    }
-
     /// Start heart beating
     pub async fn heart_beat(&mut self) -> Result<(), JitoBellError> {
         let mut client =
@@ -162,6 +112,7 @@ impl JitoBellHandler {
                     }
                     _ => continue,
                 },
+                // TODO: Don't break here -- reconnect properly
                 Err(error) => {
                     error!("Stream error: {error:?}");
                     break;
@@ -170,6 +121,41 @@ impl JitoBellHandler {
         }
 
         Ok(())
+    }
+
+    /// Send notification
+    pub async fn send_notification(
+        &mut self,
+        parser: &JitoTransactionParser,
+    ) -> Result<(), JitoBellError> {
+        handlers::send_notification(self, parser).await
+    }
+
+    pub(crate) fn get_instruction_config(
+        &self,
+        program_name: ProgramName,
+        instruction_name: impl Display,
+    ) -> Option<Instruction> {
+        self.config
+            .programs
+            .get(&program_name)
+            .and_then(|program_config| {
+                program_config
+                    .instructions
+                    .get(&instruction_name.to_string())
+                    .cloned()
+            })
+    }
+
+    pub(crate) fn get_event_config(
+        &self,
+        program_name: ProgramName,
+        event_name: impl Display,
+    ) -> Option<EventConfig> {
+        self.config
+            .programs
+            .get(&program_name)
+            .and_then(|program_config| program_config.events.get(&event_name.to_string()).cloned())
     }
 
     /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
