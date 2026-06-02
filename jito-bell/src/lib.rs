@@ -148,25 +148,7 @@ impl JitoBellHandler {
             match message {
                 Ok(msg) => match msg.update_oneof {
                     Some(UpdateOneof::Slot(update_slot)) => {
-                        let current_epoch = update_slot.slot / DEFAULT_SLOTS_PER_EPOCH;
-                        if current_epoch != self.epoch_metrics.epoch {
-                            datapoint_info!(
-                                "jito-bell-stats",
-                                ("epoch", self.epoch_metrics.epoch, i64),
-                                ("transaction", self.epoch_metrics.tx, i64),
-                                (
-                                    "success_notification",
-                                    self.epoch_metrics.notification.success,
-                                    i64
-                                ),
-                                (
-                                    "fail_notification",
-                                    self.epoch_metrics.notification.fail,
-                                    i64
-                                ),
-                            );
-                            self.epoch_metrics = EpochMetrics::new(current_epoch);
-                        }
+                        self.handle_slot_update(update_slot.slot);
                     }
                     Some(UpdateOneof::Transaction(transaction)) => {
                         let parser = JitoTransactionParser::new(transaction);
@@ -188,6 +170,29 @@ impl JitoBellHandler {
         }
 
         Ok(())
+    }
+
+    /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
+    fn handle_slot_update(&mut self, slot: u64) {
+        let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
+        if current_epoch != self.epoch_metrics.epoch {
+            datapoint_info!(
+                "jito-bell-stats",
+                ("epoch", self.epoch_metrics.epoch, i64),
+                ("transaction", self.epoch_metrics.tx, i64),
+                (
+                    "success_notification",
+                    self.epoch_metrics.notification.success,
+                    i64
+                ),
+                (
+                    "fail_notification",
+                    self.epoch_metrics.notification.fail,
+                    i64
+                ),
+            );
+            self.epoch_metrics = EpochMetrics::new(current_epoch);
+        }
     }
 
     /// Dispatch platform notifications
