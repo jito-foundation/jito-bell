@@ -10,18 +10,21 @@ use super::instruction::ParsableInstruction;
 /// Squads v4 Program
 #[derive(Debug)]
 pub enum SquadsV4Program {
+    ProposalCreate { ix: Instruction },
     ProposalActivate { ix: Instruction },
 }
 
 impl std::fmt::Display for SquadsV4Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            SquadsV4Program::ProposalCreate { ix: _ } => write!(f, "proposal_create"),
             SquadsV4Program::ProposalActivate { ix: _ } => write!(f, "proposal_activate"),
         }
     }
 }
 
 impl SquadsV4Program {
+    const PROPOSAL_CREATE: &'static str = "proposal_create";
     const PROPOSAL_ACTIVATE: &'static str = "proposal_activate";
 
     pub fn program_id() -> Pubkey {
@@ -32,12 +35,43 @@ impl SquadsV4Program {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SquadsV4Program> {
-        let discriminator = anchor_discriminator(Self::PROPOSAL_ACTIVATE);
-        if instruction.data().get(..8)? != discriminator {
-            return None;
+        let discriminator: [u8; 8] = instruction.data().get(..8)?.try_into().ok()?;
+
+        if discriminator == anchor_discriminator(Self::PROPOSAL_CREATE) {
+            return Self::parse_proposal_create_ix(instruction, account_keys);
         }
 
-        Self::parse_proposal_activate_ix(instruction, account_keys)
+        if discriminator == anchor_discriminator(Self::PROPOSAL_ACTIVATE) {
+            return Self::parse_proposal_activate_ix(instruction, account_keys);
+        }
+
+        None
+    }
+
+    fn parse_proposal_create_ix<T: ParsableInstruction>(
+        instruction: &T,
+        account_keys: &[Pubkey],
+    ) -> Option<Self> {
+        let accounts = instruction.accounts();
+        let multisig = *account_keys.get(*accounts.first()? as usize)?;
+        let proposal = *account_keys.get(*accounts.get(1)? as usize)?;
+        let creator = *account_keys.get(*accounts.get(2)? as usize)?;
+        let rent_payer = *account_keys.get(*accounts.get(3)? as usize)?;
+        let system_program = *account_keys.get(*accounts.get(4)? as usize)?;
+
+        let ix = Instruction {
+            program_id: Self::program_id(),
+            accounts: vec![
+                AccountMeta::new_readonly(multisig, false),
+                AccountMeta::new(proposal, false),
+                AccountMeta::new_readonly(creator, true),
+                AccountMeta::new(rent_payer, true),
+                AccountMeta::new_readonly(system_program, false),
+            ],
+            data: instruction.data().to_vec(),
+        };
+
+        Some(Self::ProposalCreate { ix })
     }
 
     fn parse_proposal_activate_ix<T: ParsableInstruction>(
@@ -94,6 +128,32 @@ mod tests {
             accounts,
             data,
         }
+    }
+
+    #[test]
+    fn test_proposal_create() {
+        let account_keys = create_test_pubkeys(6);
+        let mut data = anchor_discriminator("proposal_create").to_vec();
+        data.extend_from_slice(&[1, 2, 3, 4]);
+        let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data.clone());
+
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+
+        let Some(SquadsV4Program::ProposalCreate { ix }) = parsed else {
+            panic!("Expected ProposalCreate variant");
+        };
+        assert_eq!(ix.program_id, SquadsV4Program::program_id());
+        assert_eq!(ix.data, data);
+        assert_eq!(
+            ix.accounts,
+            vec![
+                AccountMeta::new_readonly(account_keys[0], false),
+                AccountMeta::new(account_keys[1], false),
+                AccountMeta::new_readonly(account_keys[2], true),
+                AccountMeta::new(account_keys[3], true),
+                AccountMeta::new_readonly(account_keys[4], false),
+            ]
+        );
     }
 
     #[test]

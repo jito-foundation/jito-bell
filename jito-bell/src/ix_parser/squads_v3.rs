@@ -10,18 +10,21 @@ use super::instruction::ParsableInstruction;
 /// Squads v3 Program
 #[derive(Debug)]
 pub enum SquadsV3Program {
+    CreateTransaction { ix: Instruction },
     ActivateTransaction { ix: Instruction },
 }
 
 impl std::fmt::Display for SquadsV3Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            SquadsV3Program::CreateTransaction { ix: _ } => write!(f, "create_transaction"),
             SquadsV3Program::ActivateTransaction { ix: _ } => write!(f, "activate_transaction"),
         }
     }
 }
 
 impl SquadsV3Program {
+    const CREATE_TRANSACTION: &'static str = "create_transaction";
     const ACTIVATE_TRANSACTION: &'static str = "activate_transaction";
 
     pub fn program_id() -> Pubkey {
@@ -32,12 +35,41 @@ impl SquadsV3Program {
         instruction: &T,
         account_keys: &[Pubkey],
     ) -> Option<SquadsV3Program> {
-        let discriminator = anchor_discriminator(Self::ACTIVATE_TRANSACTION);
-        if instruction.data().get(..8)? != discriminator {
-            return None;
+        let discriminator: [u8; 8] = instruction.data().get(..8)?.try_into().ok()?;
+
+        if discriminator == anchor_discriminator(Self::CREATE_TRANSACTION) {
+            return Self::parse_create_transaction_ix(instruction, account_keys);
         }
 
-        Self::parse_activate_transaction_ix(instruction, account_keys)
+        if discriminator == anchor_discriminator(Self::ACTIVATE_TRANSACTION) {
+            return Self::parse_activate_transaction_ix(instruction, account_keys);
+        }
+
+        None
+    }
+
+    fn parse_create_transaction_ix<T: ParsableInstruction>(
+        instruction: &T,
+        account_keys: &[Pubkey],
+    ) -> Option<Self> {
+        let accounts = instruction.accounts();
+        let multisig = *account_keys.get(*accounts.first()? as usize)?;
+        let transaction = *account_keys.get(*accounts.get(1)? as usize)?;
+        let creator = *account_keys.get(*accounts.get(2)? as usize)?;
+        let system_program = *account_keys.get(*accounts.get(3)? as usize)?;
+
+        let ix = Instruction {
+            program_id: Self::program_id(),
+            accounts: vec![
+                AccountMeta::new(multisig, false),
+                AccountMeta::new(transaction, false),
+                AccountMeta::new(creator, true),
+                AccountMeta::new_readonly(system_program, false),
+            ],
+            data: instruction.data().to_vec(),
+        };
+
+        Some(Self::CreateTransaction { ix })
     }
 
     fn parse_activate_transaction_ix<T: ParsableInstruction>(
@@ -94,6 +126,31 @@ mod tests {
             accounts,
             data,
         }
+    }
+
+    #[test]
+    fn test_create_transaction() {
+        let account_keys = create_test_pubkeys(5);
+        let mut data = anchor_discriminator("create_transaction").to_vec();
+        data.extend_from_slice(&[1, 2, 3, 4]);
+        let instruction = create_compiled_instruction(4, vec![0, 1, 2, 3], data.clone());
+
+        let parsed = SquadsV3Program::parse_squads_v3_program(&instruction, &account_keys);
+
+        let Some(SquadsV3Program::CreateTransaction { ix }) = parsed else {
+            panic!("Expected CreateTransaction variant");
+        };
+        assert_eq!(ix.program_id, SquadsV3Program::program_id());
+        assert_eq!(ix.data, data);
+        assert_eq!(
+            ix.accounts,
+            vec![
+                AccountMeta::new(account_keys[0], false),
+                AccountMeta::new(account_keys[1], false),
+                AccountMeta::new(account_keys[2], true),
+                AccountMeta::new_readonly(account_keys[3], false),
+            ]
+        );
     }
 
     #[test]
