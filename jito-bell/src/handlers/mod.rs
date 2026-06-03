@@ -115,6 +115,12 @@ pub(crate) async fn send_notification(
                     .await?;
                 }
             }
+            InstructionParser::SquadsV3(_) => {
+                debug!("Squads v3");
+            }
+            InstructionParser::SquadsV4(_) => {
+                debug!("Squads v4");
+            }
         }
     }
 

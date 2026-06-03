@@ -1,9 +1,7 @@
-use std::str::FromStr;
-
 use base64::{engine::general_purpose::STANDARD, Engine};
 use borsh::BorshDeserialize;
 use log::error;
-use solana_pubkey::Pubkey;
+use solana_pubkey::{pubkey, Pubkey};
 
 use crate::events::jito_steward::{
     AutoAddValidatorEvent, AutoRemoveValidatorEvent, DecreaseComponents, DirectedRebalanceEvent,
@@ -46,7 +44,7 @@ impl std::fmt::Display for JitoStewardEvent {
 impl JitoStewardEvent {
     /// Retrieve Program ID of Jito Steward Program
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8").unwrap()
+        pubkey!("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8")
     }
 
     /// Parse a log message and extract any events

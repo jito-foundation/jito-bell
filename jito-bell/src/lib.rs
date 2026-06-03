@@ -103,13 +103,13 @@ impl JitoBellHandler {
                     Some(UpdateOneof::Transaction(transaction)) => {
                         // A parser is a list of instructions + events from the transaction that
                         // are releveant to the notifier
-                        let parser = JitoTransactionParser::new(transaction);
+                        let parsed_tx = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
 
-                        debug!("Instruction: {:?}", parser.instructions);
+                        debug!("Instruction: {:?}", parsed_tx.instructions);
 
                         // This is where most of our work happens
-                        if let Err(e) = self.send_notification(&parser).await {
+                        if let Err(e) = self.send_notification(&parsed_tx).await {
                             error!("Error: {e}");
                         }
                     }
