@@ -1,4 +1,8 @@
-use yellowstone_grpc_proto::geyser::CommitmentLevel;
+use maplit::hashmap;
+use yellowstone_grpc_proto::{
+    geyser::{CommitmentLevel, SubscribeRequestFilterSlots},
+    prelude::{SubscribeRequest, SubscribeRequestFilterTransactions},
+};
 
 use crate::cli_args::Args;
 
@@ -87,6 +91,26 @@ impl SubscribeOption {
             twitter_api_secret: arg.twitter_api_secret,
             twitter_access_token: arg.twitter_access_token,
             twitter_access_token_secret: arg.twitter_access_token_secret,
+        }
+    }
+}
+
+impl From<&SubscribeOption> for SubscribeRequest {
+    fn from(opt: &SubscribeOption) -> Self {
+        SubscribeRequest {
+            slots: hashmap! { "slots".to_owned() => SubscribeRequestFilterSlots {
+                filter_by_commitment: Some(true),
+            } },
+            transactions: hashmap! { "transactions".to_owned() => SubscribeRequestFilterTransactions {
+                vote: opt.vote,
+                failed: opt.failed,
+                signature: opt.signature.clone(),
+                account_include: opt.account_include.clone(),
+                account_exclude: opt.account_exclude.clone(),
+                account_required: opt.account_required.clone(),
+            } },
+            commitment: Some(opt.commitment as i32),
+            ..Default::default()
         }
     }
 }

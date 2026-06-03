@@ -1,42 +1,22 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{fmt::Display, path::PathBuf};
 
-use borsh::BorshDeserialize;
-use defillama_rs::{
-    models::{Chain, Token},
-    DefiLlamaClient,
-};
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
-use ix_parser::{
-    stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
-};
-use jito_vault_client::accounts::Vault;
 use log::{debug, error};
-use maplit::hashmap;
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{
-    clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig, program_pack::Pack,
-    pubkey::Pubkey,
-};
-use spl_token::state::Mint;
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig};
 use subscribe_option::SubscribeOption;
-use threshold_config::ThresholdConfig;
 use twitterust::{TwitterClient, TwitterCredentials};
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
-    geyser::SubscribeRequestFilterSlots,
-    prelude::{
-        subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
-    },
+    prelude::{subscribe_update::UpdateOneof, SubscribeRequest},
     tonic::transport::ClientTlsConfig,
 };
 
 use crate::{
     config::JitoBellConfig,
-    event_parser::{jito_steward::JitoStewardEvent, EventParser},
-    ix_parser::{jito_steward::JitoStewardInstruction, InstructionParser},
     notification_info::Destination,
     program::{EventConfig, Instruction, ProgramName},
     tx_parser::JitoTransactionParser,
@@ -47,6 +27,7 @@ pub mod config;
 mod error;
 pub mod event_parser;
 pub mod events;
+mod handlers;
 pub mod ix_parser;
 mod metrics;
 pub mod multi_writer;
@@ -95,55 +76,8 @@ impl JitoBellHandler {
         })
     }
 
-    /// Sort thresholds
-    ///
-    /// - Sort values from high to low
-    fn sort_thresholds(&self, thresholds: &mut [ThresholdConfig]) {
-        thresholds.sort_by(|a, b| {
-            b.value
-                .partial_cmp(&a.value)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-    }
-
-    /// Get divisor
-    ///
-    /// - Fetch Mint account to get decimals value, if fails return default 9
-    async fn divisor(&self, vrt: &Pubkey) -> f64 {
-        let decimals = match self.rpc_client.get_account(vrt).await {
-            Ok(mint_acc) => match Mint::unpack(&mint_acc.data) {
-                Ok(acc) => acc.decimals,
-                Err(_) => 9,
-            },
-            Err(_e) => 9,
-        };
-
-        10_f64.powi(decimals as i32)
-    }
-
-    /// Get VRT Symbol
-    ///
-    /// - Fetch Metadata account to get symbol value, if fails return default "VRT"
-    async fn vrt_symbol(&self, vrt: &Pubkey) -> String {
-        let meta_pubkey =
-            jito_vault_sdk::inline_mpl_token_metadata::pda::find_metadata_account(vrt).0;
-        let symbol = match self.rpc_client.get_account(&meta_pubkey).await {
-            Ok(meta_acc) => {
-                match jito_vault_client::log::metadata::Metadata::deserialize(
-                    &mut meta_acc.data.as_slice(),
-                ) {
-                    Ok(meta) => meta.symbol,
-                    Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
-                }
-            }
-            Err(_e) => DEFAULT_VRT_SYMBOL.to_string(),
-        };
-
-        symbol
-    }
-
-    /// Start heart beating
-    pub async fn heart_beat(&mut self) -> Result<(), JitoBellError> {
+    /// Workhorse / Entrypoint
+    pub async fn run(&mut self) -> Result<(), JitoBellError> {
         let mut client =
             GeyserGrpcClient::build_from_shared(self.subscribe_option.endpoint.clone())?
                 .x_token(self.subscribe_option.x_token.clone())?
@@ -152,27 +86,7 @@ impl JitoBellHandler {
                 .await?;
         let (mut subscribe_tx, mut stream) = client.subscribe().await?;
 
-        let subscribe_request = SubscribeRequest {
-            slots: hashmap! { "".to_owned() => SubscribeRequestFilterSlots {
-                filter_by_commitment: Some(true),
-            } },
-            accounts: HashMap::new(),
-            transactions: hashmap! { "".to_owned() => SubscribeRequestFilterTransactions {
-                vote: self.subscribe_option.vote,
-                failed: self.subscribe_option.failed,
-                signature: self.subscribe_option.signature.clone(),
-                account_include: self.subscribe_option.account_include.clone(),
-                account_exclude: self.subscribe_option.account_exclude.clone(),
-                account_required: self.subscribe_option.account_required.clone(),
-            } },
-            transactions_status: HashMap::new(),
-            entry: HashMap::new(),
-            blocks: HashMap::new(),
-            blocks_meta: HashMap::new(),
-            commitment: Some(self.subscribe_option.commitment as i32),
-            accounts_data_slice: vec![],
-            ping: None,
-        };
+        let subscribe_request = SubscribeRequest::from(&self.subscribe_option);
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
             return Err(JitoBellError::Subscription(format!(
                 "Failed to send subscription request: {}",
@@ -184,38 +98,24 @@ impl JitoBellHandler {
             match message {
                 Ok(msg) => match msg.update_oneof {
                     Some(UpdateOneof::Slot(update_slot)) => {
-                        let current_epoch = update_slot.slot / DEFAULT_SLOTS_PER_EPOCH;
-                        if current_epoch != self.epoch_metrics.epoch {
-                            datapoint_info!(
-                                "jito-bell-stats",
-                                ("epoch", self.epoch_metrics.epoch, i64),
-                                ("transaction", self.epoch_metrics.tx, i64),
-                                (
-                                    "success_notification",
-                                    self.epoch_metrics.notification.success,
-                                    i64
-                                ),
-                                (
-                                    "fail_notification",
-                                    self.epoch_metrics.notification.fail,
-                                    i64
-                                ),
-                            );
-                            self.epoch_metrics = EpochMetrics::new(current_epoch);
-                        }
+                        self.handle_slot_update(update_slot.slot);
                     }
                     Some(UpdateOneof::Transaction(transaction)) => {
+                        // A parser is a list of instructions + events from the transaction that
+                        // are releveant to the notifier
                         let parser = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
 
                         debug!("Instruction: {:?}", parser.instructions);
 
+                        // This is where most of our work happens
                         if let Err(e) = self.send_notification(&parser).await {
                             error!("Error: {e}");
                         }
                     }
                     _ => continue,
                 },
+                // TODO: Don't break here -- reconnect properly
                 Err(error) => {
                     error!("Stream error: {error:?}");
                     break;
@@ -231,691 +131,63 @@ impl JitoBellHandler {
         &mut self,
         parser: &JitoTransactionParser,
     ) -> Result<(), JitoBellError> {
-        for program in &parser.instructions {
-            match program {
-                InstructionParser::SplToken2022(_) => {
-                    debug!("Token 2022");
-                }
-                InstructionParser::SplStakePool(spl_stake_program) => {
-                    debug!("SPL Stake Pool");
-
-                    let spl_program_str = spl_stake_program.to_string();
-
-                    let instruction_opt = self
-                        .config
-                        .programs
-                        .get(&ProgramName::SplStakePool)
-                        .and_then(|program_config| {
-                            program_config.instructions.get(&spl_program_str).cloned()
-                        });
-
-                    if let Some(instruction) = instruction_opt {
-                        self.handle_spl_stake_pool_program(parser, spl_stake_program, &instruction)
-                            .await?;
-                    }
-                }
-                InstructionParser::JitoVault(jito_vault_program) => {
-                    debug!("Jito Vault");
-
-                    let jito_vault_program_str = jito_vault_program.to_string();
-
-                    let instruction_opt =
-                        self.config.programs.get(&ProgramName::JitoVault).and_then(
-                            |program_config| {
-                                program_config
-                                    .instructions
-                                    .get(&jito_vault_program_str)
-                                    .cloned()
-                            },
-                        );
-
-                    if let Some(instruction) = instruction_opt {
-                        self.handle_jito_vault_program(parser, jito_vault_program, &instruction)
-                            .await?;
-                    }
-                }
-                InstructionParser::JitoSteward(jito_steward_instruction) => {
-                    debug!("Jito Steward");
-
-                    let jito_steward_program_str = jito_steward_instruction.to_string();
-
-                    let instruction_opt = self
-                        .config
-                        .programs
-                        .get(&ProgramName::JitoSteward)
-                        .and_then(|program_config| {
-                            program_config
-                                .instructions
-                                .get(&jito_steward_program_str)
-                                .cloned()
-                        });
-
-                    if let Some(instruction) = instruction_opt {
-                        self.handle_jito_steward_program(
-                            parser,
-                            jito_steward_instruction,
-                            &instruction,
-                        )
-                        .await?;
-                    }
-                }
-            }
-        }
-
-        for event in &parser.events {
-            match event {
-                EventParser::JitoSteward(jito_steward_event) => {
-                    let jito_steward_event_str = jito_steward_event.to_string();
-
-                    let event_opt = self
-                        .config
-                        .programs
-                        .get(&ProgramName::JitoSteward)
-                        .and_then(|program_config| {
-                            program_config.events.get(&jito_steward_event_str).cloned()
-                        });
-
-                    if let Some(event_config) = event_opt {
-                        let (description, amount, unit) = match jito_steward_event {
-                            JitoStewardEvent::StateTransition(state_transition) => {
-                                let desc = format!(
-                                    "Steward state transition occurred: {} → {}",
-                                    state_transition.previous_state, state_transition.new_state
-                                );
-                                (desc, None, None)
-                            }
-                            JitoStewardEvent::Rebalance(rebalance) => {
-                                let (change_type, amount_lamports) =
-                                    if rebalance.increase_lamports > 0 {
-                                        ("Stake Increase", rebalance.increase_lamports)
-                                    } else {
-                                        (
-                                            "Stake Decrease",
-                                            rebalance.decrease_components.total_unstake_lamports,
-                                        )
-                                    };
-
-                                let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
-                                let type_emoji = if rebalance.increase_lamports > 0 {
-                                    "📈"
-                                } else {
-                                    "📉"
-                                };
-                                let validator_full = rebalance.vote_account.to_string();
-                                let validator_url = format!(
-                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
-                                );
-
-                                let desc = format!(
-                                    "{} *{}* | {:.2} SOL\n\
-                                    \n\
-                                    Validator: <{}|{}>\n\
-                                    Epoch: {} | Type: {:?}",
-                                    type_emoji,
-                                    change_type,
-                                    amount_sol,
-                                    validator_url,
-                                    validator_full,
-                                    rebalance.epoch,
-                                    rebalance.rebalance_type_tag
-                                );
-
-                                (desc, Some(amount_sol), Some("SOL"))
-                            }
-                            JitoStewardEvent::DirectedRebalance(rebalance) => {
-                                let (change_type, amount_lamports) =
-                                    if rebalance.increase_lamports > 0 {
-                                        ("Stake Increase", rebalance.increase_lamports)
-                                    } else {
-                                        ("Stake Decrease", rebalance.decrease_lamports)
-                                    };
-
-                                let amount_sol = amount_lamports as f64 / 1_000_000_000.0;
-                                let type_emoji = if rebalance.increase_lamports > 0 {
-                                    "📈"
-                                } else {
-                                    "📉"
-                                };
-
-                                let validator_full = rebalance.vote_account.to_string();
-                                let validator_url = format!(
-                                    "https://www.jito.network/stakenet/steward/{validator_full}/"
-                                );
-
-                                let desc = format!(
-                                    "{} *{}* | {:.2} SOL\n\
-                                    \n\
-                                    Validator: <{}|{}>\n\
-                                    Epoch: {} | Type: {:?}",
-                                    type_emoji,
-                                    change_type,
-                                    amount_sol,
-                                    validator_url,
-                                    validator_full,
-                                    rebalance.epoch,
-                                    rebalance.rebalance_type_tag
-                                );
-
-                                (desc, Some(amount_sol), Some("SOL"))
-                            }
-                            _ => {
-                                debug!("Unhandled event type: {:?}", jito_steward_event);
-                                ("Unknown event".to_string(), None, None)
-                            }
-                        };
-                        match event_config {
-                            EventConfig::WithThresholds { thresholds } => {
-                                if let Some(amt) = amount {
-                                    let matching_threshold = thresholds
-                                        .iter()
-                                        .filter(|t| amt >= t.value)
-                                        .max_by(|a, b| {
-                                            a.value
-                                                .partial_cmp(&b.value)
-                                                .unwrap_or(std::cmp::Ordering::Equal)
-                                        });
-
-                                    if let Some(threshold) = matching_threshold {
-                                        let final_desc =
-                                            if threshold.notification.description.is_empty() {
-                                                description.clone()
-                                            } else {
-                                                format!(
-                                                    "{}\n\n{}",
-                                                    threshold.notification.description, description
-                                                )
-                                            };
-                                        self.dispatch_platform_notifications(
-                                            &threshold.notification.destinations,
-                                            &final_desc,
-                                            Some(amt),
-                                            unit,
-                                            &parser.transaction_signature,
-                                        )
-                                        .await?;
-                                    }
-                                }
-                            }
-                            EventConfig::Simple {
-                                destinations,
-                                description: config_desc,
-                            } => {
-                                // Use config description if provided, otherwise use generated description
-                                let final_desc = if config_desc.is_empty() {
-                                    description
-                                } else {
-                                    format!("{}\n\n{}", config_desc, description)
-                                };
-
-                                self.dispatch_platform_notifications(
-                                    &destinations,
-                                    &final_desc,
-                                    amount,
-                                    unit,
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
+        handlers::send_notification(self, parser).await
     }
 
-    /// Handle SPL Stake Pool Program
-    ///
-    /// - Notify only once for the first matching threshold.
-    async fn handle_spl_stake_pool_program(
-        &mut self,
-        parser: &JitoTransactionParser,
-        spl_stake_program: &SplStakePoolProgram,
-        instruction: &Instruction,
-    ) -> Result<(), JitoBellError> {
-        debug!("SPL Stake Program: {}", spl_stake_program);
-
-        match spl_stake_program {
-            SplStakePoolProgram::IncreaseValidatorStake { ix, amount } => {
-                let stake_pool_info = &ix.accounts[0];
-                let _staker_info = &ix.accounts[1];
-                let _withdraw_authority_info = &ix.accounts[2];
-                let _validator_list_info = &ix.accounts[3];
-                let _reserve_stake_account_info = &ix.accounts[4];
-                let _maybe_ephemeral_stake_account_info = &ix.accounts[5];
-                let _validator_stake_account_info = &ix.accounts[6];
-                let _validator_vote_account_info = &ix.accounts[7];
-                let _clock_info = &ix.accounts[8];
-                let _rent_info = &ix.accounts[9];
-                let _stake_history_info = &ix.accounts[10];
-                let _stake_config_info = &ix.accounts[11];
-                let _system_program_info = &ix.accounts[12];
-                let _stake_program_info = &ix.accounts[13];
-
-                if let Some(mut stake_pools) = instruction.stake_pools.clone() {
-                    if let Some(alert_config) =
-                        stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
-                    {
-                        self.sort_thresholds(alert_config.thresholds.as_mut());
-                        for threshold in alert_config.thresholds.iter() {
-                            if *amount > threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(*amount),
-                                    Some("SOL"),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::DepositStake { ix } => {
-                let _stake_pool_info = &ix.accounts[0];
-                let _validator_list_info = &ix.accounts[1];
-                let _stake_deposit_authority_info = &ix.accounts[2];
-                let withdraw_authority_info = &ix.accounts[3];
-                let _stake_info = &ix.accounts[4];
-                let _validator_stake_account_info = &ix.accounts[5];
-                let _reserve_stake_account_info = &ix.accounts[6];
-                let dest_user_pool_info = &ix.accounts[7];
-                let _manager_fee_info = &ix.accounts[8];
-                let _referrer_fee_info = &ix.accounts[9];
-                let pool_mint_info = &ix.accounts[10];
-
-                if let Some(mut lsts) = instruction.lsts.clone() {
-                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        for program in &parser.instructions {
-                            if let InstructionParser::SplToken2022(program) = program {
-                                match program {
-                                    SplToken2022Program::MintTo { ix, amount } => {
-                                        let mint_info = &ix.accounts[0];
-                                        let destination_account_info = &ix.accounts[1];
-                                        let owner_info = &ix.accounts[2];
-
-                                        if mint_info.pubkey.eq(&pool_mint_info.pubkey)
-                                            && destination_account_info
-                                                .pubkey
-                                                .eq(&dest_user_pool_info.pubkey)
-                                            && owner_info.pubkey.eq(&withdraw_authority_info.pubkey)
-                                        {
-                                            self.sort_thresholds(alert_config.thresholds.as_mut());
-                                            for threshold in alert_config.thresholds.iter() {
-                                                if *amount as f64 > threshold.value {
-                                                    self.dispatch_platform_notifications(
-                                                        &threshold.notification.destinations,
-                                                        &threshold.notification.description,
-                                                        Some(*amount as f64),
-                                                        Some("SOL"),
-                                                        &parser.transaction_signature,
-                                                    )
-                                                    .await?;
-                                                    break;
-                                                }
-                                            }
-
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::WithdrawStake {
-                ix,
-                minimum_lamports_out,
-            } => {
-                let _stake_pool_info = &ix.accounts[0];
-                let _validator_list_info = &ix.accounts[1];
-                let _withdraw_authority_info = &ix.accounts[2];
-                let _stake_split_from = &ix.accounts[3];
-                let _stake_split_to = &ix.accounts[4];
-                let _user_stake_authority_info = &ix.accounts[5];
-                let _user_transfer_authority_info = &ix.accounts[6];
-                let _burn_from_pool_info = &ix.accounts[7];
-                let _manager_fee_info = &ix.accounts[8];
-                let pool_mint_info = &ix.accounts[9];
-
-                if let Some(mut lsts) = instruction.lsts.clone() {
-                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        self.sort_thresholds(alert_config.thresholds.as_mut());
-                        for threshold in alert_config.thresholds.iter() {
-                            if *minimum_lamports_out >= threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(*minimum_lamports_out),
-                                    Some("SOL"),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::DepositSol { ix, amount } => {
-                let _stake_pool_info = &ix.accounts[0];
-                let _withdraw_authority_info = &ix.accounts[1];
-                let _reserve_stake_account_info = &ix.accounts[2];
-                let _from_user_lamports_info = &ix.accounts[3];
-                let _dest_user_pool_info = &ix.accounts[4];
-                let _manager_fee_info = &ix.accounts[5];
-                let _referrer_fee_info = &ix.accounts[6];
-                let pool_mint_info = &ix.accounts[7];
-
-                if let Some(mut lsts) = instruction.lsts.clone() {
-                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        self.sort_thresholds(alert_config.thresholds.as_mut());
-                        for threshold in alert_config.thresholds.iter() {
-                            if *amount >= threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(*amount),
-                                    Some("SOL"),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::WithdrawSol { ix, amount } => {
-                let _stake_pool_info = &ix.accounts[0];
-                let _withdraw_authority_info = &ix.accounts[1];
-                let _user_transfer_authority_info = &ix.accounts[2];
-                let _burn_from_pool_info = &ix.accounts[3];
-                let _reserve_stake_info = &ix.accounts[4];
-                let _destination_lamports_info = &ix.accounts[5];
-                let _manager_fee_info = &ix.accounts[6];
-                let pool_mint_info = &ix.accounts[7];
-
-                if let Some(mut lsts) = instruction.lsts.clone() {
-                    if let Some(alert_config) = lsts.get_mut(&pool_mint_info.pubkey.to_string()) {
-                        self.sort_thresholds(alert_config.thresholds.as_mut());
-                        for threshold in alert_config.thresholds.iter() {
-                            if *amount >= threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(*amount),
-                                    Some("SOL"),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::DecreaseValidatorStakeWithReserve { ix, amount } => {
-                let stake_pool_info = &ix.accounts[0];
-                let _staker_info = &ix.accounts[1];
-                let _stake_pool_withdraw_authority_info = &ix.accounts[2];
-                let _validator_list_info = &ix.accounts[3];
-                let _reserve_stake_account_info = &ix.accounts[4];
-                let _validator_stake_info = &ix.accounts[5];
-                let _transient_stake_info = &ix.accounts[6];
-                let _clock_info = &ix.accounts[7];
-                let _stake_history_info = &ix.accounts[8];
-                let _system_program_info = &ix.accounts[9];
-                let _stake_program_info = &ix.accounts[10];
-
-                if let Some(mut stake_pools) = instruction.stake_pools.clone() {
-                    if let Some(alert_config) =
-                        stake_pools.get_mut(&stake_pool_info.pubkey.to_string())
-                    {
-                        self.sort_thresholds(alert_config.thresholds.as_mut());
-                        for threshold in alert_config.thresholds.iter() {
-                            if *amount > threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(*amount),
-                                    Some("SOL"),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            SplStakePoolProgram::Initialize
-            | SplStakePoolProgram::AddValidatorToPool
-            | SplStakePoolProgram::RemoveValidatorFromPool
-            | SplStakePoolProgram::DecreaseValidatorStake
-            | SplStakePoolProgram::SetPreferredValidator
-            | SplStakePoolProgram::UpdateValidatorListBalance
-            | SplStakePoolProgram::UpdateStakePoolBalance
-            | SplStakePoolProgram::CleanupRemovedValidatorEntries
-            | SplStakePoolProgram::SetManager
-            | SplStakePoolProgram::SetFee
-            | SplStakePoolProgram::SetStaker
-            | SplStakePoolProgram::SetFundingAuthority
-            | SplStakePoolProgram::CreateTokenMetadata
-            | SplStakePoolProgram::UpdateTokenMetadata
-            | SplStakePoolProgram::IncreaseAdditionalValidatorStake
-            | SplStakePoolProgram::DecreaseAdditionalValidatorStake
-            | SplStakePoolProgram::Redelegate
-            | SplStakePoolProgram::DepositStakeWithSlippage
-            | SplStakePoolProgram::WithdrawStakeWithSlippage
-            | SplStakePoolProgram::DepositSolWithSlippage
-            | SplStakePoolProgram::WithdrawSolWithSlippage => {
-                unreachable!()
-            }
-        }
-
-        Ok(())
+    pub(crate) fn get_instruction_config(
+        &self,
+        program_name: ProgramName,
+        instruction_name: impl Display,
+    ) -> Option<Instruction> {
+        self.config
+            .programs
+            .get(&program_name)
+            .and_then(|program_config| {
+                program_config
+                    .instructions
+                    .get(&instruction_name.to_string())
+                    .cloned()
+            })
     }
 
-    /// Handle Jito Vault Program
-    ///
-    /// - Notify only once for the first matching threshold.
-    async fn handle_jito_vault_program(
-        &mut self,
-        parser: &JitoTransactionParser,
-        jito_vault_program: &JitoVaultProgram,
-        instruction: &Instruction,
-    ) -> Result<(), JitoBellError> {
-        debug!("Jito Vault Program: {}", jito_vault_program);
-
-        match jito_vault_program {
-            JitoVaultProgram::MintTo { ix, min_amount_out } => {
-                let _config_info = &ix.accounts[0];
-                let _vault_info = &ix.accounts[1];
-                let vrt_mint_info = &ix.accounts[2];
-                let _depositor_info = &ix.accounts[3];
-                let _depositor_token_account = &ix.accounts[4];
-                let _vault_token_account = &ix.accounts[5];
-                let _depositor_vrt_token_account = &ix.accounts[6];
-                let _vault_fee_token_account = &ix.accounts[7];
-
-                if let Some(vrts) = instruction.vrts.clone() {
-                    if let Some((address, vrt_config)) =
-                        vrts.get_key_value(&vrt_mint_info.pubkey.to_string())
-                    {
-                        let vrt = Pubkey::from_str(address).unwrap();
-                        let divisor = self.divisor(&vrt).await;
-                        let symbol = self.vrt_symbol(&vrt).await;
-
-                        let mut thresholds = vrt_config.thresholds.clone();
-                        self.sort_thresholds(&mut thresholds);
-                        for threshold in vrt_config.thresholds.iter() {
-                            let min_amount_out = *min_amount_out as f64 / divisor;
-                            if min_amount_out >= threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(min_amount_out),
-                                    Some(&symbol),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            JitoVaultProgram::EnqueueWithdrawal { ix, amount } => {
-                let _config_info = &ix.accounts[0];
-                let vault_info = &ix.accounts[1];
-                let _vault_staker_withdrawal_ticket_info = &ix.accounts[2];
-                let _vault_staker_withdrawal_ticket_token_account_info = &ix.accounts[3];
-                let _staker_info = &ix.accounts[4];
-                let _staker_vrt_token_account_info = &ix.accounts[5];
-                let _base_info = &ix.accounts[6];
-
-                let vault_acc = self.rpc_client.get_account(&vault_info.pubkey).await?;
-                let vault = Vault::deserialize(&mut vault_acc.data.as_slice())?;
-
-                // VRT amount
-                if let Some(ref vrts) = instruction.vrts {
-                    if let Some((address, vrt_config)) =
-                        vrts.get_key_value(&vault.vrt_mint.to_string())
-                    {
-                        let vrt = Pubkey::from_str(address).unwrap();
-                        let divisor = self.divisor(&vrt).await;
-                        let symbol = self.vrt_symbol(&vrt).await;
-
-                        let mut thresholds = vrt_config.thresholds.clone();
-                        self.sort_thresholds(&mut thresholds);
-                        for threshold in vrt_config.thresholds.iter() {
-                            let amount = *amount as f64 / divisor;
-                            if amount >= threshold.value {
-                                self.dispatch_platform_notifications(
-                                    &threshold.notification.destinations,
-                                    &threshold.notification.description,
-                                    Some(amount),
-                                    Some(&symbol),
-                                    &parser.transaction_signature,
-                                )
-                                .await?;
-                                break;
-                            }
-                        }
-
-                        // USD amount
-                        if !vrt_config.usd_thresholds.is_empty() {
-                            let client = DefiLlamaClient::new();
-                            let vrt = Token::new(Chain::Solana, vrt.to_string());
-                            let prices = client.get_price(&vrt).await?;
-
-                            if let Some(usd_price) = prices.coins.values().last() {
-                                let mut sorted_usd_thresholds = vrt_config.usd_thresholds.clone();
-                                sorted_usd_thresholds.sort_by(|a, b| {
-                                    b.value
-                                        .partial_cmp(&a.value)
-                                        .unwrap_or(std::cmp::Ordering::Equal)
-                                });
-
-                                for usd_threshold in sorted_usd_thresholds.iter() {
-                                    let amount = *amount as f64 / 1_000_000_000_f64;
-                                    let amount = (amount * usd_price.price) as u64;
-
-                                    if amount >= usd_threshold.value {
-                                        self.dispatch_platform_notifications(
-                                            &usd_threshold.notification.destinations,
-                                            &usd_threshold.notification.description,
-                                            Some(amount as f64),
-                                            Some("USD"),
-                                            &parser.transaction_signature,
-                                        )
-                                        .await?;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            JitoVaultProgram::InitializeConfig
-            | JitoVaultProgram::InitializeVault
-            | JitoVaultProgram::InitializeVaultWithMint
-            | JitoVaultProgram::InitializeVaultOperatorDelegation
-            | JitoVaultProgram::InitializeVaultNcnTicket
-            | JitoVaultProgram::InitializeVaultNcnSlasherOperatorTicket
-            | JitoVaultProgram::InitializeVaultNcnSlasherTicket
-            | JitoVaultProgram::WarmupVaultNcnTicket
-            | JitoVaultProgram::CooldownVaultNcnTicket
-            | JitoVaultProgram::WarmupVaultNcnSlasherTicket
-            | JitoVaultProgram::CooldownVaultNcnSlasherTicket
-            | JitoVaultProgram::ChangeWithdrawalTicketOwner
-            | JitoVaultProgram::BurnWithdrawalTicket
-            | JitoVaultProgram::SetDepositCapacity
-            | JitoVaultProgram::SetFees
-            | JitoVaultProgram::SetProgramFee
-            | JitoVaultProgram::SetProgramFeeWallet
-            | JitoVaultProgram::SetIsPaused
-            | JitoVaultProgram::DelegateTokenAccount
-            | JitoVaultProgram::SetAdmin
-            | JitoVaultProgram::SetSecondaryAdmin
-            | JitoVaultProgram::AddDelegation
-            | JitoVaultProgram::CooldownDelegation
-            | JitoVaultProgram::UpdateVaultBalance
-            | JitoVaultProgram::InitializeVaultUpdateStateTracker
-            | JitoVaultProgram::CrankVaultUpdateStateTracker
-            | JitoVaultProgram::CloseVaultUpdateStateTracker
-            | JitoVaultProgram::CreateTokenMetadata
-            | JitoVaultProgram::UpdateTokenMetadata
-            | JitoVaultProgram::SetConfigAdmin => {
-                unreachable!()
-            }
-        }
-
-        Ok(())
+    pub(crate) fn get_event_config(
+        &self,
+        program_name: ProgramName,
+        event_name: impl Display,
+    ) -> Option<EventConfig> {
+        self.config
+            .programs
+            .get(&program_name)
+            .and_then(|program_config| program_config.events.get(&event_name.to_string()).cloned())
     }
 
-    /// Sends a notification for each matching `CopyDirectedStakeTargets` instruction
-    /// that includes notification metadata.
-    async fn handle_jito_steward_program(
-        &mut self,
-        parser: &JitoTransactionParser,
-        jito_steward_instruction: &JitoStewardInstruction,
-        instruction: &Instruction,
-    ) -> Result<(), JitoBellError> {
-        debug!("Jito Steward Instruction: {jito_steward_instruction}");
-
-        if let JitoStewardInstruction::CopyDirectedStakeTargets {
-            ix: _,
-            vote_pubkey: _,
-            total_target_lamports,
-            validator_list_index: _,
-        } = jito_steward_instruction
-        {
-            if let Some(ref notification_info) = instruction.notification_info {
-                self.dispatch_platform_notifications(
-                    &notification_info.destinations,
-                    &notification_info.description,
-                    Some(*total_target_lamports as f64),
-                    Some("lamports"),
-                    &parser.transaction_signature,
-                )
-                .await?;
-            }
+    /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
+    fn handle_slot_update(&mut self, slot: u64) {
+        let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
+        if current_epoch != self.epoch_metrics.epoch {
+            datapoint_info!(
+                "jito-bell-stats",
+                ("epoch", self.epoch_metrics.epoch, i64),
+                ("transaction", self.epoch_metrics.tx, i64),
+                (
+                    "success_notification",
+                    self.epoch_metrics.notification.success,
+                    i64
+                ),
+                (
+                    "fail_notification",
+                    self.epoch_metrics.notification.fail,
+                    i64
+                ),
+            );
+            self.epoch_metrics = EpochMetrics::new(current_epoch);
         }
-
-        Ok(())
     }
 
     /// Dispatch platform notifications
     ///
     /// - Return error only if ALL platforms failed, or handle as needed
-    async fn dispatch_platform_notifications(
+    pub(crate) async fn dispatch_platform_notifications(
         &mut self,
         destinations: &[Destination],
         description: &str,

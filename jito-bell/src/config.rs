@@ -27,8 +27,22 @@ impl JitoBellConfig {
 
 impl std::fmt::Display for JitoBellConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Explorer URL: {}", self.explorer_url)?;
+
+        writeln!(f, "Message Templates:")?;
+        for (name, template) in &self.message_templates {
+            writeln!(f, "  {}: {}", name, template)?;
+        }
+
         writeln!(f, "Programs:")?;
-        for program in self.programs.values() {
+        for (program_name, program) in &self.programs {
+            let program_name = match program_name {
+                ProgramName::JitoSteward => "jito_steward",
+                ProgramName::SplToken2022 => "spl_token2022",
+                ProgramName::SplStakePool => "spl_stake_pool",
+                ProgramName::JitoVault => "jito_vault",
+            };
+            writeln!(f, "  Program Name: {}", program_name)?;
             writeln!(f, "  Program ID: {}", program.program_id)?;
 
             if !program.instructions.is_empty() {

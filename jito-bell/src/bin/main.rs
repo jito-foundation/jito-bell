@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Jito Bell Config:\n{}", handler.config);
 
     info!("Starting heartbeat...");
-    handler.heart_beat().await?;
+    handler.run().await?;
 
     Ok(())
 }
