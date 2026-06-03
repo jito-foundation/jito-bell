@@ -281,14 +281,14 @@ programs:
       create_transaction:
         notification_info:
           description: "Squads v3 transaction created"
-          destinations: ["stake_pool_alerts_slack"]
+          destinations: ["jito_bell_slack"]
   squads_v4:
     program_id: "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf"
     instructions:
       proposal_create:
         notification_info:
           description: "Squads v4 proposal created"
-          destinations: ["stake_pool_alerts_slack"]
+          destinations: ["jito_bell_slack"]
 
 explorer_url: "https://solscan.io"
 squads_app_url_template: "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}"
