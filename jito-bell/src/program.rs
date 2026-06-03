@@ -14,6 +14,8 @@ pub enum ProgramName {
     SplToken2022,
     SplStakePool,
     JitoVault,
+    SquadsV3,
+    SquadsV4,
 }
 
 #[derive(Deserialize)]

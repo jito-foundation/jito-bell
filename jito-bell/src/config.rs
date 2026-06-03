@@ -41,6 +41,8 @@ impl std::fmt::Display for JitoBellConfig {
                 ProgramName::SplToken2022 => "spl_token2022",
                 ProgramName::SplStakePool => "spl_stake_pool",
                 ProgramName::JitoVault => "jito_vault",
+                ProgramName::SquadsV3 => "squads_v3",
+                ProgramName::SquadsV4 => "squads_v4",
             };
             writeln!(f, "  Program Name: {}", program_name)?;
             writeln!(f, "  Program ID: {}", program.program_id)?;
