@@ -60,7 +60,7 @@ impl SquadsV4Program {
         account_keys: &[Pubkey],
     ) -> Option<Self> {
         let accounts = instruction.accounts();
-        let multisig = *account_keys.get(*accounts.get(0)? as usize)?;
+        let multisig = *account_keys.get(*accounts.first()? as usize)?;
         let proposal = *account_keys.get(*accounts.get(1)? as usize)?;
         let (transaction_index, draft) = parse_proposal_create_args(instruction.data())?;
 
