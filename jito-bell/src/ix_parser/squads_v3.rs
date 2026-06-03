@@ -10,14 +10,19 @@ use super::instruction::ParsableInstruction;
 /// Squads v3 Program
 #[derive(Debug)]
 pub enum SquadsV3Program {
-    CreateTransaction { ix: Instruction },
-    ActivateTransaction { ix: Instruction },
+    CreateTransaction {
+        multisig: Pubkey,
+        transaction: Pubkey,
+    },
+    ActivateTransaction {
+        ix: Instruction,
+    },
 }
 
 impl std::fmt::Display for SquadsV3Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SquadsV3Program::CreateTransaction { ix: _ } => write!(f, "create_transaction"),
+            SquadsV3Program::CreateTransaction { .. } => write!(f, "create_transaction"),
             SquadsV3Program::ActivateTransaction { ix: _ } => write!(f, "activate_transaction"),
         }
     }
@@ -55,21 +60,11 @@ impl SquadsV3Program {
         let accounts = instruction.accounts();
         let multisig = *account_keys.get(*accounts.first()? as usize)?;
         let transaction = *account_keys.get(*accounts.get(1)? as usize)?;
-        let creator = *account_keys.get(*accounts.get(2)? as usize)?;
-        let system_program = *account_keys.get(*accounts.get(3)? as usize)?;
 
-        let ix = Instruction {
-            program_id: Self::program_id(),
-            accounts: vec![
-                AccountMeta::new(multisig, false),
-                AccountMeta::new(transaction, false),
-                AccountMeta::new(creator, true),
-                AccountMeta::new_readonly(system_program, false),
-            ],
-            data: instruction.data().to_vec(),
-        };
-
-        Some(Self::CreateTransaction { ix })
+        Some(Self::CreateTransaction {
+            multisig,
+            transaction,
+        })
     }
 
     fn parse_activate_transaction_ix<T: ParsableInstruction>(
@@ -137,20 +132,15 @@ mod tests {
 
         let parsed = SquadsV3Program::parse_squads_v3_program(&instruction, &account_keys);
 
-        let Some(SquadsV3Program::CreateTransaction { ix }) = parsed else {
+        let Some(SquadsV3Program::CreateTransaction {
+            multisig,
+            transaction,
+        }) = parsed
+        else {
             panic!("Expected CreateTransaction variant");
         };
-        assert_eq!(ix.program_id, SquadsV3Program::program_id());
-        assert_eq!(ix.data, data);
-        assert_eq!(
-            ix.accounts,
-            vec![
-                AccountMeta::new(account_keys[0], false),
-                AccountMeta::new(account_keys[1], false),
-                AccountMeta::new(account_keys[2], true),
-                AccountMeta::new_readonly(account_keys[3], false),
-            ]
-        );
+        assert_eq!(multisig, account_keys[0]);
+        assert_eq!(transaction, account_keys[1]);
     }
 
     #[test]

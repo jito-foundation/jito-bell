@@ -3,7 +3,8 @@
 use log::debug;
 
 use crate::{
-    error::JitoBellError, ix_parser::squads_v4::SquadsV4Program, program::InstructionConfig,
+    error::JitoBellError, handlers::squads_common::SquadsContext,
+    ix_parser::squads_v4::SquadsV4Program, program::InstructionConfig,
     tx_parser::JitoTransactionParser, JitoBellHandler,
 };
 
@@ -16,21 +17,26 @@ pub(crate) async fn handle_squads_v4_program(
 ) -> Result<(), JitoBellError> {
     debug!("Squads v4 Instruction: {squads_v4_instruction}");
 
-    if !matches!(
-        squads_v4_instruction,
-        SquadsV4Program::ProposalCreate { ix: _ }
-    ) {
-        return Ok(());
-    }
-
-    if let Some(ref notification_info) = instruction.notification_info {
+    if let (
+        SquadsV4Program::ProposalCreate {
+            multisig,
+            proposal,
+            transaction_index,
+            ..
+        },
+        Some(notification_info),
+    ) = (squads_v4_instruction, &instruction.notification_info)
+    {
+        let squads_context = SquadsContext::V4Proposal {
+            multisig: *multisig,
+            proposal: *proposal,
+            transaction_index: *transaction_index,
+        };
         handler
-            .dispatch_platform_notifications(
-                &notification_info.destinations,
+            .dispatch_slack(
                 &notification_info.description,
-                None,
-                None,
                 &parser.transaction_signature,
+                squads_context,
             )
             .await?;
     }

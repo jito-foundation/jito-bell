@@ -17,6 +17,7 @@ use yellowstone_grpc_proto::{
 
 use crate::{
     config::JitoBellConfig,
+    handlers::squads_common::SquadsContext,
     notification_info::Destination,
     program::{EventConfig, InstructionConfig, ProgramName},
     tx_parser::JitoTransactionParser,
@@ -181,6 +182,109 @@ impl JitoBellHandler {
                 ),
             );
             self.epoch_metrics = EpochMetrics::new(current_epoch);
+        }
+    }
+
+    /// Dispatch a direct Slack notification for Squads proposal/transaction creation.
+    pub(crate) async fn dispatch_slack(
+        &mut self,
+        description: &str,
+        transaction_signature: &str,
+        squads_context: SquadsContext,
+    ) -> Result<(), JitoBellError> {
+        if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
+            let squads_url = squads_context.squads_url(&self.config.squads_app_url_template);
+            let mut fields = vec![
+                serde_json::json!({
+                    "type": "mrkdwn",
+                    "text": format!(
+                        "*Squads:* <{}|{}>",
+                        squads_url,
+                        squads_context.link_label()
+                    )
+                }),
+                serde_json::json!({
+                    "type": "mrkdwn",
+                    "text": format!(
+                        "*Transaction:* <{}/tx/{}|View on Explorer>",
+                        self.config.explorer_url,
+                        transaction_signature
+                    )
+                }),
+                serde_json::json!({
+                    "type": "mrkdwn",
+                    "text": format!("*Multisig:* `{}`", squads_context.multisig())
+                }),
+                serde_json::json!({
+                    "type": "mrkdwn",
+                    "text": format!(
+                        "*{}:* `{}`",
+                        squads_context.account_label(),
+                        squads_context.account()
+                    )
+                }),
+            ];
+
+            if let Some(transaction_index) = squads_context.transaction_index_field() {
+                fields.push(serde_json::json!({
+                    "type": "mrkdwn",
+                    "text": format!("*Transaction Index:* `{}`", transaction_index)
+                }));
+            }
+
+            let payload = serde_json::json!({
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": squads_context.header()
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": format!("*Description:* {}", description)
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": fields
+                    }
+                ]
+            });
+
+            let client = reqwest::Client::new();
+            let response = client
+                .post(webhook_url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .await;
+
+            match response {
+                Ok(res) if res.status().is_success() => {
+                    self.epoch_metrics.increment_success_notification_count();
+                    Ok(())
+                }
+                Ok(res) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    Err(JitoBellError::Notification(format!(
+                        "Failed to send Squads Slack message: Status {}",
+                        res.status()
+                    )))
+                }
+                Err(e) => {
+                    self.epoch_metrics.increment_fail_notification_count();
+                    Err(JitoBellError::Notification(format!(
+                        "Squads Slack request error: {}",
+                        e
+                    )))
+                }
+            }
+        } else {
+            Ok(())
         }
     }
 
@@ -490,7 +594,7 @@ impl JitoBellHandler {
         sig: &str,
     ) -> Result<(), JitoBellError> {
         // Build a Slack message with blocks for better formatting
-        if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
+        if let Some(webhook_url) = &self.subscribe_option.jito_bell_slack_webhook_url {
             let payload = serde_json::json!({
                 "blocks": [
                     {

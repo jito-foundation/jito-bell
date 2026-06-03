@@ -10,14 +10,21 @@ use super::instruction::ParsableInstruction;
 /// Squads v4 Program
 #[derive(Debug)]
 pub enum SquadsV4Program {
-    ProposalCreate { ix: Instruction },
-    ProposalActivate { ix: Instruction },
+    ProposalCreate {
+        multisig: Pubkey,
+        proposal: Pubkey,
+        transaction_index: u64,
+        draft: bool,
+    },
+    ProposalActivate {
+        ix: Instruction,
+    },
 }
 
 impl std::fmt::Display for SquadsV4Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SquadsV4Program::ProposalCreate { ix: _ } => write!(f, "proposal_create"),
+            SquadsV4Program::ProposalCreate { .. } => write!(f, "proposal_create"),
             SquadsV4Program::ProposalActivate { ix: _ } => write!(f, "proposal_activate"),
         }
     }
@@ -53,25 +60,16 @@ impl SquadsV4Program {
         account_keys: &[Pubkey],
     ) -> Option<Self> {
         let accounts = instruction.accounts();
-        let multisig = *account_keys.get(*accounts.first()? as usize)?;
+        let multisig = *account_keys.get(*accounts.get(0)? as usize)?;
         let proposal = *account_keys.get(*accounts.get(1)? as usize)?;
-        let creator = *account_keys.get(*accounts.get(2)? as usize)?;
-        let rent_payer = *account_keys.get(*accounts.get(3)? as usize)?;
-        let system_program = *account_keys.get(*accounts.get(4)? as usize)?;
+        let (transaction_index, draft) = parse_proposal_create_args(instruction.data())?;
 
-        let ix = Instruction {
-            program_id: Self::program_id(),
-            accounts: vec![
-                AccountMeta::new_readonly(multisig, false),
-                AccountMeta::new(proposal, false),
-                AccountMeta::new_readonly(creator, true),
-                AccountMeta::new(rent_payer, true),
-                AccountMeta::new_readonly(system_program, false),
-            ],
-            data: instruction.data().to_vec(),
-        };
-
-        Some(Self::ProposalCreate { ix })
+        Some(Self::ProposalCreate {
+            multisig,
+            proposal,
+            transaction_index,
+            draft,
+        })
     }
 
     fn parse_proposal_activate_ix<T: ParsableInstruction>(
@@ -101,6 +99,12 @@ fn anchor_discriminator(ix_name: &str) -> [u8; 8] {
     let preimage = format!("global:{ix_name}");
     let hash = hash(preimage.as_bytes()).to_bytes();
     hash[..8].try_into().unwrap()
+}
+
+fn parse_proposal_create_args(data: &[u8]) -> Option<(u64, bool)> {
+    let transaction_index = u64::from_le_bytes(data.get(8..16)?.try_into().ok()?);
+    let draft = *data.get(16)? != 0;
+    Some((transaction_index, draft))
 }
 
 #[cfg(test)]
@@ -134,26 +138,25 @@ mod tests {
     fn test_proposal_create() {
         let account_keys = create_test_pubkeys(6);
         let mut data = anchor_discriminator("proposal_create").to_vec();
-        data.extend_from_slice(&[1, 2, 3, 4]);
+        data.extend_from_slice(&42_u64.to_le_bytes());
+        data.push(1);
         let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data.clone());
 
         let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
 
-        let Some(SquadsV4Program::ProposalCreate { ix }) = parsed else {
+        let Some(SquadsV4Program::ProposalCreate {
+            multisig,
+            proposal,
+            transaction_index,
+            draft,
+        }) = parsed
+        else {
             panic!("Expected ProposalCreate variant");
         };
-        assert_eq!(ix.program_id, SquadsV4Program::program_id());
-        assert_eq!(ix.data, data);
-        assert_eq!(
-            ix.accounts,
-            vec![
-                AccountMeta::new_readonly(account_keys[0], false),
-                AccountMeta::new(account_keys[1], false),
-                AccountMeta::new_readonly(account_keys[2], true),
-                AccountMeta::new(account_keys[3], true),
-                AccountMeta::new_readonly(account_keys[4], false),
-            ]
-        );
+        assert_eq!(multisig, account_keys[0]);
+        assert_eq!(proposal, account_keys[1]);
+        assert_eq!(transaction_index, 42);
+        assert!(draft);
     }
 
     #[test]
@@ -184,6 +187,18 @@ mod tests {
     fn test_unknown_data_returns_none() {
         let account_keys = create_test_pubkeys(3);
         let instruction = create_compiled_instruction(0, vec![0, 1, 2], vec![0; 8]);
+
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+
+        assert!(parsed.is_none());
+    }
+
+    #[test]
+    fn test_proposal_create_with_short_args_returns_none() {
+        let account_keys = create_test_pubkeys(6);
+        let mut data = anchor_discriminator("proposal_create").to_vec();
+        data.extend_from_slice(&42_u64.to_le_bytes());
+        let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data);
 
         let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
 

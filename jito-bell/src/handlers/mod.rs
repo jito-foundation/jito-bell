@@ -6,6 +6,7 @@
 //! runtime services such as RPC account reads.
 
 mod jito_steward;
+pub mod squads_common;
 mod squads_v3;
 mod squads_v4;
 mod stake_pool;
@@ -122,7 +123,7 @@ pub(crate) async fn send_notification(
                 }
             }
             InstructionParser::SquadsV3(ix) => match ix {
-                SquadsV3Program::CreateTransaction { ix: _ } => {
+                SquadsV3Program::CreateTransaction { .. } => {
                     debug!("Squads v3");
 
                     if let Some(instruction) =
@@ -137,7 +138,7 @@ pub(crate) async fn send_notification(
                 }
             },
             InstructionParser::SquadsV4(ix) => match ix {
-                SquadsV4Program::ProposalCreate { ix: _ } => {
+                SquadsV4Program::ProposalCreate { .. } => {
                     debug!("Squads v4");
 
                     if let Some(instruction) =
@@ -205,6 +206,8 @@ mod tests {
             config: JitoBellConfig {
                 programs: squads_programs(),
                 explorer_url: "http://explorer.test".to_string(),
+                squads_app_url_template:
+                    "http://squads.test/{{multisig}}/{{transaction}}/{{proposal}}".to_string(),
                 message_templates: HashMap::new(),
             },
             rpc_client: RpcClient::new("http://127.0.0.1:8899".to_string()),
@@ -295,17 +298,18 @@ mod tests {
         (url, listener)
     }
 
-    async fn accept_one(listener: TcpListener) {
+    async fn accept_one(listener: TcpListener) -> String {
         let (mut socket, _) = listener.accept().await.unwrap();
-        let mut buffer = [0; 4096];
-        let _ = socket.read(&mut buffer).await.unwrap();
+        let mut buffer = [0; 8192];
+        let bytes_read = socket.read(&mut buffer).await.unwrap();
         socket
             .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
             .await
             .unwrap();
+        String::from_utf8_lossy(&buffer[..bytes_read]).to_string()
     }
 
-    async fn assert_sends_one(instruction: InstructionParser) {
+    async fn send_and_capture_body(instruction: InstructionParser) -> String {
         let (webhook_url, listener) = test_webhook().await;
         let server = tokio::spawn(accept_one(listener));
         let mut handler = test_handler(webhook_url);
@@ -316,7 +320,7 @@ mod tests {
         timeout(Duration::from_secs(1), server)
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
     }
 
     async fn assert_sends_none(instruction: InstructionParser) {
@@ -333,10 +337,23 @@ mod tests {
 
     #[tokio::test]
     async fn squads_v3_create_transaction_dispatches_once() {
-        assert_sends_one(InstructionParser::SquadsV3(
-            SquadsV3Program::CreateTransaction { ix: test_ix() },
+        let multisig = Pubkey::new_unique();
+        let transaction = Pubkey::new_unique();
+
+        let request = send_and_capture_body(InstructionParser::SquadsV3(
+            SquadsV3Program::CreateTransaction {
+                multisig,
+                transaction,
+            },
         ))
         .await;
+
+        assert!(request.contains("Squads Transaction Created"));
+        assert!(request.contains("Squads v3 transaction created"));
+        assert!(request.contains(&format!("http://squads.test/{}/{}/", multisig, transaction)));
+        assert!(request.contains(&format!("*Multisig:* `{multisig}`")));
+        assert!(request.contains(&format!("*Squads Transaction:* `{transaction}`")));
+        assert!(request.contains("http://explorer.test/tx/test_signature"));
     }
 
     #[tokio::test]
@@ -349,10 +366,26 @@ mod tests {
 
     #[tokio::test]
     async fn squads_v4_proposal_create_dispatches_once() {
-        assert_sends_one(InstructionParser::SquadsV4(
-            SquadsV4Program::ProposalCreate { ix: test_ix() },
+        let multisig = Pubkey::new_unique();
+        let proposal = Pubkey::new_unique();
+
+        let request = send_and_capture_body(InstructionParser::SquadsV4(
+            SquadsV4Program::ProposalCreate {
+                multisig,
+                proposal,
+                transaction_index: 42,
+                draft: false,
+            },
         ))
         .await;
+
+        assert!(request.contains("Squads Proposal Created"));
+        assert!(request.contains("Squads v4 proposal created"));
+        assert!(request.contains(&format!("http://squads.test/{}/42/{}", multisig, proposal)));
+        assert!(request.contains(&format!("*Multisig:* `{multisig}`")));
+        assert!(request.contains(&format!("*Proposal:* `{proposal}`")));
+        assert!(request.contains("*Transaction Index:* `42`"));
+        assert!(request.contains("http://explorer.test/tx/test_signature"));
     }
 
     #[tokio::test]
