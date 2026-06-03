@@ -18,7 +18,7 @@ use yellowstone_grpc_proto::{
 use crate::{
     config::JitoBellConfig,
     notification_info::Destination,
-    program::{EventConfig, Instruction, ProgramName},
+    program::{EventConfig, InstructionConfig, ProgramName},
     tx_parser::JitoTransactionParser,
 };
 
@@ -138,7 +138,7 @@ impl JitoBellHandler {
         &self,
         program_name: ProgramName,
         instruction_name: impl Display,
-    ) -> Option<Instruction> {
+    ) -> Option<InstructionConfig> {
         self.config
             .programs
             .get(&program_name)

@@ -16,7 +16,7 @@ use log::debug;
 use solana_sdk::pubkey::Pubkey;
 
 use crate::{
-    error::JitoBellError, ix_parser::vault::JitoVaultProgram, program::Instruction,
+    error::JitoBellError, ix_parser::vault::JitoVaultProgram, program::InstructionConfig,
     tx_parser::JitoTransactionParser, JitoBellHandler,
 };
 
@@ -29,7 +29,7 @@ pub(crate) async fn handle_jito_vault_program(
     handler: &mut JitoBellHandler,
     parser: &JitoTransactionParser,
     jito_vault_program: &JitoVaultProgram,
-    instruction: &Instruction,
+    instruction: &InstructionConfig,
 ) -> Result<(), JitoBellError> {
     debug!("Jito Vault Program: {}", jito_vault_program);
 

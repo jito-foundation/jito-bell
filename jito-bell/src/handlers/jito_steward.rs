@@ -10,7 +10,7 @@ use crate::{
     error::JitoBellError,
     event_parser::jito_steward::JitoStewardEvent,
     ix_parser::jito_steward::JitoStewardInstruction,
-    program::{EventConfig, Instruction},
+    program::{EventConfig, InstructionConfig},
     tx_parser::JitoTransactionParser,
     JitoBellHandler,
 };
@@ -21,7 +21,7 @@ pub(crate) async fn handle_jito_steward_program(
     handler: &mut JitoBellHandler,
     parser: &JitoTransactionParser,
     jito_steward_instruction: &JitoStewardInstruction,
-    instruction: &Instruction,
+    instruction: &InstructionConfig,
 ) -> Result<(), JitoBellError> {
     debug!("Jito Steward Instruction: {jito_steward_instruction}");
 

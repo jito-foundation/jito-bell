@@ -3,7 +3,7 @@
 use log::debug;
 
 use crate::{
-    error::JitoBellError, ix_parser::squads_v4::SquadsV4Program, program::Instruction,
+    error::JitoBellError, ix_parser::squads_v4::SquadsV4Program, program::InstructionConfig,
     tx_parser::JitoTransactionParser, JitoBellHandler,
 };
 
@@ -12,7 +12,7 @@ pub(crate) async fn handle_squads_v4_program(
     handler: &mut JitoBellHandler,
     parser: &JitoTransactionParser,
     squads_v4_instruction: &SquadsV4Program,
-    instruction: &Instruction,
+    instruction: &InstructionConfig,
 ) -> Result<(), JitoBellError> {
     debug!("Squads v4 Instruction: {squads_v4_instruction}");
 

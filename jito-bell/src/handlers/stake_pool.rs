@@ -11,7 +11,7 @@ use crate::{
     ix_parser::{
         stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, InstructionParser,
     },
-    program::Instruction,
+    program::InstructionConfig,
     tx_parser::JitoTransactionParser,
     JitoBellHandler,
 };
@@ -25,7 +25,7 @@ pub(crate) async fn handle_spl_stake_pool_program(
     handler: &mut JitoBellHandler,
     parser: &JitoTransactionParser,
     spl_stake_program: &SplStakePoolProgram,
-    instruction: &Instruction,
+    instruction: &InstructionConfig,
 ) -> Result<(), JitoBellError> {
     debug!("SPL Stake Program: {}", spl_stake_program);
 

@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::program::{EventConfig, Program, ProgramName};
+use crate::program::{EventConfig, ProgramConfig, ProgramName};
 
 #[derive(Deserialize)]
 pub struct JitoBellConfig {
     /// Programs Configuration
-    pub programs: HashMap<ProgramName, Program>,
+    pub programs: HashMap<ProgramName, ProgramConfig>,
 
     /// Block explorer url
     pub explorer_url: String,

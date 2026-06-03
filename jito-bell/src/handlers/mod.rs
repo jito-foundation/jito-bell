@@ -180,7 +180,7 @@ mod tests {
     use std::{collections::HashMap, time::Duration};
 
     use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-    use solana_sdk::{instruction::Instruction as SolanaInstruction, pubkey::Pubkey};
+    use solana_sdk::{instruction::Instruction, pubkey::Pubkey};
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::TcpListener,
@@ -194,7 +194,7 @@ mod tests {
         ix_parser::{squads_v3::SquadsV3Program, squads_v4::SquadsV4Program, InstructionParser},
         metrics::EpochMetrics,
         notification_info::{Destination, NotificationInfo},
-        program::{Instruction, Program, ProgramName},
+        program::{InstructionConfig, ProgramConfig, ProgramName},
         subscribe_option::SubscribeOption,
         tx_parser::JitoTransactionParser,
         JitoBellHandler,
@@ -234,11 +234,11 @@ mod tests {
         }
     }
 
-    fn squads_programs() -> HashMap<ProgramName, Program> {
+    fn squads_programs() -> HashMap<ProgramName, ProgramConfig> {
         HashMap::from([
             (
                 ProgramName::SquadsV3,
-                Program {
+                ProgramConfig {
                     program_id: SquadsV3Program::program_id().to_string(),
                     instructions: HashMap::from([(
                         "create_transaction".to_string(),
@@ -249,7 +249,7 @@ mod tests {
             ),
             (
                 ProgramName::SquadsV4,
-                Program {
+                ProgramConfig {
                     program_id: SquadsV4Program::program_id().to_string(),
                     instructions: HashMap::from([(
                         "proposal_create".to_string(),
@@ -261,8 +261,8 @@ mod tests {
         ])
     }
 
-    fn simple_instruction(description: &str) -> Instruction {
-        Instruction {
+    fn simple_instruction(description: &str) -> InstructionConfig {
+        InstructionConfig {
             stake_pools: None,
             lsts: None,
             vrts: None,
@@ -281,8 +281,8 @@ mod tests {
         }
     }
 
-    fn test_ix() -> SolanaInstruction {
-        SolanaInstruction {
+    fn test_ix() -> Instruction {
+        Instruction {
             program_id: Pubkey::new_unique(),
             accounts: Vec::new(),
             data: Vec::new(),
