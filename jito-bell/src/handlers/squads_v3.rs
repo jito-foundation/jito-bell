@@ -31,6 +31,7 @@ pub(crate) async fn handle_squads_v3_program(
                 &notification_info.description,
                 &parser.transaction_signature,
                 squads_context,
+                &notification_info.destinations,
             )
             .await?;
     }
