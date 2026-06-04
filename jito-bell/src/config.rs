@@ -33,6 +33,22 @@ impl JitoBellConfig {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::JitoBellConfig;
+
+    #[test]
+    fn sample_config_parses() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("jito_bell_config_sample.yaml");
+        let yaml = std::fs::read_to_string(path).expect("sample config file not found");
+        serde_yaml::from_str::<JitoBellConfig>(&yaml)
+            .expect("sample config should deserialize without error");
+    }
+}
+
 impl std::fmt::Display for JitoBellConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Explorer URL: {}", self.explorer_url)?;

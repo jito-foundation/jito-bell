@@ -13,6 +13,12 @@ use yellowstone_grpc_proto::geyser::CommitmentLevel;
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
+    if env::var("YELLOWSTONE_URL").is_err() {
+        if let Ok(endpoint) = env::var("ENDPOINT") {
+            env::set_var("YELLOWSTONE_URL", endpoint);
+        }
+    }
+
     let log_path =
         env::var("LOG_FILE_PATH").unwrap_or_else(|_| "/var/log/jito-bell/app.log".to_string());
 
