@@ -80,7 +80,7 @@ impl JitoBellHandler {
     /// Workhorse / Entrypoint
     pub async fn run(&mut self) -> Result<(), JitoBellError> {
         let mut client =
-            GeyserGrpcClient::build_from_shared(self.subscribe_option.endpoint.clone())?
+            GeyserGrpcClient::build_from_shared(self.subscribe_option.yellowstone_url.clone())?
                 .x_token(self.subscribe_option.x_token.clone())?
                 .tls_config(ClientTlsConfig::new().with_native_roots())?
                 .connect()

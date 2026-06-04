@@ -6,9 +6,9 @@ use yellowstone_grpc_proto::geyser::CommitmentLevel;
 #[derive(Debug, Clone, Parser)]
 #[clap(author, version, about)]
 pub struct Args {
-    #[clap(short, long, env = "ENDPOINT")]
-    /// Service endpoint
-    pub endpoint: String,
+    #[clap(long, env = "YELLOWSTONE_URL")]
+    /// Yellowstone gRPC endpoint URL
+    pub yellowstone_url: String,
 
     #[clap(long, env = "X_TOKEN")]
     pub x_token: Option<String>,
