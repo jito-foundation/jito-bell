@@ -1,3 +1,4 @@
+use log::debug;
 use solana_sdk::{
     hash::hash,
     instruction::{AccountMeta, Instruction},
@@ -41,15 +42,26 @@ impl SquadsV4Program {
     pub fn parse_squads_v4_program<T: ParsableInstruction>(
         instruction: &T,
         account_keys: &[Pubkey],
+        squads_parse_errors: &mut u64,
     ) -> Option<SquadsV4Program> {
         let discriminator: [u8; 8] = instruction.data().get(..8)?.try_into().ok()?;
 
         if discriminator == anchor_discriminator(Self::PROPOSAL_CREATE) {
-            return Self::parse_proposal_create_ix(instruction, account_keys);
+            let result = Self::parse_proposal_create_ix(instruction, account_keys);
+            if result.is_none() {
+                *squads_parse_errors += 1;
+                debug!("SquadsV4: matched proposal_create discriminator but failed to parse (short data or invalid account index)");
+            }
+            return result;
         }
 
         if discriminator == anchor_discriminator(Self::PROPOSAL_ACTIVATE) {
-            return Self::parse_proposal_activate_ix(instruction, account_keys);
+            let result = Self::parse_proposal_activate_ix(instruction, account_keys);
+            if result.is_none() {
+                *squads_parse_errors += 1;
+                debug!("SquadsV4: matched proposal_activate discriminator but failed to parse (short data or invalid account index)");
+            }
+            return result;
         }
 
         None
@@ -142,7 +154,7 @@ mod tests {
         data.push(1);
         let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data.clone());
 
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut 0);
 
         let Some(SquadsV4Program::ProposalCreate {
             multisig,
@@ -166,7 +178,7 @@ mod tests {
         data.extend_from_slice(&[1, 2, 3, 4]);
         let instruction = create_compiled_instruction(3, vec![0, 1, 2], data.clone());
 
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut 0);
 
         let Some(SquadsV4Program::ProposalActivate { ix }) = parsed else {
             panic!("Expected ProposalActivate variant");
@@ -188,7 +200,7 @@ mod tests {
         let account_keys = create_test_pubkeys(3);
         let instruction = create_compiled_instruction(0, vec![0, 1, 2], vec![0; 8]);
 
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut 0);
 
         assert!(parsed.is_none());
     }
@@ -200,9 +212,11 @@ mod tests {
         data.extend_from_slice(&42_u64.to_le_bytes());
         let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data);
 
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+        let mut errors = 0u64;
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut errors);
 
         assert!(parsed.is_none());
+        assert_eq!(errors, 1, "known discriminator with short args should increment parse error counter");
     }
 
     #[test]
@@ -210,7 +224,7 @@ mod tests {
         let account_keys = create_test_pubkeys(3);
         let instruction = create_compiled_instruction(0, vec![0, 1, 2], vec![0; 7]);
 
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys);
+        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut 0);
 
         assert!(parsed.is_none());
     }

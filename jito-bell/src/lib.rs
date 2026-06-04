@@ -2,7 +2,7 @@ use std::{fmt::Display, path::PathBuf};
 
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
-use log::{debug, error};
+use log::{debug, error, warn};
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -107,6 +107,11 @@ impl JitoBellHandler {
                         let parsed_tx = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
 
+                        if parsed_tx.failed_tx {
+                            self.epoch_metrics.increment_failed_tx_count();
+                        }
+                        self.epoch_metrics.squads.parse_errors += parsed_tx.squads_parse_errors;
+
                         debug!("Instruction: {:?}", parsed_tx.instructions);
 
                         // This is where most of our work happens
@@ -162,6 +167,14 @@ impl JitoBellHandler {
             .and_then(|program_config| program_config.events.get(&event_name.to_string()).cloned())
     }
 
+    pub(crate) fn increment_squads_parsed(&mut self) {
+        self.epoch_metrics.increment_squads_parsed();
+    }
+
+    pub(crate) fn increment_squads_no_config(&mut self) {
+        self.epoch_metrics.increment_squads_no_config();
+    }
+
     /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
     fn handle_slot_update(&mut self, slot: u64) {
         let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
@@ -170,6 +183,7 @@ impl JitoBellHandler {
                 "jito-bell-stats",
                 ("epoch", self.epoch_metrics.epoch, i64),
                 ("transaction", self.epoch_metrics.tx, i64),
+                ("failed_transaction", self.epoch_metrics.failed_tx, i64),
                 (
                     "success_notification",
                     self.epoch_metrics.notification.success,
@@ -180,6 +194,16 @@ impl JitoBellHandler {
                     self.epoch_metrics.notification.fail,
                     i64
                 ),
+            );
+            datapoint_info!(
+                "jito-bell-squads-stats",
+                ("epoch", self.epoch_metrics.epoch, i64),
+                ("proposals_parsed", self.epoch_metrics.squads.proposals_parsed, i64),
+                ("parse_errors", self.epoch_metrics.squads.parse_errors, i64),
+                ("no_config", self.epoch_metrics.squads.no_config, i64),
+                ("no_webhook", self.epoch_metrics.squads.no_webhook, i64),
+                ("partial_webhook_failure", self.epoch_metrics.squads.partial_webhook_failure, i64),
+                ("webhook_errors", self.epoch_metrics.squads.webhook_errors, i64),
             );
             self.epoch_metrics = EpochMetrics::new(current_epoch);
         }
@@ -215,6 +239,11 @@ impl JitoBellHandler {
             .collect();
 
         if webhook_urls.is_empty() {
+            self.epoch_metrics.increment_squads_no_webhook();
+            warn!(
+                "dispatch_slack: no webhook URLs resolved for Squads notification (destinations: {:?})",
+                destinations
+            );
             return Ok(());
         }
 
@@ -296,6 +325,7 @@ impl JitoBellHandler {
                 }
                 Ok(res) => {
                     self.epoch_metrics.increment_fail_notification_count();
+                    self.epoch_metrics.increment_squads_webhook_errors();
                     errors.push(JitoBellError::Notification(format!(
                         "Failed to send Squads Slack message: Status {}",
                         res.status()
@@ -303,6 +333,7 @@ impl JitoBellHandler {
                 }
                 Err(e) => {
                     self.epoch_metrics.increment_fail_notification_count();
+                    self.epoch_metrics.increment_squads_webhook_errors();
                     errors.push(JitoBellError::Notification(format!(
                         "Squads Slack request error: {}",
                         e
@@ -311,12 +342,20 @@ impl JitoBellHandler {
             }
         }
 
-        if !errors.is_empty() && errors.len() == webhook_urls.len() {
+        if errors.is_empty() {
+            Ok(())
+        } else if errors.len() < webhook_urls.len() {
+            self.epoch_metrics.increment_squads_partial_webhook_failure();
+            warn!(
+                "dispatch_slack: partial webhook failure ({}/{} failed) for Squads notification",
+                errors.len(),
+                webhook_urls.len()
+            );
+            Ok(())
+        } else {
             Err(JitoBellError::Notification(
                 "All Squads Slack webhooks failed".to_string(),
             ))
-        } else {
-            Ok(())
         }
     }
 

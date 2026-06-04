@@ -13,7 +13,7 @@ mod stake_pool;
 mod vault;
 
 use borsh::BorshDeserialize;
-use log::debug;
+use log::{debug, warn};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{program_pack::Pack, pubkey::Pubkey};
 use spl_token::state::Mint;
@@ -123,23 +123,37 @@ pub(crate) async fn send_notification(
                 }
             }
             InstructionParser::SquadsV3(ix) => match ix {
-                SquadsV3Program::CreateTransaction { .. } => {
+                SquadsV3Program::CreateTransaction { multisig, .. } => {
+                    handler.increment_squads_parsed();
                     if let Some(instruction) =
                         handler.get_instruction_config(ProgramName::SquadsV3, ix)
                     {
                         squads_v3::handle_squads_v3_program(handler, parser, ix, &instruction)
                             .await?;
+                    } else {
+                        handler.increment_squads_no_config();
+                        warn!(
+                            "SquadsV3: CreateTransaction from multisig {} has no handler config",
+                            multisig
+                        );
                     }
                 }
                 SquadsV3Program::ActivateTransaction { ix: _ } => {}
             },
             InstructionParser::SquadsV4(ix) => match ix {
-                SquadsV4Program::ProposalCreate { .. } => {
+                SquadsV4Program::ProposalCreate { multisig, .. } => {
+                    handler.increment_squads_parsed();
                     if let Some(instruction) =
                         handler.get_instruction_config(ProgramName::SquadsV4, ix)
                     {
                         squads_v4::handle_squads_v4_program(handler, parser, ix, &instruction)
                             .await?;
+                    } else {
+                        handler.increment_squads_no_config();
+                        warn!(
+                            "SquadsV4: ProposalCreate from multisig {} has no handler config",
+                            multisig
+                        );
                     }
                 }
                 SquadsV4Program::ProposalActivate { ix: _ } => {}
