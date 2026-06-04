@@ -188,10 +188,14 @@ mod tests {
         let instruction = create_compiled_instruction(1, vec![], data);
 
         let mut errors = 0u64;
-        let parsed = SquadsV3Program::parse_squads_v3_program(&instruction, &account_keys, &mut errors);
+        let parsed =
+            SquadsV3Program::parse_squads_v3_program(&instruction, &account_keys, &mut errors);
 
         assert!(parsed.is_none());
-        assert_eq!(errors, 1, "known discriminator with missing accounts should increment parse error counter");
+        assert_eq!(
+            errors, 1,
+            "known discriminator with missing accounts should increment parse error counter"
+        );
     }
 
     #[test]

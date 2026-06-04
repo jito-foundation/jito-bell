@@ -326,7 +326,8 @@ impl JitoBellHandler {
         if errors.is_empty() {
             Ok(())
         } else if errors.len() < webhook_urls.len() {
-            self.epoch_metrics.increment_squads_partial_webhook_failure();
+            self.epoch_metrics
+                .increment_squads_partial_webhook_failure();
             warn!(
                 "dispatch_slack: partial webhook failure ({}/{} failed) for Squads notification",
                 errors.len(),

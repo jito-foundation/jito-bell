@@ -168,12 +168,20 @@ fn parse_known_instruction<T: ParsableInstruction>(
     // Squads programs are handled explicitly so that a matched discriminator that
     // fails inner parsing can be distinguished from an unrecognised instruction.
     if program_id.eq(&SquadsV3Program::program_id()) {
-        return SquadsV3Program::parse_squads_v3_program(instruction, account_keys, squads_parse_errors)
-            .map(InstructionParser::SquadsV3);
+        return SquadsV3Program::parse_squads_v3_program(
+            instruction,
+            account_keys,
+            squads_parse_errors,
+        )
+        .map(InstructionParser::SquadsV3);
     }
     if program_id.eq(&SquadsV4Program::program_id()) {
-        return SquadsV4Program::parse_squads_v4_program(instruction, account_keys, squads_parse_errors)
-            .map(InstructionParser::SquadsV4);
+        return SquadsV4Program::parse_squads_v4_program(
+            instruction,
+            account_keys,
+            squads_parse_errors,
+        )
+        .map(InstructionParser::SquadsV4);
     }
 
     let parsers: [(Pubkey, InstructionParserFn<T>); 3] = [

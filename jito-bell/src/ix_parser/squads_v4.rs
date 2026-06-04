@@ -213,10 +213,14 @@ mod tests {
         let instruction = create_compiled_instruction(5, vec![0, 1, 2, 3, 4], data);
 
         let mut errors = 0u64;
-        let parsed = SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut errors);
+        let parsed =
+            SquadsV4Program::parse_squads_v4_program(&instruction, &account_keys, &mut errors);
 
         assert!(parsed.is_none());
-        assert_eq!(errors, 1, "known discriminator with short args should increment parse error counter");
+        assert_eq!(
+            errors, 1,
+            "known discriminator with short args should increment parse error counter"
+        );
     }
 
     #[test]

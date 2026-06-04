@@ -60,11 +60,7 @@ impl EpochMetrics {
     }
 
     fn emit_live_metric(&self, name: &'static str, count: u64) {
-        datapoint_info!(
-            name,
-            ("count", count, i64),
-            ("epoch", self.epoch, i64),
-        );
+        datapoint_info!(name, ("count", count, i64), ("epoch", self.epoch, i64),);
     }
 
     pub fn increment_tx_count(&mut self) {
