@@ -67,7 +67,7 @@ impl JitoBellHandler {
         let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
 
         let epoch = rpc_client.get_epoch_info().await?;
-        let epoch_metrics = EpochMetrics::new(epoch.epoch);
+        let epoch_metrics = EpochMetrics::new(epoch.epoch, epoch.absolute_slot);
 
         Ok(Self {
             config,
@@ -110,7 +110,8 @@ impl JitoBellHandler {
                         if parsed_tx.failed_tx {
                             self.epoch_metrics.increment_failed_tx_count();
                         }
-                        self.epoch_metrics.squads.parse_errors += parsed_tx.squads_parse_errors;
+                        self.epoch_metrics
+                            .increment_squads_parse_errors(parsed_tx.squads_parse_errors);
 
                         debug!("Instruction: {:?}", parsed_tx.instructions);
 
@@ -175,37 +176,17 @@ impl JitoBellHandler {
         self.epoch_metrics.increment_squads_no_config();
     }
 
-    /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
+    /// Handle a slot update: on epoch rollover, emit an epoch marker and reset.
     fn handle_slot_update(&mut self, slot: u64) {
         let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
+        self.epoch_metrics.update_slot(slot);
         if current_epoch != self.epoch_metrics.epoch {
             datapoint_info!(
-                "jito-bell-stats",
-                ("epoch", self.epoch_metrics.epoch, i64),
-                ("transaction", self.epoch_metrics.tx, i64),
-                ("failed_transaction", self.epoch_metrics.failed_tx, i64),
-                (
-                    "success_notification",
-                    self.epoch_metrics.notification.success,
-                    i64
-                ),
-                (
-                    "fail_notification",
-                    self.epoch_metrics.notification.fail,
-                    i64
-                ),
+                "jito-bell-epoch",
+                ("epoch", current_epoch, i64),
+                ("slot", slot, i64),
             );
-            datapoint_info!(
-                "jito-bell-squads-stats",
-                ("epoch", self.epoch_metrics.epoch, i64),
-                ("proposals_parsed", self.epoch_metrics.squads.proposals_parsed, i64),
-                ("parse_errors", self.epoch_metrics.squads.parse_errors, i64),
-                ("no_config", self.epoch_metrics.squads.no_config, i64),
-                ("no_webhook", self.epoch_metrics.squads.no_webhook, i64),
-                ("partial_webhook_failure", self.epoch_metrics.squads.partial_webhook_failure, i64),
-                ("webhook_errors", self.epoch_metrics.squads.webhook_errors, i64),
-            );
-            self.epoch_metrics = EpochMetrics::new(current_epoch);
+            self.epoch_metrics = EpochMetrics::new(current_epoch, slot);
         }
     }
 
