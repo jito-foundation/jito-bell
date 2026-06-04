@@ -124,8 +124,6 @@ pub(crate) async fn send_notification(
             }
             InstructionParser::SquadsV3(ix) => match ix {
                 SquadsV3Program::CreateTransaction { .. } => {
-                    debug!("Squads v3");
-
                     if let Some(instruction) =
                         handler.get_instruction_config(ProgramName::SquadsV3, ix)
                     {
@@ -133,14 +131,10 @@ pub(crate) async fn send_notification(
                             .await?;
                     }
                 }
-                SquadsV3Program::ActivateTransaction { ix: _ } => {
-                    debug!("Squads v3 non-create instruction");
-                }
+                SquadsV3Program::ActivateTransaction { ix: _ } => {}
             },
             InstructionParser::SquadsV4(ix) => match ix {
                 SquadsV4Program::ProposalCreate { .. } => {
-                    debug!("Squads v4");
-
                     if let Some(instruction) =
                         handler.get_instruction_config(ProgramName::SquadsV4, ix)
                     {
@@ -148,9 +142,7 @@ pub(crate) async fn send_notification(
                             .await?;
                     }
                 }
-                SquadsV4Program::ProposalActivate { ix: _ } => {
-                    debug!("Squads v4 non-create instruction");
-                }
+                SquadsV4Program::ProposalActivate { ix: _ } => {}
             },
         }
     }

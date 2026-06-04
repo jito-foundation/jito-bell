@@ -1,7 +1,5 @@
 //! Squads v3 instruction notification handling.
 
-use log::debug;
-
 use crate::{
     error::JitoBellError, handlers::squads_common::SquadsContext,
     ix_parser::squads_v3::SquadsV3Program, program::InstructionConfig,
@@ -15,8 +13,6 @@ pub(crate) async fn handle_squads_v3_program(
     squads_v3_instruction: &SquadsV3Program,
     instruction: &InstructionConfig,
 ) -> Result<(), JitoBellError> {
-    debug!("Squads v3 Instruction: {squads_v3_instruction}");
-
     if let (
         SquadsV3Program::CreateTransaction {
             multisig,
