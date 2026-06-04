@@ -49,7 +49,10 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    info!("Starting Jito Bell with yellowstone URL: {}", args.yellowstone_url);
+    info!(
+        "Starting Jito Bell with yellowstone URL: {}",
+        args.yellowstone_url
+    );
 
     let hostname_cmd = Command::new("hostname")
         .output()

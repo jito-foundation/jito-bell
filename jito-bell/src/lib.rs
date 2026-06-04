@@ -199,14 +199,14 @@ impl JitoBellHandler {
                 Destination::JitoBellSlack => {
                     self.subscribe_option.jito_bell_slack_webhook_url.clone()
                 }
-                Destination::StakePoolAlertsSlack => {
-                    self.subscribe_option.stake_pool_alerts_slack_webhook_url.clone()
-                }
-                Destination::StakenetEventAlertsSlack => {
-                    self.subscribe_option
-                        .stakenet_event_alerts_slack_webhook_url
-                        .clone()
-                }
+                Destination::StakePoolAlertsSlack => self
+                    .subscribe_option
+                    .stake_pool_alerts_slack_webhook_url
+                    .clone(),
+                Destination::StakenetEventAlertsSlack => self
+                    .subscribe_option
+                    .stakenet_event_alerts_slack_webhook_url
+                    .clone(),
                 _ => {
                     error!("dispatch_slack called with unsupported destination: {d}");
                     None
