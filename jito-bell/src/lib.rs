@@ -17,7 +17,6 @@ use yellowstone_grpc_proto::{
 
 use crate::{
     config::JitoBellConfig,
-    handlers::squads_common::SquadsContext,
     notification_info::Destination,
     program::{EventConfig, InstructionConfig, ProgramName},
     tx_parser::JitoTransactionParser,
@@ -30,6 +29,7 @@ pub mod event_parser;
 pub mod events;
 mod handlers;
 pub mod ix_parser;
+pub use handlers::squads_common::SquadsContext;
 mod metrics;
 pub mod multi_writer;
 pub mod notification_info;
@@ -228,67 +228,11 @@ impl JitoBellHandler {
             return Ok(());
         }
 
-        let squads_url = squads_context.squads_url();
-        let mut fields = vec![
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*Squads:* <{}|{}>",
-                    squads_url,
-                    squads_context.link_label()
-                )
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*Transaction:* <{}/tx/{}|View on Explorer>",
-                    self.config.explorer_url,
-                    transaction_signature
-                )
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!("*Multisig:* `{}`", squads_context.multisig())
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*{}:* `{}`",
-                    squads_context.account_label(),
-                    squads_context.account()
-                )
-            }),
-        ];
-
-        if let Some(transaction_index) = squads_context.transaction_index_field() {
-            fields.push(serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!("*Transaction Index:* `{}`", transaction_index)
-            }));
-        }
-
-        let payload = serde_json::json!({
-            "blocks": [
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": squads_context.header()
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": format!("*Description:* {}", description)
-                    }
-                },
-                {
-                    "type": "section",
-                    "fields": fields
-                }
-            ]
-        });
+        let payload = squads_context.build_slack_payload(
+            description,
+            transaction_signature,
+            &self.config.explorer_url,
+        );
 
         let client = reqwest::Client::new();
         let mut errors = Vec::new();

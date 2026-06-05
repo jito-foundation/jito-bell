@@ -8,7 +8,7 @@ const SQUADS_V4_URL: &str =
     "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}";
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum SquadsContext {
+pub enum SquadsContext {
     V3Transaction {
         multisig: Pubkey,
         transaction: Pubkey,
@@ -89,5 +89,65 @@ impl SquadsContext {
             .replace("{{multisig}}", &self.multisig().to_string())
             .replace("{{transaction}}", &self.transaction_template_value())
             .replace("{{proposal}}", &self.proposal_template_value())
+    }
+
+    pub fn build_slack_payload(
+        self,
+        description: &str,
+        transaction_signature: &str,
+        explorer_url: &str,
+    ) -> serde_json::Value {
+        let squads_url = self.squads_url();
+        let mut fields = vec![
+            serde_json::json!({
+                "type": "mrkdwn",
+                "text": format!("*Squads:* <{}|{}>", squads_url, self.link_label())
+            }),
+            serde_json::json!({
+                "type": "mrkdwn",
+                "text": format!(
+                    "*Transaction:* <{}/tx/{}|View on Explorer>",
+                    explorer_url, transaction_signature
+                )
+            }),
+            serde_json::json!({
+                "type": "mrkdwn",
+                "text": format!("*Multisig:* `{}`", self.multisig())
+            }),
+            serde_json::json!({
+                "type": "mrkdwn",
+                "text": format!("*{}:* `{}`", self.account_label(), self.account())
+            }),
+        ];
+
+        if let Some(transaction_index) = self.transaction_index_field() {
+            fields.push(serde_json::json!({
+                "type": "mrkdwn",
+                "text": format!("*Transaction Index:* `{}`", transaction_index)
+            }));
+        }
+
+        serde_json::json!({
+            "blocks": [
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": self.header()
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": format!("*Description:* {}", description)
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": fields
+                }
+            ]
+        })
     }
 }
