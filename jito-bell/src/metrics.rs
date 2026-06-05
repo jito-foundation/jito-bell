@@ -63,6 +63,16 @@ impl EpochMetrics {
         datapoint_info!(name, ("count", count, i64), ("epoch", self.epoch, i64),);
     }
 
+    pub fn emit_slot_heartbeat(&self, slot: u64) {
+        if slot % 10 == 0 {
+            datapoint_info!(
+                "jito-bell-slot-heartbeat",
+                ("slot", slot, i64),
+                ("epoch", self.epoch, i64),
+            );
+        }
+    }
+
     pub fn increment_tx_count(&mut self) {
         self.tx += 1;
         self.emit_live_metric("jito-bell-transactions", 1);
