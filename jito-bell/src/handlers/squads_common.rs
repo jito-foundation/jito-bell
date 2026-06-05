@@ -116,9 +116,13 @@ impl SquadsContext {
 
     pub(crate) fn squads_url(self, _explorer_url: &str, _transaction_signature: &str) -> String {
         match self {
-            Self::V3Transaction { multisig, .. } => format!(
-                "https://v3.squads.so/transactions/{}",
+            Self::V3Transaction {
+                multisig,
+                transaction,
+            } => format!(
+                "https://v3.squads.so/transactions/{}/tx/{}",
                 STANDARD.encode(multisig.to_string()),
+                transaction,
             ),
             Self::V4Proposal { .. } => SQUADS_V4_URL
                 .replace("{{multisig}}", &self.multisig_template_value())
