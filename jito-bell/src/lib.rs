@@ -228,7 +228,7 @@ impl JitoBellHandler {
             return Ok(());
         }
 
-        let squads_url = squads_context.squads_url(&self.config.squads_app_url_template);
+        let squads_url = squads_context.squads_url();
         let mut fields = vec![
             serde_json::json!({
                 "type": "mrkdwn",

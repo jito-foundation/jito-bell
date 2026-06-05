@@ -291,7 +291,6 @@ programs:
           destinations: ["slack"]
 
 explorer_url: "https://solscan.io"
-squads_app_url_template: "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}"
 
 message_templates:
   default: "{{description}} - Amount: {{amount}} {{currency_unit}} - Tx: https://explorer.solana.com/tx/{{tx_hash}}"

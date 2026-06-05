@@ -1,6 +1,11 @@
 //! Shared types for Squads v3/v4 notification handling.
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use solana_sdk::pubkey::Pubkey;
+
+const SQUADS_V3_URL: &str = "https://v3.squads.so/transactions/{{transaction}}";
+const SQUADS_V4_URL: &str =
+    "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}";
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum SquadsContext {
@@ -52,7 +57,7 @@ impl SquadsContext {
 
     fn transaction_template_value(self) -> String {
         match self {
-            Self::V3Transaction { transaction, .. } => transaction.to_string(),
+            Self::V3Transaction { transaction, .. } => STANDARD.encode(transaction.to_string()),
             Self::V4Proposal {
                 transaction_index, ..
             } => transaction_index.to_string(),
@@ -75,7 +80,11 @@ impl SquadsContext {
         }
     }
 
-    pub(crate) fn squads_url(self, template: &str) -> String {
+    pub(crate) fn squads_url(self) -> String {
+        let template = match self {
+            Self::V3Transaction { .. } => SQUADS_V3_URL,
+            Self::V4Proposal { .. } => SQUADS_V4_URL,
+        };
         template
             .replace("{{multisig}}", &self.multisig().to_string())
             .replace("{{transaction}}", &self.transaction_template_value())
