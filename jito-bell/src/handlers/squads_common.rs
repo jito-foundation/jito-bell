@@ -114,14 +114,12 @@ impl SquadsContext {
         }
     }
 
-    pub(crate) fn squads_url(self, explorer_url: &str) -> String {
+    pub(crate) fn squads_url(self, _explorer_url: &str, _transaction_signature: &str) -> String {
         match self {
-            // The public v3 client does not expose a stable deep link for a
-            // transaction account, so fall back to the transaction PDA on the
-            // configured explorer.
-            Self::V3Transaction { transaction, .. } => {
-                format!("{}/address/{}", explorer_url, transaction)
-            }
+            Self::V3Transaction { multisig, .. } => format!(
+                "https://v3.squads.so/transactions/{}",
+                STANDARD.encode(multisig.to_string()),
+            ),
             Self::V4Proposal { .. } => SQUADS_V4_URL
                 .replace("{{multisig}}", &self.multisig_template_value())
                 .replace("{{transaction}}", &self.transaction_template_value())
@@ -135,7 +133,7 @@ impl SquadsContext {
         transaction_signature: &str,
         explorer_url: &str,
     ) -> serde_json::Value {
-        let squads_url = self.squads_url(explorer_url);
+        let squads_url = self.squads_url(explorer_url, transaction_signature);
         let mut fields = vec![
             serde_json::json!({
                 "type": "mrkdwn",

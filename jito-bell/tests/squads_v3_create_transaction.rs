@@ -22,7 +22,7 @@ const TX_SIG: &str =
 const EXPECTED_MULTISIG: &str = "6f9mMaBZ1CxL5Aad1u2GDKXvkYmN9NAt3BBWvb2Dwzjt";
 const EXPECTED_TRANSACTION: &str = "4DxJoJRS9dsorFxCoPbVtcpG64iyj2bjHrXgoW2AFqUY";
 const EXPECTED_SQUADS_URL: &str =
-    "https://explorer.solana.com/address/4DxJoJRS9dsorFxCoPbVtcpG64iyj2bjHrXgoW2AFqUY";
+    "https://v3.squads.so/transactions/NmY5bU1hQloxQ3hMNUFhZDF1MkdES1h2a1ltTjlOQXQzQkJXdmIyRHd6anQ=";
 
 fn pubkey_bytes(s: &str) -> Vec<u8> {
     Pubkey::from_str(s).unwrap().to_bytes().to_vec()
