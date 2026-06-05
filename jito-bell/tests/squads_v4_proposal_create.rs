@@ -22,6 +22,8 @@ const TX_SIG: &str =
 const EXPECTED_MULTISIG: &str = "B6cxPRnWEdMfKuYspnZXDrPfnH2rSeht4VaoSjc1ibBm";
 const EXPECTED_PROPOSAL: &str = "FSZZRGe9hnycwuK4HhhTNfLhYBV31txtK7Ut6WLuBASR";
 const EXPECTED_TX_INDEX: u64 = 33;
+const EXPECTED_SQUADS_URL: &str =
+    "https://app.squads.so/squads/CytGGhG18DfYnYaLbdrxkAUBPJsYTDUbLJUHYsvQH7Zm/transactions/12SNDKGbXeaL45kCuVrmpv8xWxrRqdLKGnTNoC62kDcg";
 
 fn pubkey_bytes(s: &str) -> Vec<u8> {
     Pubkey::from_str(s).unwrap().to_bytes().to_vec()
@@ -137,6 +139,18 @@ fn squads_v4_proposal_create_fires_and_produces_slack_message() {
         .as_str()
         .unwrap()
         .contains("Squads v4 proposal created"));
+
+    // Squads v4 routes use the squad vault PDA and transaction PDA, not the
+    // multisig account, proposal PDA, or raw transaction index.
+    let squads_field = &payload["blocks"][2]["fields"][0];
+    assert!(squads_field["text"]
+        .as_str()
+        .unwrap()
+        .contains(EXPECTED_SQUADS_URL));
+    assert!(squads_field["text"]
+        .as_str()
+        .unwrap()
+        .contains("12SNDKGbXeaL45kCuVrmpv8xWxrRqdLKGnTNoC62kDcg"));
 
     // Fields block: multisig, proposal, tx index, and signature all appear
     let fields = payload["blocks"][2]["fields"].to_string();

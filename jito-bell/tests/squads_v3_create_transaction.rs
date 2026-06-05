@@ -21,6 +21,8 @@ const TX_SIG: &str =
     "Fkjru2spekPeHzAbb4ZptZssWUcdH5TddCXwzyejbQfhmf25WCBbwtutJwB95nSE2m3nifSQGQHLcQHshg6W9jf";
 const EXPECTED_MULTISIG: &str = "6f9mMaBZ1CxL5Aad1u2GDKXvkYmN9NAt3BBWvb2Dwzjt";
 const EXPECTED_TRANSACTION: &str = "4DxJoJRS9dsorFxCoPbVtcpG64iyj2bjHrXgoW2AFqUY";
+const EXPECTED_SQUADS_URL: &str =
+    "https://explorer.solana.com/address/4DxJoJRS9dsorFxCoPbVtcpG64iyj2bjHrXgoW2AFqUY";
 
 fn pubkey_bytes(s: &str) -> Vec<u8> {
     Pubkey::from_str(s).unwrap().to_bytes().to_vec()
@@ -131,6 +133,12 @@ fn squads_v3_create_transaction_fires_and_produces_slack_message() {
         .as_str()
         .unwrap()
         .contains("Squads v3 transaction created"));
+
+    let squads_field = &payload["blocks"][2]["fields"][0];
+    assert!(squads_field["text"]
+        .as_str()
+        .unwrap()
+        .contains(EXPECTED_SQUADS_URL));
 
     // Fields block: multisig, transaction, and tx signature all appear
     let fields = payload["blocks"][2]["fields"].to_string();
