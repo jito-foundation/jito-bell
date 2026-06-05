@@ -6,8 +6,8 @@ use crate::{
     event_parser::{jito_steward::JitoStewardEvent, EventParser},
     ix_parser::{
         instruction::ParsableInstruction, jito_steward::JitoStewardInstruction,
-        stake_pool::SplStakePoolProgram, token_2022::SplToken2022Program, vault::JitoVaultProgram,
-        InstructionParser,
+        squads_v3::SquadsV3Program, squads_v4::SquadsV4Program, stake_pool::SplStakePoolProgram,
+        token_2022::SplToken2022Program, vault::JitoVaultProgram, InstructionParser,
     },
 };
 
@@ -147,7 +147,7 @@ fn parse_known_instruction<T: ParsableInstruction>(
     account_keys: &[Pubkey],
 ) -> Option<InstructionParser> {
     let program_id = account_keys.get(instruction.program_id_index() as usize)?;
-    let parsers: [(Pubkey, InstructionParserFn<T>); 3] = [
+    let parsers: [(Pubkey, InstructionParserFn<T>); 5] = [
         (
             SplToken2022Program::program_id(),
             |instruction, account_keys| {
@@ -167,6 +167,20 @@ fn parse_known_instruction<T: ParsableInstruction>(
             |instruction, account_keys| {
                 JitoVaultProgram::parse_jito_vault_program(instruction, account_keys)
                     .map(InstructionParser::JitoVault)
+            },
+        ),
+        (
+            SquadsV3Program::program_id(),
+            |instruction, account_keys| {
+                SquadsV3Program::parse_squads_v3_program(instruction, account_keys)
+                    .map(InstructionParser::SquadsV3)
+            },
+        ),
+        (
+            SquadsV4Program::program_id(),
+            |instruction, account_keys| {
+                SquadsV4Program::parse_squads_v4_program(instruction, account_keys)
+                    .map(InstructionParser::SquadsV4)
             },
         ),
     ];

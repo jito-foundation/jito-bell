@@ -275,8 +275,23 @@ programs:
         #     notification:
         #       description: "Very large Withdrawal worth $100,000+ detected"
         #       destinations: ["telegram", "slack", "discord"]
+  squads_v3:
+    program_id: "SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu"
+    instructions:
+      create_transaction:
+        notification_info:
+          description: "Squads v3 transaction created"
+          destinations: ["slack"]
+  squads_v4:
+    program_id: "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf"
+    instructions:
+      proposal_create:
+        notification_info:
+          description: "Squads v4 proposal created"
+          destinations: ["slack"]
 
 explorer_url: "https://solscan.io"
+squads_app_url_template: "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}"
 
 message_templates:
   default: "{{description}} - Amount: {{amount}} {{currency_unit}} - Tx: https://explorer.solana.com/tx/{{tx_hash}}"

@@ -7,7 +7,7 @@ services:
     container_name: jito-bell
     environment:
       - RUST_LOG=${RUST_LOG:-debug}
-      - ENDPOINT=${ENDPOINT}
+      - YELLOWSTONE_URL=${YELLOWSTONE_URL}
       - X_TOKEN=${X_TOKEN}
       - ACCOUNT_INCLUDE=${ACCOUNT_INCLUDE}
       - CONFIG_FILE=${CONFIG_FILE}

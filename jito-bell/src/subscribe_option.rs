@@ -7,8 +7,8 @@ use yellowstone_grpc_proto::{
 use crate::cli_args::Args;
 
 pub struct SubscribeOption {
-    /// Endpoint
-    pub endpoint: String,
+    /// Yellowstone gRPC endpoint URL
+    pub yellowstone_url: String,
 
     /// X-Token
     pub x_token: Option<String>,
@@ -71,7 +71,7 @@ pub struct SubscribeOption {
 impl SubscribeOption {
     pub fn new(arg: Args, commitment: CommitmentLevel) -> Self {
         Self {
-            endpoint: arg.endpoint,
+            yellowstone_url: arg.yellowstone_url,
             x_token: arg.x_token,
             commitment,
             vote: arg.vote,
@@ -118,7 +118,7 @@ impl From<&SubscribeOption> for SubscribeRequest {
 impl std::fmt::Display for SubscribeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Subscribe Options:")?;
-        writeln!(f, "  Endpoint: {}", self.endpoint)?;
+        writeln!(f, "  Yellowstone URL: {}", self.yellowstone_url)?;
 
         // Handle x_token securely - don't print actual token
         match &self.x_token {

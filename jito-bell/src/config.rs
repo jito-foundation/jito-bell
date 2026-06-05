@@ -2,18 +2,26 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::program::{EventConfig, Program, ProgramName};
+use crate::program::{EventConfig, ProgramConfig, ProgramName};
 
 #[derive(Deserialize)]
 pub struct JitoBellConfig {
     /// Programs Configuration
-    pub programs: HashMap<ProgramName, Program>,
+    pub programs: HashMap<ProgramName, ProgramConfig>,
 
     /// Block explorer url
     pub explorer_url: String,
 
+    /// Squads app URL template
+    #[serde(default = "default_squads_app_url_template")]
+    pub squads_app_url_template: String,
+
     /// Message Templates
     pub message_templates: HashMap<String, String>,
+}
+
+fn default_squads_app_url_template() -> String {
+    "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}".to_string()
 }
 
 impl JitoBellConfig {
@@ -25,9 +33,30 @@ impl JitoBellConfig {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::JitoBellConfig;
+
+    #[test]
+    fn sample_config_parses() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("jito_bell_config_sample.yaml");
+        let yaml = std::fs::read_to_string(path).expect("sample config file not found");
+        serde_yaml::from_str::<JitoBellConfig>(&yaml)
+            .expect("sample config should deserialize without error");
+    }
+}
+
 impl std::fmt::Display for JitoBellConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Explorer URL: {}", self.explorer_url)?;
+        writeln!(
+            f,
+            "Squads App URL Template: {}",
+            self.squads_app_url_template
+        )?;
 
         writeln!(f, "Message Templates:")?;
         for (name, template) in &self.message_templates {
@@ -41,6 +70,8 @@ impl std::fmt::Display for JitoBellConfig {
                 ProgramName::SplToken2022 => "spl_token2022",
                 ProgramName::SplStakePool => "spl_stake_pool",
                 ProgramName::JitoVault => "jito_vault",
+                ProgramName::SquadsV3 => "squads_v3",
+                ProgramName::SquadsV4 => "squads_v4",
             };
             writeln!(f, "  Program Name: {}", program_name)?;
             writeln!(f, "  Program ID: {}", program.program_id)?;

@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use solana_pubkey::Pubkey;
+use solana_pubkey::{pubkey, Pubkey};
 use solana_sdk::instruction::{AccountMeta, Instruction};
 
 use crate::ix_parser::instruction::ParsableInstruction;
@@ -112,7 +110,7 @@ impl std::fmt::Display for JitoStewardInstruction {
 impl JitoStewardInstruction {
     /// Retrieve Program ID of Jito Steward Program
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8").unwrap()
+        pubkey!("Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8")
     }
 
     /// Parse Jito Steward instruction

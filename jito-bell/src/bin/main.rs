@@ -13,6 +13,12 @@ use yellowstone_grpc_proto::geyser::CommitmentLevel;
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
+    if env::var("YELLOWSTONE_URL").is_err() {
+        if let Ok(endpoint) = env::var("ENDPOINT") {
+            env::set_var("YELLOWSTONE_URL", endpoint);
+        }
+    }
+
     let log_path =
         env::var("LOG_FILE_PATH").unwrap_or_else(|_| "/var/log/jito-bell/app.log".to_string());
 
@@ -43,7 +49,10 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    info!("Starting Jito Bell with endpoint: {}", args.endpoint);
+    info!(
+        "Starting Jito Bell with yellowstone URL: {}",
+        args.yellowstone_url
+    );
 
     let hostname_cmd = Command::new("hostname")
         .output()
@@ -62,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
 
     let commitment = CommitmentConfig::confirmed();
     let mut handler = JitoBellHandler::new(
-        args.endpoint.clone(),
+        args.yellowstone_url.clone(),
         commitment,
         args.config_file,
         subscribe_option,

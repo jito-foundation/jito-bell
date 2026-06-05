@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     native_token::lamports_to_sol,
+    pubkey,
     pubkey::Pubkey,
 };
 use spl_stake_pool::instruction::StakePoolInstruction;
@@ -114,7 +113,7 @@ impl std::fmt::Display for SplStakePoolProgram {
 impl SplStakePoolProgram {
     /// Retrieve Program ID of SPL Stake Pool Program
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy").unwrap()
+        pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy")
     }
 
     /// Parse SPL Stake Pool program

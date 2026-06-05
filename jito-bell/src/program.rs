@@ -14,16 +14,18 @@ pub enum ProgramName {
     SplToken2022,
     SplStakePool,
     JitoVault,
+    SquadsV3,
+    SquadsV4,
 }
 
 #[derive(Deserialize)]
-pub struct Program {
+pub struct ProgramConfig {
     /// Program ID
     pub program_id: String,
 
     /// Instructions configurations
     #[serde(default)]
-    pub instructions: HashMap<String, Instruction>,
+    pub instructions: HashMap<String, InstructionConfig>,
 
     /// Events configurations
     #[serde(default)]
@@ -42,7 +44,7 @@ pub struct AlertConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Instruction {
+pub struct InstructionConfig {
     /// Stake Pool
     pub stake_pools: Option<HashMap<String, AlertConfig>>,
 
