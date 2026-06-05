@@ -43,6 +43,9 @@ pub struct SubscribeOption {
     /// Slack webhook url for Stakenet Event Alerts
     pub stakenet_event_alerts_slack_webhook_url: Option<String>,
 
+    /// Slack webhook url for Squads Alerts
+    pub squads_alerts_slack_webhook_url: Option<String>,
+
     /// Discord webhook url
     pub discord_webhook_url: Option<String>,
 
@@ -83,6 +86,7 @@ impl SubscribeOption {
             jito_bell_slack_webhook_url: arg.slack_webhook_url,
             stake_pool_alerts_slack_webhook_url: arg.stake_pool_alerts_slack_webhook_url,
             stakenet_event_alerts_slack_webhook_url: arg.stakenet_event_alerts_slack_webhook_url,
+            squads_alerts_slack_webhook_url: arg.squads_alerts_slack_webhook_url,
             discord_webhook_url: arg.discord_webhook_url,
             telegram_bot_token: arg.telegram_bot_token,
             telegram_chat_id: arg.telegram_chat_id,

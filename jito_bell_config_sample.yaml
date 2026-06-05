@@ -281,14 +281,14 @@ programs:
       create_transaction:
         notification_info:
           description: "Squads v3 transaction created"
-          destinations: ["slack"]
+          destinations: ["squads_alerts_slack"]
   squads_v4:
     program_id: "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf"
     instructions:
       proposal_create:
         notification_info:
           description: "Squads v4 proposal created"
-          destinations: ["slack"]
+          destinations: ["squads_alerts_slack"]
 
 explorer_url: "https://solscan.io"
 

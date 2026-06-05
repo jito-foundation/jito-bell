@@ -212,6 +212,10 @@ impl JitoBellHandler {
                     .subscribe_option
                     .stakenet_event_alerts_slack_webhook_url
                     .clone(),
+                Destination::SquadsAlertsSlack => self
+                    .subscribe_option
+                    .squads_alerts_slack_webhook_url
+                    .clone(),
                 _ => {
                     error!("dispatch_slack called with unsupported destination: {d}");
                     None
@@ -343,6 +347,12 @@ impl JitoBellHandler {
                         transaction_signature,
                     )
                     .await
+                }
+                Destination::SquadsAlertsSlack => {
+                    warn!(
+                        "squads_alerts_slack destination routed through dispatch_platform_notifications; only valid for Squads handlers — skipping"
+                    );
+                    continue;
                 }
                 Destination::Discord => {
                     debug!("Will Send Discord Notification");
