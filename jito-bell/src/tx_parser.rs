@@ -24,6 +24,14 @@ pub struct JitoTransactionParser {
 
     /// Events emitted by programs, grouped by program
     pub events: Vec<EventParser>,
+
+    /// True when the transaction was on-chain failed (meta.err set).
+    /// Instructions are not parsed in this case.
+    pub failed_tx: bool,
+
+    /// Number of Squads instructions where the discriminator matched a known
+    /// instruction but argument/account parsing returned None.
+    pub squads_parse_errors: u64,
 }
 
 impl JitoTransactionParser {
@@ -37,6 +45,8 @@ impl JitoTransactionParser {
             transaction_signature: String::new(),
             instructions: Vec::new(),
             events: Vec::new(),
+            failed_tx: false,
+            squads_parse_errors: 0,
         }
     }
 
@@ -47,7 +57,10 @@ impl JitoTransactionParser {
         let meta = tx_update.meta?;
 
         if meta.err.is_some() {
-            return None;
+            return Some(Self {
+                failed_tx: true,
+                ..Self::empty()
+            });
         }
 
         let tx = tx_update.transaction?;
@@ -67,6 +80,7 @@ impl JitoTransactionParser {
                 InstructionScope::TopLevel,
                 &meta.log_messages,
                 &mut parser.events,
+                &mut parser.squads_parse_errors,
             ) {
                 parser.instructions.push(parsed_instruction);
             }
@@ -80,6 +94,7 @@ impl JitoTransactionParser {
                     InstructionScope::Inner,
                     &[],
                     &mut parser.events,
+                    &mut parser.squads_parse_errors,
                 ) {
                     parser.instructions.push(parsed_instruction);
                 }
@@ -120,6 +135,7 @@ fn parse_instruction<T: ParsableInstruction>(
     scope: InstructionScope,
     log_messages: &[String],
     parsed_events: &mut Vec<EventParser>,
+    squads_parse_errors: &mut u64,
 ) -> Option<InstructionParser> {
     let program_id = account_keys.get(instruction.program_id_index() as usize)?;
 
@@ -138,16 +154,37 @@ fn parse_instruction<T: ParsableInstruction>(
 
         parsed_instruction
     } else {
-        parse_known_instruction(instruction, account_keys)
+        parse_known_instruction(instruction, account_keys, squads_parse_errors)
     }
 }
 
 fn parse_known_instruction<T: ParsableInstruction>(
     instruction: &T,
     account_keys: &[Pubkey],
+    squads_parse_errors: &mut u64,
 ) -> Option<InstructionParser> {
     let program_id = account_keys.get(instruction.program_id_index() as usize)?;
-    let parsers: [(Pubkey, InstructionParserFn<T>); 5] = [
+
+    // Squads programs are handled explicitly so that a matched discriminator that
+    // fails inner parsing can be distinguished from an unrecognised instruction.
+    if program_id.eq(&SquadsV3Program::program_id()) {
+        return SquadsV3Program::parse_squads_v3_program(
+            instruction,
+            account_keys,
+            squads_parse_errors,
+        )
+        .map(InstructionParser::SquadsV3);
+    }
+    if program_id.eq(&SquadsV4Program::program_id()) {
+        return SquadsV4Program::parse_squads_v4_program(
+            instruction,
+            account_keys,
+            squads_parse_errors,
+        )
+        .map(InstructionParser::SquadsV4);
+    }
+
+    let parsers: [(Pubkey, InstructionParserFn<T>); 3] = [
         (
             SplToken2022Program::program_id(),
             |instruction, account_keys| {
@@ -167,20 +204,6 @@ fn parse_known_instruction<T: ParsableInstruction>(
             |instruction, account_keys| {
                 JitoVaultProgram::parse_jito_vault_program(instruction, account_keys)
                     .map(InstructionParser::JitoVault)
-            },
-        ),
-        (
-            SquadsV3Program::program_id(),
-            |instruction, account_keys| {
-                SquadsV3Program::parse_squads_v3_program(instruction, account_keys)
-                    .map(InstructionParser::SquadsV3)
-            },
-        ),
-        (
-            SquadsV4Program::program_id(),
-            |instruction, account_keys| {
-                SquadsV4Program::parse_squads_v4_program(instruction, account_keys)
-                    .map(InstructionParser::SquadsV4)
             },
         ),
     ];

@@ -281,17 +281,16 @@ programs:
       create_transaction:
         notification_info:
           description: "Squads v3 transaction created"
-          destinations: ["slack"]
+          destinations: ["squads_alerts_slack"]
   squads_v4:
     program_id: "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf"
     instructions:
       proposal_create:
         notification_info:
           description: "Squads v4 proposal created"
-          destinations: ["slack"]
+          destinations: ["squads_alerts_slack"]
 
 explorer_url: "https://solscan.io"
-squads_app_url_template: "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}"
 
 message_templates:
   default: "{{description}} - Amount: {{amount}} {{currency_unit}} - Tx: https://explorer.solana.com/tx/{{tx_hash}}"

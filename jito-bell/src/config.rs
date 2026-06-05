@@ -12,16 +12,8 @@ pub struct JitoBellConfig {
     /// Block explorer url
     pub explorer_url: String,
 
-    /// Squads app URL template
-    #[serde(default = "default_squads_app_url_template")]
-    pub squads_app_url_template: String,
-
     /// Message Templates
     pub message_templates: HashMap<String, String>,
-}
-
-fn default_squads_app_url_template() -> String {
-    "https://app.squads.so/squads/{{multisig}}/transactions/{{transaction}}".to_string()
 }
 
 impl JitoBellConfig {
@@ -52,11 +44,6 @@ mod tests {
 impl std::fmt::Display for JitoBellConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Explorer URL: {}", self.explorer_url)?;
-        writeln!(
-            f,
-            "Squads App URL Template: {}",
-            self.squads_app_url_template
-        )?;
 
         writeln!(f, "Message Templates:")?;
         for (name, template) in &self.message_templates {

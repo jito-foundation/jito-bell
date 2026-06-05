@@ -2,7 +2,7 @@ use std::{fmt::Display, path::PathBuf};
 
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
-use log::{debug, error};
+use log::{debug, error, warn};
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -17,7 +17,6 @@ use yellowstone_grpc_proto::{
 
 use crate::{
     config::JitoBellConfig,
-    handlers::squads_common::SquadsContext,
     notification_info::Destination,
     program::{EventConfig, InstructionConfig, ProgramName},
     tx_parser::JitoTransactionParser,
@@ -30,6 +29,7 @@ pub mod event_parser;
 pub mod events;
 mod handlers;
 pub mod ix_parser;
+pub use handlers::squads_common::SquadsContext;
 mod metrics;
 pub mod multi_writer;
 pub mod notification_info;
@@ -56,7 +56,7 @@ pub struct JitoBellHandler {
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
     pub async fn new(
-        endpoint: String,
+        rpc_url: String,
         commitment: CommitmentConfig,
         config_path: PathBuf,
         subscribe_option: SubscribeOption,
@@ -64,10 +64,10 @@ impl JitoBellHandler {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
-        let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
+        let rpc_client = RpcClient::new_with_commitment(rpc_url, commitment);
 
         let epoch = rpc_client.get_epoch_info().await?;
-        let epoch_metrics = EpochMetrics::new(epoch.epoch);
+        let epoch_metrics = EpochMetrics::new(epoch.epoch, epoch.absolute_slot);
 
         Ok(Self {
             config,
@@ -106,6 +106,12 @@ impl JitoBellHandler {
                         // are releveant to the notifier
                         let parsed_tx = JitoTransactionParser::new(transaction);
                         self.epoch_metrics.increment_tx_count();
+
+                        if parsed_tx.failed_tx {
+                            self.epoch_metrics.increment_failed_tx_count();
+                        }
+                        self.epoch_metrics
+                            .increment_squads_parse_errors(parsed_tx.squads_parse_errors);
 
                         debug!("Instruction: {:?}", parsed_tx.instructions);
 
@@ -162,26 +168,26 @@ impl JitoBellHandler {
             .and_then(|program_config| program_config.events.get(&event_name.to_string()).cloned())
     }
 
-    /// Handle a slot update: on epoch rollover, flush epoch metrics and reset.
+    pub(crate) fn increment_squads_parsed(&mut self) {
+        self.epoch_metrics.increment_squads_parsed();
+    }
+
+    pub(crate) fn increment_squads_no_config(&mut self) {
+        self.epoch_metrics.increment_squads_no_config();
+    }
+
+    /// Handle a slot update: on epoch rollover, emit an epoch marker and reset.
     fn handle_slot_update(&mut self, slot: u64) {
         let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
+        self.epoch_metrics.update_slot(slot);
+        self.epoch_metrics.emit_slot_heartbeat(slot);
         if current_epoch != self.epoch_metrics.epoch {
             datapoint_info!(
-                "jito-bell-stats",
-                ("epoch", self.epoch_metrics.epoch, i64),
-                ("transaction", self.epoch_metrics.tx, i64),
-                (
-                    "success_notification",
-                    self.epoch_metrics.notification.success,
-                    i64
-                ),
-                (
-                    "fail_notification",
-                    self.epoch_metrics.notification.fail,
-                    i64
-                ),
+                "jito-bell-epoch",
+                ("epoch", current_epoch, i64),
+                ("slot", slot, i64),
             );
-            self.epoch_metrics = EpochMetrics::new(current_epoch);
+            self.epoch_metrics = EpochMetrics::new(current_epoch, slot);
         }
     }
 
@@ -207,6 +213,10 @@ impl JitoBellHandler {
                     .subscribe_option
                     .stakenet_event_alerts_slack_webhook_url
                     .clone(),
+                Destination::SquadsAlertsSlack => self
+                    .subscribe_option
+                    .squads_alerts_slack_webhook_url
+                    .clone(),
                 _ => {
                     error!("dispatch_slack called with unsupported destination: {d}");
                     None
@@ -215,70 +225,19 @@ impl JitoBellHandler {
             .collect();
 
         if webhook_urls.is_empty() {
+            self.epoch_metrics.increment_squads_no_webhook();
+            warn!(
+                "dispatch_slack: no webhook URLs resolved for Squads notification (destinations: {:?})",
+                destinations
+            );
             return Ok(());
         }
 
-        let squads_url = squads_context.squads_url(&self.config.squads_app_url_template);
-        let mut fields = vec![
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*Squads:* <{}|{}>",
-                    squads_url,
-                    squads_context.link_label()
-                )
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*Transaction:* <{}/tx/{}|View on Explorer>",
-                    self.config.explorer_url,
-                    transaction_signature
-                )
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!("*Multisig:* `{}`", squads_context.multisig())
-            }),
-            serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!(
-                    "*{}:* `{}`",
-                    squads_context.account_label(),
-                    squads_context.account()
-                )
-            }),
-        ];
-
-        if let Some(transaction_index) = squads_context.transaction_index_field() {
-            fields.push(serde_json::json!({
-                "type": "mrkdwn",
-                "text": format!("*Transaction Index:* `{}`", transaction_index)
-            }));
-        }
-
-        let payload = serde_json::json!({
-            "blocks": [
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": squads_context.header()
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": format!("*Description:* {}", description)
-                    }
-                },
-                {
-                    "type": "section",
-                    "fields": fields
-                }
-            ]
-        });
+        let payload = squads_context.build_slack_payload(
+            description,
+            transaction_signature,
+            &self.config.explorer_url,
+        );
 
         let client = reqwest::Client::new();
         let mut errors = Vec::new();
@@ -296,6 +255,7 @@ impl JitoBellHandler {
                 }
                 Ok(res) => {
                     self.epoch_metrics.increment_fail_notification_count();
+                    self.epoch_metrics.increment_squads_webhook_errors();
                     errors.push(JitoBellError::Notification(format!(
                         "Failed to send Squads Slack message: Status {}",
                         res.status()
@@ -303,6 +263,7 @@ impl JitoBellHandler {
                 }
                 Err(e) => {
                     self.epoch_metrics.increment_fail_notification_count();
+                    self.epoch_metrics.increment_squads_webhook_errors();
                     errors.push(JitoBellError::Notification(format!(
                         "Squads Slack request error: {}",
                         e
@@ -311,12 +272,21 @@ impl JitoBellHandler {
             }
         }
 
-        if !errors.is_empty() && errors.len() == webhook_urls.len() {
+        if errors.is_empty() {
+            Ok(())
+        } else if errors.len() < webhook_urls.len() {
+            self.epoch_metrics
+                .increment_squads_partial_webhook_failure();
+            warn!(
+                "dispatch_slack: partial webhook failure ({}/{} failed) for Squads notification",
+                errors.len(),
+                webhook_urls.len()
+            );
+            Ok(())
+        } else {
             Err(JitoBellError::Notification(
                 "All Squads Slack webhooks failed".to_string(),
             ))
-        } else {
-            Ok(())
         }
     }
 
@@ -378,6 +348,12 @@ impl JitoBellHandler {
                         transaction_signature,
                     )
                     .await
+                }
+                Destination::SquadsAlertsSlack => {
+                    warn!(
+                        "squads_alerts_slack destination routed through dispatch_platform_notifications; only valid for Squads handlers — skipping"
+                    );
+                    continue;
                 }
                 Destination::Discord => {
                     debug!("Will Send Discord Notification");
@@ -626,7 +602,7 @@ impl JitoBellHandler {
         sig: &str,
     ) -> Result<(), JitoBellError> {
         // Build a Slack message with blocks for better formatting
-        if let Some(webhook_url) = &self.subscribe_option.jito_bell_slack_webhook_url {
+        if let Some(webhook_url) = &self.subscribe_option.stake_pool_alerts_slack_webhook_url {
             let payload = serde_json::json!({
                 "blocks": [
                     {

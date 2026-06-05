@@ -10,6 +10,10 @@ pub struct Args {
     /// Yellowstone gRPC endpoint URL
     pub yellowstone_url: String,
 
+    #[clap(long, env = "RPC_URL")]
+    /// Solana JSON-RPC endpoint URL
+    pub rpc_url: String,
+
     #[clap(long, env = "X_TOKEN")]
     pub x_token: Option<String>,
 
@@ -52,6 +56,10 @@ pub struct Args {
     /// Slack webhook URL for Stakenet Event Alerts
     #[clap(long, env)]
     pub stakenet_event_alerts_slack_webhook_url: Option<String>,
+
+    /// Slack webhook URL for Squads Alerts
+    #[clap(long, env)]
+    pub squads_alerts_slack_webhook_url: Option<String>,
 
     /// Discord webhook URL
     #[clap(long, env)]
