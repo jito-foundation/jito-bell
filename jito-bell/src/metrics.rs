@@ -64,7 +64,7 @@ impl EpochMetrics {
     }
 
     pub fn emit_slot_heartbeat(&self, slot: u64) {
-        if slot % 10 == 0 {
+        if slot.is_multiple_of(10) {
             datapoint_info!(
                 "jito-bell-slot-heartbeat",
                 ("slot", slot, i64),
