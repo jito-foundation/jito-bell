@@ -8,6 +8,7 @@ services:
     environment:
       - RUST_LOG=${RUST_LOG:-debug}
       - YELLOWSTONE_URL=${YELLOWSTONE_URL}
+      - RPC_URL=${RPC_URL}
       - X_TOKEN=${X_TOKEN}
       - ACCOUNT_INCLUDE=${ACCOUNT_INCLUDE}
       - CONFIG_FILE=${CONFIG_FILE}

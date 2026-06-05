@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
 
     let commitment = CommitmentConfig::confirmed();
     let mut handler = JitoBellHandler::new(
-        args.yellowstone_url.clone(),
+        args.rpc_url.clone(),
         commitment,
         args.config_file,
         subscribe_option,

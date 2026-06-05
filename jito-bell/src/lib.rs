@@ -56,7 +56,7 @@ pub struct JitoBellHandler {
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
     pub async fn new(
-        endpoint: String,
+        rpc_url: String,
         commitment: CommitmentConfig,
         config_path: PathBuf,
         subscribe_option: SubscribeOption,
@@ -64,7 +64,7 @@ impl JitoBellHandler {
         let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
-        let rpc_client = RpcClient::new_with_commitment(endpoint.to_string(), commitment);
+        let rpc_client = RpcClient::new_with_commitment(rpc_url, commitment);
 
         let epoch = rpc_client.get_epoch_info().await?;
         let epoch_metrics = EpochMetrics::new(epoch.epoch, epoch.absolute_slot);

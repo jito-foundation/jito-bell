@@ -10,6 +10,10 @@ pub struct Args {
     /// Yellowstone gRPC endpoint URL
     pub yellowstone_url: String,
 
+    #[clap(long, env = "RPC_URL")]
+    /// Solana JSON-RPC endpoint URL
+    pub rpc_url: String,
+
     #[clap(long, env = "X_TOKEN")]
     pub x_token: Option<String>,
 
