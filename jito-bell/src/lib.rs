@@ -56,10 +56,7 @@ pub struct JitoBellHandler {
 
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
-    pub async fn new(
-        commitment: CommitmentConfig,
-        args: Args,
-    ) -> Result<Self, JitoBellError> {
+    pub async fn new(commitment: CommitmentConfig, args: Args) -> Result<Self, JitoBellError> {
         let config_str = std::fs::read_to_string(&args.config_file).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
