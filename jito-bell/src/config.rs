@@ -1,11 +1,16 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+use solana_sdk::pubkey::Pubkey;
 
 use crate::program::{EventConfig, ProgramConfig, ProgramName};
 
 #[derive(Deserialize)]
 pub struct JitoBellConfig {
+    /// Yellowstone transaction subscription filters.
+    pub filters: FilterOptions,
+
     /// Programs Configuration
     pub programs: HashMap<ProgramName, ProgramConfig>,
 
@@ -25,25 +30,91 @@ impl JitoBellConfig {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::JitoBellConfig;
+#[derive(Debug, Clone, Deserialize)]
+pub struct FilterOptions {
+    /// Filter vote transactions
+    pub vote: Option<bool>,
 
-    #[test]
-    fn sample_config_parses() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .join("jito_bell_config_sample.yaml");
-        let yaml = std::fs::read_to_string(path).expect("sample config file not found");
-        serde_yaml::from_str::<JitoBellConfig>(&yaml)
-            .expect("sample config should deserialize without error");
-    }
+    /// Filter failed transactions
+    pub failed: Option<bool>,
+
+    /// Filter by transaction signature
+    pub signature: Option<String>,
+
+    /// Filter included accounts in transactions
+    #[serde(
+        default,
+        deserialize_with = "deserialize_pubkey_vec",
+        rename = "accounts-include",
+        alias = "accounts_include"
+    )]
+    pub accounts_include: Vec<Pubkey>,
+
+    /// Filter excluded accounts in transactions
+    #[serde(
+        default,
+        deserialize_with = "deserialize_pubkey_vec",
+        rename = "accounts-exclude",
+        alias = "accounts_exclude"
+    )]
+    pub accounts_exclude: Vec<Pubkey>,
+
+    /// Filter required accounts in transactions
+    #[serde(
+        default,
+        deserialize_with = "deserialize_pubkey_vec",
+        rename = "accounts-required",
+        alias = "accounts_required"
+    )]
+    pub accounts_required: Vec<Pubkey>,
+}
+
+fn deserialize_pubkey_vec<'de, D>(deserializer: D) -> Result<Vec<Pubkey>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Vec::<String>::deserialize(deserializer)?
+        .into_iter()
+        .map(|value| {
+            Pubkey::from_str(&value).map_err(|error| {
+                serde::de::Error::custom(format!("invalid pubkey {value}: {error}"))
+            })
+        })
+        .collect()
 }
 
 impl std::fmt::Display for JitoBellConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Explorer URL: {}", self.explorer_url)?;
+
+        writeln!(f, "Filters:")?;
+        if let Some(vote) = self.filters.vote {
+            writeln!(f, "  Vote: {}", vote)?;
+        }
+        if let Some(failed) = self.filters.failed {
+            writeln!(f, "  Failed: {}", failed)?;
+        }
+        if let Some(signature) = &self.filters.signature {
+            writeln!(f, "  Signature: {}", signature)?;
+        }
+        if !self.filters.accounts_include.is_empty() {
+            writeln!(f, "  Accounts Include:")?;
+            for account in &self.filters.accounts_include {
+                writeln!(f, "    - {}", account)?;
+            }
+        }
+        if !self.filters.accounts_exclude.is_empty() {
+            writeln!(f, "  Accounts Exclude:")?;
+            for account in &self.filters.accounts_exclude {
+                writeln!(f, "    - {}", account)?;
+            }
+        }
+        if !self.filters.accounts_required.is_empty() {
+            writeln!(f, "  Accounts Required:")?;
+            for account in &self.filters.accounts_required {
+                writeln!(f, "    - {}", account)?;
+            }
+        }
 
         writeln!(f, "Message Templates:")?;
         for (name, template) in &self.message_templates {

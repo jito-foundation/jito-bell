@@ -1,13 +1,10 @@
 use std::{env, io::Write, process::Command};
 
 use clap::Parser;
-use jito_bell::{
-    cli_args::Args, multi_writer::MultiWriter, subscribe_option::SubscribeOption, JitoBellHandler,
-};
+use jito_bell::{cli_args::Args, multi_writer::MultiWriter, JitoBellHandler};
 use log::info;
 use solana_metrics::set_host_id;
 use solana_sdk::commitment_config::CommitmentConfig;
-use yellowstone_grpc_proto::geyser::CommitmentLevel;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -64,20 +61,13 @@ async fn main() -> anyhow::Result<()> {
 
     set_host_id(format!("jito-bell_{hostname}"));
 
-    let commitment: CommitmentLevel = args.commitment.unwrap_or_default().into();
-    let subscribe_option = SubscribeOption::new(args.clone(), commitment);
+    let rpc_commitment = CommitmentConfig::confirmed();
+    let mut handler = JitoBellHandler::new(rpc_commitment, args).await?;
 
-    info!("Subscription configuration:\n{}", subscribe_option);
-
-    let commitment = CommitmentConfig::confirmed();
-    let mut handler = JitoBellHandler::new(
-        args.rpc_url.clone(),
-        commitment,
-        args.config_file,
-        subscribe_option,
-    )
-    .await?;
-
+    info!(
+        "Subscription configuration:\n{}",
+        handler.subscribe_option()
+    );
     info!("Jito Bell Config:\n{}", handler.config);
 
     info!("Starting heartbeat...");

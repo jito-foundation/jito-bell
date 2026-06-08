@@ -1,3 +1,15 @@
+filters:
+  vote: false
+  failed: true
+  signature:
+  accounts-include:
+    - "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+    - "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    - "CXSLcb8gFEw2zhFwaQEZ2xCRpoN2dxafMNm7HuciDfDq"
+    - "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg"
+  accounts-exclude: []
+  accounts-required: []
+
 programs:
   jito_steward:
     program_id: "Stewardf95sJbmtcZsyagb2dg4Mo8eVQho8gpECvLx8"
