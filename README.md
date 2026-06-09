@@ -51,7 +51,8 @@ The system is highly configurable through the `jito_bell_config.yaml` file:
 Set different notification thresholds for various transaction types
 Configure multiple notification destinations with different filtering rules
 Customize notification formats and information included
-Define which program instructions to monitor
+Define which accounts and program instructions to monitor.
+Yellowstone transaction filters are read from the config `filters` section.
 
 ## Programs
 
@@ -110,7 +111,6 @@ docker build -t jito-bell .
 docker run jito-bell \
   -e "https://your-endpoint.com" \
   -x-token "your-token-here" \
-  -account-include SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy \
   -config-file /etc/jito-bell/jito_bell_config.yaml
 ```
 

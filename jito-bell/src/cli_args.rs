@@ -21,30 +21,6 @@ pub struct Args {
     #[clap(long, env)]
     pub commitment: Option<ArgsCommitment>,
 
-    /// Filter vote transactions
-    #[clap(long, env)]
-    pub vote: Option<bool>,
-
-    /// Filter failed transactions
-    #[clap(long, env = "FAILED")]
-    pub failed: Option<bool>,
-
-    /// Filter by transaction signature
-    #[clap(long, env)]
-    pub signature: Option<String>,
-
-    /// Filter included account in transactions
-    #[clap(long, env = "ACCOUNT_INCLUDE", value_delimiter = ',')]
-    pub account_include: Vec<String>,
-
-    /// Filter excluded account in transactions
-    #[clap(long, env)]
-    pub account_exclude: Vec<String>,
-
-    /// Filter required account in transactions
-    #[clap(long, env)]
-    pub account_required: Vec<String>,
-
     /// Slack webhook URL for Jito Bell
     #[clap(long, env)]
     pub slack_webhook_url: Option<String>,

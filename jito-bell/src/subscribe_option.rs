@@ -1,10 +1,11 @@
 use maplit::hashmap;
+use solana_sdk::pubkey::Pubkey;
 use yellowstone_grpc_proto::{
     geyser::{CommitmentLevel, SubscribeRequestFilterSlots},
     prelude::{SubscribeRequest, SubscribeRequestFilterTransactions},
 };
 
-use crate::cli_args::Args;
+use crate::{cli_args::Args, config::FilterOptions};
 
 pub struct SubscribeOption {
     /// Yellowstone gRPC endpoint URL
@@ -26,13 +27,13 @@ pub struct SubscribeOption {
     pub signature: Option<String>,
 
     /// Account include
-    pub account_include: Vec<String>,
+    pub account_include: Vec<Pubkey>,
 
     /// Account exclude
-    pub account_exclude: Vec<String>,
+    pub account_exclude: Vec<Pubkey>,
 
     /// Account required
-    pub account_required: Vec<String>,
+    pub account_required: Vec<Pubkey>,
 
     /// Slack webhook url for Jito Bell
     pub jito_bell_slack_webhook_url: Option<String>,
@@ -72,17 +73,17 @@ pub struct SubscribeOption {
 }
 
 impl SubscribeOption {
-    pub fn new(arg: Args, commitment: CommitmentLevel) -> Self {
+    pub fn new(arg: Args, commitment: CommitmentLevel, filters: FilterOptions) -> Self {
         Self {
             yellowstone_url: arg.yellowstone_url,
             x_token: arg.x_token,
             commitment,
-            vote: arg.vote,
-            failed: arg.failed,
-            signature: arg.signature,
-            account_include: arg.account_include,
-            account_exclude: arg.account_exclude,
-            account_required: arg.account_required,
+            vote: filters.vote,
+            failed: filters.failed,
+            signature: filters.signature,
+            account_include: filters.accounts_include,
+            account_exclude: filters.accounts_exclude,
+            account_required: filters.accounts_required,
             jito_bell_slack_webhook_url: arg.slack_webhook_url,
             stake_pool_alerts_slack_webhook_url: arg.stake_pool_alerts_slack_webhook_url,
             stakenet_event_alerts_slack_webhook_url: arg.stakenet_event_alerts_slack_webhook_url,
@@ -109,9 +110,9 @@ impl From<&SubscribeOption> for SubscribeRequest {
                 vote: opt.vote,
                 failed: opt.failed,
                 signature: opt.signature.clone(),
-                account_include: opt.account_include.clone(),
-                account_exclude: opt.account_exclude.clone(),
-                account_required: opt.account_required.clone(),
+                account_include: opt.account_include.iter().map(ToString::to_string).collect(),
+                account_exclude: opt.account_exclude.iter().map(ToString::to_string).collect(),
+                account_required: opt.account_required.iter().map(ToString::to_string).collect(),
             } },
             commitment: Some(opt.commitment as i32),
             ..Default::default()

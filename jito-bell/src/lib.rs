@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::PathBuf};
+use std::fmt::Display;
 
 use error::JitoBellError;
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -16,6 +16,7 @@ use yellowstone_grpc_proto::{
 };
 
 use crate::{
+    cli_args::Args,
     config::JitoBellConfig,
     notification_info::Destination,
     program::{EventConfig, InstructionConfig, ProgramName},
@@ -55,15 +56,15 @@ pub struct JitoBellHandler {
 
 impl JitoBellHandler {
     /// Initialize Jito Bell Handler
-    pub async fn new(
-        rpc_url: String,
-        commitment: CommitmentConfig,
-        config_path: PathBuf,
-        subscribe_option: SubscribeOption,
-    ) -> Result<Self, JitoBellError> {
-        let config_str = std::fs::read_to_string(&config_path).map_err(JitoBellError::Io)?;
+    pub async fn new(commitment: CommitmentConfig, args: Args) -> Result<Self, JitoBellError> {
+        let config_str = std::fs::read_to_string(&args.config_file).map_err(JitoBellError::Io)?;
 
         let config: JitoBellConfig = serde_yaml::from_str(&config_str)?;
+        let rpc_url = args.rpc_url.clone();
+        let subscribe_commitment = args.commitment.unwrap_or_default().into();
+        let subscribe_option =
+            SubscribeOption::new(args, subscribe_commitment, config.filters.clone());
+
         let rpc_client = RpcClient::new_with_commitment(rpc_url, commitment);
 
         let epoch = rpc_client.get_epoch_info().await?;
@@ -75,6 +76,10 @@ impl JitoBellHandler {
             epoch_metrics,
             subscribe_option,
         })
+    }
+
+    pub fn subscribe_option(&self) -> &SubscribeOption {
+        &self.subscribe_option
     }
 
     /// Workhorse / Entrypoint

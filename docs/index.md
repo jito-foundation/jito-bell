@@ -130,12 +130,12 @@ docker build -t jito-bell .
 ### Run Jito Bell app
 
 We need rpc url for running Jito Bell app.
+Yellowstone transaction filters are read from the config `filters` section.
 
 ```bash
 docker run jito-bell \
   -e "https://your-endpoint.com" \
   -x-token "your-token-here" \
-  -account-include SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy \
   -config-file /etc/jito-bell/jito_bell_config.yaml
 ```
 
