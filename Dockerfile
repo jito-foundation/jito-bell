@@ -1,5 +1,5 @@
 # Builder image
-FROM rust:1.88-slim-bullseye AS builder
+FROM rust:1.89-slim-bullseye AS builder
 
 RUN apt-get update && apt-get install -y \
     libudev-dev \
@@ -30,4 +30,3 @@ COPY --from=builder /usr/src/app/target/release/jito-bell /usr/local/bin/jito-be
 
 # Only one ENTRYPOINT line
 ENTRYPOINT ["jito-bell"]
-
