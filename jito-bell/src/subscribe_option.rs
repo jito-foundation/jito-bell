@@ -105,6 +105,7 @@ impl From<&SubscribeOption> for SubscribeRequest {
         SubscribeRequest {
             slots: hashmap! { "slots".to_owned() => SubscribeRequestFilterSlots {
                 filter_by_commitment: Some(true),
+                interslot_updates: None,
             } },
             transactions: hashmap! { "transactions".to_owned() => SubscribeRequestFilterTransactions {
                 vote: opt.vote,
