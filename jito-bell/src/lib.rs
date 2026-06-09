@@ -104,7 +104,11 @@ impl JitoBellHandler {
             match message {
                 Ok(msg) => match msg.update_oneof {
                     Some(UpdateOneof::Slot(update_slot)) => {
-                        self.handle_slot_update(update_slot.slot);
+                        // Newer geyser servers leak interslot SlotStatuses that v2.0.0 protos
+                        // decode with garbage status; dedupe by accepting only our commitment.
+                        if update_slot.status == self.subscribe_option.commitment as i32 {
+                            self.handle_slot_update(update_slot.slot);
+                        }
                     }
                     Some(UpdateOneof::Transaction(transaction)) => {
                         // A parser is a list of instructions + events from the transaction that
@@ -186,6 +190,7 @@ impl JitoBellHandler {
         let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
         self.epoch_metrics.update_slot(slot);
         self.epoch_metrics.emit_slot_heartbeat(slot);
+        self.epoch_metrics.emit_epoch_progress(slot);
         if current_epoch != self.epoch_metrics.epoch {
             datapoint_info!(
                 "jito-bell-epoch",
