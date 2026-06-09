@@ -72,7 +72,6 @@ fn make_update() -> SubscribeUpdateTransaction {
                     instructions: vec![create_tx_ix],
                     ..Default::default()
                 }),
-                ..Default::default()
             }),
             meta: Some(TransactionStatusMeta {
                 err: None,
