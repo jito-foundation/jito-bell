@@ -190,6 +190,7 @@ impl JitoBellHandler {
         let current_epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
         self.epoch_metrics.update_slot(slot);
         self.epoch_metrics.emit_slot_heartbeat(slot);
+        self.epoch_metrics.emit_epoch_progress(slot);
         if current_epoch != self.epoch_metrics.epoch {
             datapoint_info!(
                 "jito-bell-epoch",

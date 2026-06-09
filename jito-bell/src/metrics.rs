@@ -1,4 +1,6 @@
-use solana_metrics::datapoint_info;
+use log::info;
+use solana_metrics::{datapoint::DataPoint, datapoint_info, submit};
+use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 
 #[derive(Debug, Default)]
 pub(crate) struct NotificationMetrics {
@@ -63,13 +65,33 @@ impl EpochMetrics {
         datapoint_info!(name, ("count", count, i64), ("epoch", self.epoch, i64),);
     }
 
-    pub fn emit_slot_heartbeat(&self, slot: u64) {
-        if slot.is_multiple_of(10) {
-            datapoint_info!(
-                "jito-bell-slot-heartbeat",
-                ("slot", slot, i64),
-                ("epoch", self.epoch, i64),
+    pub fn emit_epoch_progress(&self, slot: u64) {
+        if slot.is_multiple_of(DEFAULT_SLOTS_PER_EPOCH / 10) {
+            let position = slot % DEFAULT_SLOTS_PER_EPOCH;
+            info!(
+                "epoch={} slot={} ({position}/{}) tx={} failed_tx={} notif_ok={} notif_fail={} squads_parsed={}",
+                self.epoch,
+                slot,
+                DEFAULT_SLOTS_PER_EPOCH,
+                self.tx,
+                self.failed_tx,
+                self.notification.success,
+                self.notification.fail,
+                self.squads.proposals_parsed,
             );
+        }
+    }
+
+    pub fn emit_slot_heartbeat(&self, slot: u64) {
+        if slot.is_multiple_of(100) {
+            // Manual datapoint construction (vs. datapoint_info!): we want the point
+            // submitted to InfluxDB unconditionally, with only the agent's per-point
+            // log line filtered out by RUST_LOG. datapoint_debug! would gate the
+            // submit on log_enabled!(Debug), dropping the metric at default verbosity.
+            let mut point = DataPoint::new("jito-bell-slot-heartbeat");
+            point.add_field_i64("slot", slot as i64);
+            point.add_field_i64("epoch", self.epoch as i64);
+            submit(point, log::Level::Debug);
         }
     }
 
