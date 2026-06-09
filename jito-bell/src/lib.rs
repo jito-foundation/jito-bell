@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use error::JitoBellError;
-use futures::{sink::SinkExt, stream::StreamExt};
+use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
 use log::{debug, error, warn};
 use metrics::EpochMetrics;
 use solana_metrics::datapoint_info;
@@ -9,11 +9,8 @@ use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, commitment_config::CommitmentConfig};
 use subscribe_option::SubscribeOption;
 use twitterust::{TwitterClient, TwitterCredentials};
-use yellowstone_grpc_client::GeyserGrpcClient;
-use yellowstone_grpc_proto::{
-    prelude::{subscribe_update::UpdateOneof, SubscribeRequest},
-    tonic::transport::ClientTlsConfig,
-};
+use yellowstone_grpc_client::{ClientTlsConfig, GeyserGrpcClient};
+use yellowstone_grpc_proto::prelude::{subscribe_update::UpdateOneof, SubscribeRequest};
 
 use crate::{
     cli_args::Args,
@@ -90,7 +87,13 @@ impl JitoBellHandler {
                 .tls_config(ClientTlsConfig::new().with_native_roots())?
                 .connect()
                 .await?;
-        let (mut subscribe_tx, mut stream) = client.subscribe().await?;
+        let (mut subscribe_tx, subscribe_rx) = mpsc::channel(1);
+        let mut stream = client
+            .geyser
+            .subscribe(subscribe_rx)
+            .await
+            .map_err(|e| JitoBellError::Subscription(format!("Failed to subscribe: {e}")))?
+            .into_inner();
 
         let subscribe_request = SubscribeRequest::from(&self.subscribe_option);
         if let Err(e) = subscribe_tx.send(subscribe_request).await {
@@ -104,8 +107,8 @@ impl JitoBellHandler {
             match message {
                 Ok(msg) => match msg.update_oneof {
                     Some(UpdateOneof::Slot(update_slot)) => {
-                        // Newer geyser servers leak interslot SlotStatuses that v2.0.0 protos
-                        // decode with garbage status; dedupe by accepting only our commitment.
+                        // Accept only the requested commitment status. Yellowstone can emit
+                        // additional interslot statuses on newer server/proto versions.
                         if update_slot.status == self.subscribe_option.commitment as i32 {
                             self.handle_slot_update(update_slot.slot);
                         }

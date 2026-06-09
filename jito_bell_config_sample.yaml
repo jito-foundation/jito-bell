@@ -1,6 +1,6 @@
 filters:
   vote: false
-  failed: true
+  failed: false
   signature:
   accounts-include:
     - "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"

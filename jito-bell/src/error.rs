@@ -32,7 +32,7 @@ pub enum JitoBellError {
     SolanaProgram(#[from] solana_program::program_error::ProgramError),
 
     #[error("Solana RPC Client error: {0}")]
-    SolanaRpcClient(#[from] solana_rpc_client_api::client_error::Error),
+    SolanaRpcClient(#[source] Box<solana_rpc_client_api::client_error::Error>),
 
     #[error("Defillama error: {0}")]
     DefiLlama(#[from] defillama_rs::DefillamaError),
@@ -42,5 +42,11 @@ pub enum JitoBellError {
 impl From<serde_yaml::Error> for JitoBellError {
     fn from(err: serde_yaml::Error) -> Self {
         JitoBellError::Config(err.to_string())
+    }
+}
+
+impl From<solana_rpc_client_api::client_error::Error> for JitoBellError {
+    fn from(err: solana_rpc_client_api::client_error::Error) -> Self {
+        JitoBellError::SolanaRpcClient(Box::new(err))
     }
 }
