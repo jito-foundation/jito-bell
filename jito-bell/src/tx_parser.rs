@@ -1,6 +1,6 @@
 use solana_pubkey::Pubkey;
 use solana_sdk::signature::Signature;
-use yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction;
+use yellowstone_grpc_proto::{geyser::SubscribeUpdateTransaction, prelude::Message};
 
 use crate::{
     event_parser::{jito_steward::JitoStewardEvent, EventParser},
@@ -12,6 +12,33 @@ use crate::{
 };
 
 type InstructionParserFn<T> = fn(&T, &[Pubkey]) -> Option<InstructionParser>;
+
+/// Wire format of the transaction message, as reported by the Geyser proto.
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
+pub enum TransactionVersion {
+    #[default]
+    Legacy,
+    V0,
+    V1,
+}
+
+impl TransactionVersion {
+    /// `Message.config` (proto field 7) is populated only for v1 (SIMD-0385) and is
+    /// the sole marker separating v1 from v0, so it has to be tested first: `versioned`
+    /// is true for both, and checking it first would label every v1 transaction v0.
+    ///
+    /// Requires yellowstone-grpc-proto >= 12.6.0; older generated stubs discard field 7
+    /// silently, which collapses v1 into v0 here with no error.
+    fn from_message(message: &Message) -> Self {
+        if message.config.is_some() {
+            Self::V1
+        } else if message.versioned {
+            Self::V0
+        } else {
+            Self::Legacy
+        }
+    }
+}
 
 /// Parse Transaction
 #[derive(Debug)]
@@ -32,6 +59,9 @@ pub struct JitoTransactionParser {
     /// Number of Squads instructions where the discriminator matched a known
     /// instruction but argument/account parsing returned None.
     pub squads_parse_errors: u64,
+
+    /// Wire format of the transaction message.
+    pub version: TransactionVersion,
 }
 
 impl JitoTransactionParser {
@@ -47,6 +77,7 @@ impl JitoTransactionParser {
             events: Vec::new(),
             failed_tx: false,
             squads_parse_errors: 0,
+            version: TransactionVersion::Legacy,
         }
     }
 
@@ -56,9 +87,19 @@ impl JitoTransactionParser {
         let tx_update = transaction.transaction?;
         let meta = tx_update.meta?;
 
+        // Read before the failed-tx bail so version counters cover every transaction
+        // on the stream, not just the ones that reach instruction parsing.
+        parser.version = tx_update
+            .transaction
+            .as_ref()
+            .and_then(|tx| tx.message.as_ref())
+            .map(TransactionVersion::from_message)
+            .unwrap_or_default();
+
         if meta.err.is_some() {
             return Some(Self {
                 failed_tx: true,
+                version: parser.version,
                 ..Self::empty()
             });
         }
@@ -215,4 +256,69 @@ fn parse_known_instruction<T: ParsableInstruction>(
             None
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use yellowstone_grpc_proto::prelude::TransactionConfig;
+
+    use super::*;
+
+    #[test]
+    fn legacy_message_has_no_version_marker() {
+        let message = Message::default();
+
+        assert_eq!(
+            TransactionVersion::from_message(&message),
+            TransactionVersion::Legacy
+        );
+    }
+
+    #[test]
+    fn versioned_without_config_is_v0() {
+        let message = Message {
+            versioned: true,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            TransactionVersion::from_message(&message),
+            TransactionVersion::V0
+        );
+    }
+
+    #[test]
+    fn config_wins_over_versioned_flag() {
+        // A v1 message also sets `versioned`, so testing that flag first would
+        // silently classify every v1 transaction as v0.
+        let message = Message {
+            versioned: true,
+            config: Some(TransactionConfig {
+                compute_unit_limit: Some(20_000),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            TransactionVersion::from_message(&message),
+            TransactionVersion::V1
+        );
+    }
+
+    #[test]
+    fn empty_config_still_marks_v1() {
+        // All TransactionConfig fields are optional; presence of the message is
+        // the marker, not any field inside it.
+        let message = Message {
+            versioned: true,
+            config: Some(TransactionConfig::default()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            TransactionVersion::from_message(&message),
+            TransactionVersion::V1
+        );
+    }
 }

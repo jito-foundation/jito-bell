@@ -114,6 +114,8 @@ impl From<&SubscribeOption> for SubscribeRequest {
                 account_include: opt.account_include.iter().map(ToString::to_string).collect(),
                 account_exclude: opt.account_exclude.iter().map(ToString::to_string).collect(),
                 account_required: opt.account_required.iter().map(ToString::to_string).collect(),
+                cuckoo_account_include: None,
+                token_accounts: None,
             } },
             commitment: Some(opt.commitment as i32),
             ..Default::default()

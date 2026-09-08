@@ -42,6 +42,10 @@ pub(crate) struct EpochMetrics {
     /// Transactions that were on-chain failures (meta.err set); skipped for notification.
     pub(crate) failed_tx: u64,
 
+    /// Transactions arriving in the v1 (SIMD-0385) format. Stays at zero if the
+    /// upstream Geyser plugin predates 15.1.1, which downgrades v1 to v0 on the wire.
+    pub(crate) v1_tx: u64,
+
     /// Notification Metrics
     pub(crate) notification: NotificationMetrics,
 
@@ -70,12 +74,13 @@ impl EpochMetrics {
         if slot.is_multiple_of(DEFAULT_SLOTS_PER_EPOCH / 10) {
             let position = slot % DEFAULT_SLOTS_PER_EPOCH;
             info!(
-                "epoch={} slot={} ({position}/{}) tx={} failed_tx={} notif_ok={} notif_fail={} squads_parsed={}",
+                "epoch={} slot={} ({position}/{}) tx={} failed_tx={} v1_tx={} notif_ok={} notif_fail={} squads_parsed={}",
                 self.epoch,
                 slot,
                 DEFAULT_SLOTS_PER_EPOCH,
                 self.tx,
                 self.failed_tx,
+                self.v1_tx,
                 self.notification.success,
                 self.notification.fail,
                 self.squads.proposals_parsed,
@@ -104,6 +109,11 @@ impl EpochMetrics {
     pub fn increment_failed_tx_count(&mut self) {
         self.failed_tx += 1;
         self.emit_live_metric("jito-bell-failed-transactions", 1);
+    }
+
+    pub fn increment_v1_tx_count(&mut self) {
+        self.v1_tx += 1;
+        self.emit_live_metric("jito-bell-v1-transactions", 1);
     }
 
     pub fn increment_success_notification_count(&mut self) {
