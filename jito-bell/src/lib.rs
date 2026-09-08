@@ -17,7 +17,7 @@ use crate::{
     config::JitoBellConfig,
     notification_info::Destination,
     program::{EventConfig, InstructionConfig, ProgramName},
-    tx_parser::{JitoTransactionParser, TransactionVersion},
+    tx_parser::JitoTransactionParser,
 };
 
 pub mod cli_args;
@@ -121,9 +121,6 @@ impl JitoBellHandler {
 
                         if parsed_tx.failed_tx {
                             self.epoch_metrics.increment_failed_tx_count();
-                        }
-                        if parsed_tx.version == TransactionVersion::V1 {
-                            self.epoch_metrics.increment_v1_tx_count();
                         }
                         self.epoch_metrics
                             .increment_squads_parse_errors(parsed_tx.squads_parse_errors);
