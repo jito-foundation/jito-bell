@@ -21,8 +21,9 @@ pub(crate) struct SquadsMetrics {
     pub(crate) no_config: u64,
     /// dispatch_slack called but no webhook URLs resolved from the destination list.
     pub(crate) no_webhook: u64,
-    /// At least one webhook failed while at least one succeeded in the same dispatch.
-    pub(crate) partial_webhook_failure: u64,
+    /// A Squads webhook dispatch had at least one delivery failure.
+    /// This is the single alert surface for both partial and total webhook failure.
+    pub(crate) webhook_failure: u64,
     /// Total individual webhook HTTP/transport errors across all dispatches.
     pub(crate) webhook_errors: u64,
 }
@@ -138,9 +139,9 @@ impl EpochMetrics {
         self.emit_live_metric("jito-bell-squads-no-webhook", 1);
     }
 
-    pub fn increment_squads_partial_webhook_failure(&mut self) {
-        self.squads.partial_webhook_failure += 1;
-        self.emit_live_metric("jito-bell-squads-partial-webhook-failure", 1);
+    pub fn increment_squads_webhook_failure(&mut self) {
+        self.squads.webhook_failure += 1;
+        self.emit_live_metric("jito-bell-squads-webhook-failure", 1);
     }
 
     pub fn increment_squads_webhook_errors(&mut self) {

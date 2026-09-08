@@ -287,19 +287,24 @@ impl JitoBellHandler {
 
         if errors.is_empty() {
             Ok(())
-        } else if errors.len() < webhook_urls.len() {
-            self.epoch_metrics
-                .increment_squads_partial_webhook_failure();
-            warn!(
-                "dispatch_slack: partial webhook failure ({}/{} failed) for Squads notification",
-                errors.len(),
-                webhook_urls.len()
-            );
-            Ok(())
         } else {
-            Err(JitoBellError::Notification(
-                "All Squads Slack webhooks failed".to_string(),
-            ))
+            self.epoch_metrics.increment_squads_webhook_failure();
+            if errors.len() < webhook_urls.len() {
+                warn!(
+                    "dispatch_slack: partial webhook failure ({}/{} failed) for Squads notification",
+                    errors.len(),
+                    webhook_urls.len()
+                );
+                Ok(())
+            } else {
+                warn!(
+                    "dispatch_slack: full webhook failure ({} failed) for Squads notification",
+                    webhook_urls.len()
+                );
+                Err(JitoBellError::Notification(
+                    "All Squads Slack webhooks failed".to_string(),
+                ))
+            }
         }
     }
 
