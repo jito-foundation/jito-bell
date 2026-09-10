@@ -1,5 +1,5 @@
 # Builder image
-FROM rust:1.98-slim-bookworm AS builder
+FROM rust:1.98-slim-bullseye AS builder
 
 RUN apt-get update && apt-get install -y \
     libudev-dev \
@@ -19,10 +19,10 @@ COPY . .
 RUN cargo build --release --bin jito-bell
 
 # Final image
-FROM debian:bookworm-slim
+FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl3 \
+    libssl1.1 \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
